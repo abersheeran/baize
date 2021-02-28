@@ -1,5 +1,7 @@
 # BaíZé
 
+[![Codecov](https://img.shields.io/codecov/c/github/abersheeran/baize?style=flat-square)](https://codecov.io/gh/abersheeran/baize)
+
 Powerful and exquisite WSGI/ASGI framework/toolkit.
 
 The minimize implementation of methods required in the Web framework. No redundant implementation means that you can freely customize functions without considering the conflict with baize's own implementation.
