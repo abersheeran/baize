@@ -1,6 +1,8 @@
 import os
+import sys
 
 import httpx
+import pytest
 
 from baize.formparsers import UploadFile, _user_safe_decode
 from baize.wsgi import JSONResponse, Request
@@ -68,12 +70,14 @@ def app_read_body(environ, start_response):
     return response(environ, start_response)
 
 
+@pytest.mark.skipif("multipart" not in sys.modules, reason="Missing python-multipart")
 def test_multipart_request_data(tmpdir):
     with httpx.Client(app=app, base_url="http://testServer/") as client:
         response = client.post("/", data={"some": "data"}, files=FORCE_MULTIPART)
         assert response.json() == {"some": "data"}
 
 
+@pytest.mark.skipif("multipart" not in sys.modules, reason="Missing python-multipart")
 def test_multipart_request_files(tmpdir):
     path = os.path.join(tmpdir, "test.txt")
     with open(path, "wb") as file:
@@ -91,6 +95,7 @@ def test_multipart_request_files(tmpdir):
             }
 
 
+@pytest.mark.skipif("multipart" not in sys.modules, reason="Missing python-multipart")
 def test_multipart_request_files_with_content_type(tmpdir):
     path = os.path.join(tmpdir, "test.txt")
     with open(path, "wb") as file:
@@ -108,6 +113,7 @@ def test_multipart_request_files_with_content_type(tmpdir):
             }
 
 
+@pytest.mark.skipif("multipart" not in sys.modules, reason="Missing python-multipart")
 def test_multipart_request_multiple_files(tmpdir):
     path1 = os.path.join(tmpdir, "test1.txt")
     with open(path1, "wb") as file:
@@ -136,6 +142,7 @@ def test_multipart_request_multiple_files(tmpdir):
             }
 
 
+@pytest.mark.skipif("multipart" not in sys.modules, reason="Missing python-multipart")
 def test_multi_items(tmpdir):
     path1 = os.path.join(tmpdir, "test1.txt")
     with open(path1, "wb") as file:
@@ -169,6 +176,7 @@ def test_multi_items(tmpdir):
             }
 
 
+@pytest.mark.skipif("multipart" not in sys.modules, reason="Missing python-multipart")
 def test_multipart_request_mixed_files_and_data(tmpdir):
     with httpx.Client(app=app, base_url="http://testServer/") as client:
         response = client.post(
@@ -206,6 +214,7 @@ def test_multipart_request_mixed_files_and_data(tmpdir):
         }
 
 
+@pytest.mark.skipif("multipart" not in sys.modules, reason="Missing python-multipart")
 def test_multipart_request_with_charset_for_filename(tmpdir):
     with httpx.Client(app=app, base_url="http://testServer/") as client:
         response = client.post(
@@ -234,6 +243,7 @@ def test_multipart_request_with_charset_for_filename(tmpdir):
         }
 
 
+@pytest.mark.skipif("multipart" not in sys.modules, reason="Missing python-multipart")
 def test_multipart_request_without_charset_for_filename(tmpdir):
     with httpx.Client(app=app, base_url="http://testServer/") as client:
         response = client.post(
@@ -261,6 +271,7 @@ def test_multipart_request_without_charset_for_filename(tmpdir):
         }
 
 
+@pytest.mark.skipif("multipart" not in sys.modules, reason="Missing python-multipart")
 def test_multipart_request_with_encoded_value(tmpdir):
     with httpx.Client(app=app, base_url="http://testServer/") as client:
         response = client.post(
@@ -314,6 +325,7 @@ def test_urlencoded_multi_field_app_reads_body(tmpdir):
         assert response.json() == {"some": "data", "second": "key pair"}
 
 
+@pytest.mark.skipif("multipart" not in sys.modules, reason="Missing python-multipart")
 def test_multipart_multi_field_app_reads_body(tmpdir):
     with httpx.Client(app=app_read_body, base_url="http://testServer/") as client:
         response = client.post(
