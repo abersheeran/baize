@@ -26,6 +26,15 @@ __all__ = [
 Address = namedtuple("Address", ["host", "port"])
 
 
+class defaultdict(dict):
+    def __init__(self, default_factory, *args, **kwargs) -> None:
+        self.default_factory = default_factory
+        super().__init__(*args, **kwargs)
+
+    def __missing__(self, key):
+        return self.default_factory(key)
+
+
 class MediaType:
     __slots__ = ("main_type", "sub_type", "options")
 

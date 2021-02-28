@@ -22,7 +22,7 @@ from typing import (
 from urllib.parse import parse_qsl, quote_plus
 
 from .common import BaseResponse, MoreInfoFromHeaderMixin
-from .datastructures import URL, Address, FormData, Headers, QueryParams
+from .datastructures import URL, Address, FormData, Headers, QueryParams, defaultdict
 from .exceptions import HTTPException
 from .formparsers import MultiPartParser
 from .typing import Environ, JSONable, ServerSentEvent, StartResponse
@@ -37,9 +37,10 @@ __all__ = [
     "SendEventResponse",
 ]
 
-StatusStringMapping = {
-    int(status): f"{status} {status.phrase}" for status in HTTPStatus
-}
+StatusStringMapping = defaultdict(
+    lambda status: f"{status} Custom status code",
+    {int(status): f"{status} {status.phrase}" for status in HTTPStatus},
+)
 
 
 class HTTPConnection(Mapping, MoreInfoFromHeaderMixin):

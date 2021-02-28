@@ -239,6 +239,12 @@ def test_request_accpet():
 # ######################################################################################
 
 
+def test_unknown_status():
+    with httpx.Client(app=Response(b"", 600), base_url="http://testServer/") as client:
+        response = client.get("/")
+        assert response.status_code == 600
+
+
 def test_redirect_response():
     def app(environ, start_response):
         if environ["PATH_INFO"] == "/":
