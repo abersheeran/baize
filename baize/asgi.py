@@ -18,7 +18,7 @@ from typing import (
 )
 from urllib.parse import parse_qsl, quote_plus
 
-from .common import BaseResponse, MoreInfoFromHeaderMixin
+from .common import BaseFileResponse, BaseResponse, MoreInfoFromHeaderMixin
 from .datastructures import URL, Address, FormData, Headers, QueryParams
 from .exceptions import HTTPException
 from .formparsers import AsyncMultiPartParser
@@ -294,6 +294,153 @@ class RedirectResponse(BaseResponse):
             }
         )
         await send({"type": "http.response.body", "body": b""})
+
+
+class FileResponse(BaseFileResponse):
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        send_header_only = scope["method"] == "HEAD"
+
+        stat_result = self.stat_file()
+        file_size = stat_result.st_size
+        headers = self.generate_required_header(stat_result)
+
+        http_range, http_if_range = "", ""
+        for key, value in scope["headers"]:
+            if key == b"range":
+                http_range = value.decode("latin-1")
+            elif key == b"if-range":
+                http_if_range = value.decode("latin-1")
+
+        loop = asyncio.get_running_loop()
+
+        if http_range == "" or (
+            http_if_range != "" and not self.judge_if_range(http_if_range, stat_result)
+        ):
+            headers.append(("content-type", str(self.media_type)))
+            headers.append(("content-length", str(file_size)))
+            await send(
+                {
+                    "type": "http.response.start",
+                    "status": 200,
+                    "headers": [
+                        (k.encode("latin-1"), v.encode("latin-1"))
+                        for k, v in chain(self.raw_headers, headers)
+                    ],
+                }
+            )
+            if send_header_only:
+                return await send({"type": "http.response.body", "body": b""})
+
+            file = await loop.run_in_executor(None, open, self.filepath, "rb")
+            try:
+                for _ in range(0, file_size, 4096):
+                    await send(
+                        {
+                            "type": "http.response.body",
+                            "body": await loop.run_in_executor(None, file.read, 4096),
+                            "more_body": True,
+                        }
+                    )
+            finally:
+                await loop.run_in_executor(None, file.close)
+            return await send({"type": "http.response.body", "body": b""})
+
+        ranges = self.parse_range(http_range, file_size)
+
+        if len(ranges) == 1:
+            start, end = ranges[0]
+            headers.append(("content-range", f"bytes {start}-{end-1}/{file_size}"))
+            headers.append(("content-length", str(end - start)))
+            await send(
+                {
+                    "type": "http.response.start",
+                    "status": 206,
+                    "headers": [
+                        (k.encode("latin-1"), v.encode("latin-1"))
+                        for k, v in chain(self.raw_headers, headers)
+                    ],
+                }
+            )
+            if send_header_only:
+                return await send({"type": "http.response.body", "body": b""})
+
+            file = await loop.run_in_executor(None, open, self.filepath, "rb")
+            try:
+                await loop.run_in_executor(None, file.seek, start)
+                for here in range(start, end, 4096):
+                    await send(
+                        {
+                            "type": "http.response.body",
+                            "body": await loop.run_in_executor(
+                                None, file.read, min(4096, end - here)
+                            ),
+                            "more_body": True,
+                        }
+                    )
+            finally:
+                await loop.run_in_executor(None, file.close)
+            return await send({"type": "http.response.body", "body": b""})
+        else:
+            headers.append(
+                ("content-type", "multipart/byteranges; boundary=3d6b6a416f9b5")
+            )
+            content_length = (
+                18
+                + len(ranges) * (57 + len(self.media_type) + len(str(file_size)))
+                + sum(len(str(start)) + len(str(end - 1)) for start, end in ranges)
+            ) + sum(end - start for start, end in ranges)
+            headers.append(("content-length", str(content_length)))
+            await send(
+                {
+                    "type": "http.response.start",
+                    "status": 206,
+                    "headers": [
+                        (k.encode("latin-1"), v.encode("latin-1"))
+                        for k, v in chain(self.raw_headers, headers)
+                    ],
+                }
+            )
+            if send_header_only:
+                return await send({"type": "http.response.body", "body": b""})
+
+            file = await loop.run_in_executor(None, open, self.filepath, "rb")
+            try:
+                for start, end in ranges:
+                    await send(
+                        {
+                            "type": "http.response.body",
+                            "body": (
+                                "--3d6b6a416f9b5\n"
+                                f"Content-Type: {self.media_type}\n"
+                                f"Content-Range: bytes {start}-{end-1}/{file_size}\n\n"
+                            ).encode("latin-1"),
+                            "more_body": True,
+                        }
+                    )
+                    await loop.run_in_executor(None, file.seek, start)
+                    for here in range(start, end, 4096):
+                        await send(
+                            {
+                                "type": "http.response.body",
+                                "body": await loop.run_in_executor(
+                                    None, file.read, min(4096, end - here)
+                                ),
+                                "more_body": True,
+                            }
+                        )
+                    await send(
+                        {"type": "http.response.body", "body": b"\n", "more_body": True}
+                    )
+                await send(
+                    {
+                        "type": "http.response.body",
+                        "body": b"--3d6b6a416f9b5--\n",
+                        "more_body": True,
+                    }
+                )
+            finally:
+                await loop.run_in_executor(None, file.close)
+            return await send({"type": "http.response.body", "body": b""})
 
 
 class SendEventResponse(BaseResponse):

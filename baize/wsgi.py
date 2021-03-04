@@ -21,7 +21,7 @@ from typing import (
 )
 from urllib.parse import parse_qsl, quote_plus
 
-from .common import BaseResponse, MoreInfoFromHeaderMixin
+from .common import BaseFileResponse, BaseResponse, MoreInfoFromHeaderMixin
 from .datastructures import URL, Address, FormData, Headers, QueryParams, defaultdict
 from .exceptions import HTTPException
 from .formparsers import MultiPartParser
@@ -241,6 +241,86 @@ class RedirectResponse(BaseResponse):
     ) -> Iterable[bytes]:
         start_response(StatusStringMapping[self.status_code], self.raw_headers, None)
         yield b""
+
+
+class FileResponse(BaseFileResponse):
+    def __call__(
+        self, environ: Environ, start_response: StartResponse
+    ) -> Iterable[bytes]:
+        send_header_only = environ["REQUEST_METHOD"] == "HEAD"
+
+        stat_result = self.stat_file()
+        file_size = stat_result.st_size
+        headers = self.generate_required_header(stat_result)
+
+        if "HTTP_RANGE" not in environ or (
+            "HTTP_IF_RANGE" in environ
+            and not self.judge_if_range(environ["HTTP_IF_RANGE"], stat_result)
+        ):
+            headers.append(("content-type", str(self.media_type)))
+            headers.append(("content-length", str(file_size)))
+            start_response(
+                StatusStringMapping[200], list(chain(self.raw_headers, headers)), None
+            )
+
+            if send_header_only:
+                yield b""
+                return
+
+            with open(self.filepath, "rb") as file:
+                for _ in range(0, file_size, 4096):
+                    yield file.read(4096)
+            return
+
+        ranges = self.parse_range(environ["HTTP_RANGE"], file_size)
+
+        if len(ranges) == 1:
+            start, end = ranges[0]
+            headers.append(("content-range", f"bytes {start}-{end-1}/{file_size}"))
+            headers.append(("content-length", str(end - start)))
+            start_response(
+                StatusStringMapping[206], list(chain(self.raw_headers, headers)), None
+            )
+            if send_header_only:
+                yield b""
+                return
+
+            with open(self.filepath, "rb") as file:
+                file.seek(start)
+                for here in range(start, end, 4096):
+                    yield file.read(min(4096, end - here))
+                return
+        else:
+            headers.append(
+                ("content-type", "multipart/byteranges; boundary=3d6b6a416f9b5")
+            )
+            content_length = (
+                18
+                + len(ranges) * (57 + len(self.media_type) + len(str(file_size)))
+                + sum(len(str(start)) + len(str(end - 1)) for start, end in ranges)
+            ) + sum(end - start for start, end in ranges)
+            headers.append(("content-length", str(content_length)))
+
+            start_response(
+                StatusStringMapping[206], list(chain(self.raw_headers, headers)), None
+            )
+            if send_header_only:
+                yield b""
+                return
+
+            with open(self.filepath, "rb") as file:
+                for start, end in ranges:
+                    file.seek(start)
+                    yield b"--3d6b6a416f9b5\n"
+                    yield f"Content-Type: {self.media_type}\n".encode("latin-1")
+                    yield f"Content-Range: bytes {start}-{end-1}/{file_size}\n".encode(
+                        "latin-1"
+                    )
+                    yield b"\n"
+                    for here in range(start, end, 4096):
+                        yield file.read(min(4096, end - here))
+                    yield b"\n"
+                yield b"--3d6b6a416f9b5--\n"
 
 
 class SendEventResponse(BaseResponse):

@@ -2,6 +2,7 @@ import asyncio
 import sys
 import tempfile
 from inspect import cleandoc
+from pathlib import Path
 
 import httpx
 import pytest
@@ -10,6 +11,7 @@ from starlette.testclient import TestClient
 
 from baize.asgi import (
     ClientDisconnect,
+    FileResponse,
     JSONResponse,
     PlainTextResponse,
     RedirectResponse,
@@ -504,6 +506,103 @@ async def test_redirect_response():
         response = await client.get("/redirect")
         assert response.text == "hello, world"
         assert response.url == "http://testserver/"
+
+
+README = """\
+# BaíZé
+
+Powerful and exquisite WSGI/ASGI framework/toolkit.
+
+The minimize implementation of methods required in the Web framework. No redundant implementation means that you can freely customize functions without considering the conflict with baize's own implementation.
+
+Under the ASGI/WSGI protocol, the interface of the request object and the response object is almost the same, only need to add or delete `await` in the appropriate place. In addition, it should be noted that ASGI supports WebSocket but WSGI does not.
+"""
+
+
+@pytest.mark.asyncio
+async def test_file_response(tmp_path: Path):
+    filepath = tmp_path / "README.txt"
+    filepath.write_bytes(README.encode("utf8"))
+    file_response = FileResponse(str(filepath))
+    async with httpx.AsyncClient(
+        app=file_response, base_url="http://testServer/"
+    ) as client:
+        response = await client.get("/")
+        assert response.status_code == 200
+        assert response.headers["content-length"] == str(len(README.encode("utf8")))
+        assert response.text == README
+
+        response = await client.head("/")
+        assert response.status_code == 200
+        assert response.headers["content-length"] == str(len(README.encode("utf8")))
+        assert response.content == b""
+
+        response = await client.get("/", headers={"Range": "bytes=0-100"})
+        assert response.status_code == 206
+        assert response.headers["content-length"] == str(101)
+        assert response.content == README.encode("utf8")[:101]
+
+        response = await client.head("/", headers={"Range": "bytes=0-100"})
+        assert response.status_code == 206
+        assert response.headers["content-length"] == str(101)
+        assert response.content == b""
+
+        response = await client.get("/", headers={"Range": "bytes=0-100, 200-300"})
+        assert response.status_code == 206
+        assert response.headers["content-length"] == str(370)
+
+        response = await client.head("/", headers={"Range": "bytes=0-100, 200-300"})
+        assert response.status_code == 206
+        assert response.headers["content-length"] == str(370)
+        assert response.content == b""
+
+        response = await client.head(
+            "/",
+            headers={
+                "Range": "bytes=200-300",
+                "if-range": response.headers["etag"][:-1],
+            },
+        )
+        assert response.status_code == 200
+        response = await client.head(
+            "/",
+            headers={
+                "Range": "bytes=200-300",
+                "if-range": response.headers["etag"],
+            },
+        )
+        assert response.status_code == 206
+
+        with pytest.raises(HTTPException):
+            await client.head("/", headers={"Range": "bytes: 0-1000"})
+        with pytest.raises(HTTPException):
+            await client.head("/", headers={"Range": "bytes=0-1000"})
+
+
+@pytest.mark.asyncio
+async def test_file_response_with_not_file(tmp_path: Path):
+    file_response = FileResponse(str(tmp_path))
+    async with httpx.AsyncClient(
+        app=file_response, base_url="http://testServer/"
+    ) as client:
+        with pytest.raises(RuntimeError):
+            await client.get("/")
+
+
+@pytest.mark.asyncio
+async def test_file_response_with_download_name(tmp_path: Path):
+    file_response = FileResponse(str(tmp_path))
+    filepath = tmp_path / "README"
+    filepath.write_bytes(README.encode("utf8"))
+    file_response = FileResponse(str(filepath), download_name="README.txt")
+    async with httpx.AsyncClient(
+        app=file_response, base_url="http://testServer/"
+    ) as client:
+        response = await client.get("/")
+        assert (
+            response.headers["content-disposition"]
+            == "attachment; filename*=utf-8''README.txt"
+        )
 
 
 @pytest.mark.asyncio
