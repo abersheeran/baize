@@ -193,8 +193,8 @@ class BaseFileResponse(BaseResponse):
         """
         Judge whether if-range is consistent with the value of etag or last-modified
         """
-        return if_range_raw_line == self.generate_etag(
-            stat_result
+        return (
+            if_range_raw_line == self.generate_etag(stat_result)
         ) or if_range_raw_line == formatdate(stat_result.st_mtime, usegmt=True)
 
     def parse_range(
