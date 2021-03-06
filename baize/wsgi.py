@@ -23,10 +23,11 @@ from typing import (
 )
 from urllib.parse import parse_qsl, quote_plus
 
-from .common import BaseFileResponse, BaseResponse, MoreInfoFromHeaderMixin
 from .datastructures import URL, Address, FormData, Headers, QueryParams, defaultdict
 from .exceptions import HTTPException
 from .formparsers import MultiPartParser
+from .requests import MoreInfoFromHeaderMixin
+from .responses import BaseFileResponse, BaseResponse
 from .typing import Environ, JSONable, ServerSentEvent, StartResponse
 from .utils import cached_property
 
@@ -243,6 +244,27 @@ class RedirectResponse(BaseResponse):
     ) -> Iterable[bytes]:
         start_response(StatusStringMapping[self.status_code], self.raw_headers, None)
         yield b""
+
+
+class StreamResponse(BaseResponse):
+    def __init__(
+        self,
+        generator: Generator[bytes, None, None],
+        status_code: int = 200,
+        headers: Mapping[str, str] = None,
+        content_type: str = "application/octet-stream",
+    ) -> None:
+        self.generator = generator
+        super().__init__(status_code, headers)
+        self.raw_headers.append(("content-type", content_type))
+        self.raw_headers.append(("transfer-encoding", "chunked"))
+
+    def __call__(
+        self, environ: Environ, start_response: StartResponse
+    ) -> Iterable[bytes]:
+        start_response(StatusStringMapping[self.status_code], self.raw_headers, None)
+        for chunk in self.generator:
+            yield chunk
 
 
 class FileResponse(BaseFileResponse):

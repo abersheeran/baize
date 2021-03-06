@@ -3,6 +3,7 @@ import tempfile
 import time
 from inspect import cleandoc
 from pathlib import Path
+from typing import Generator
 
 import httpx
 import pytest
@@ -17,6 +18,7 @@ from baize.wsgi import (
     Request,
     Response,
     SendEventResponse,
+    StreamResponse,
 )
 
 
@@ -259,6 +261,18 @@ def test_redirect_response():
         response = client.get("/redirect")
         assert response.text == "hello, world"
         assert response.url == "http://testserver/"
+
+
+def test_stream_response():
+    def generator(num: int) -> Generator[bytes, None, None]:
+        for i in range(num):
+            yield str(i).encode("utf-8")
+
+    with httpx.Client(
+        app=StreamResponse(generator(10)), base_url="http://testServer/"
+    ) as client:
+        response = client.get("/")
+        assert response.content == b"".join(str(i).encode("utf-8") for i in range(10))
 
 
 README = """\

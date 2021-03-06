@@ -20,10 +20,11 @@ from typing import (
 )
 from urllib.parse import parse_qsl, quote_plus
 
-from .common import BaseFileResponse, BaseResponse, MoreInfoFromHeaderMixin
 from .datastructures import URL, Address, FormData, Headers, QueryParams
 from .exceptions import HTTPException
 from .formparsers import AsyncMultiPartParser
+from .requests import MoreInfoFromHeaderMixin
+from .responses import BaseFileResponse, BaseResponse
 from .typing import JSONable, Message, Receive, Scope, Send, ServerSentEvent
 from .utils import cached_property
 
@@ -296,6 +297,36 @@ class RedirectResponse(BaseResponse):
             }
         )
         await send({"type": "http.response.body", "body": b""})
+
+
+class StreamResponse(BaseResponse):
+    def __init__(
+        self,
+        generator: AsyncGenerator[bytes, None],
+        status_code: int = 200,
+        headers: Mapping[str, str] = None,
+        content_type: str = "application/octet-stream",
+    ) -> None:
+        self.generator = generator
+        super().__init__(status_code, headers)
+        self.raw_headers.append(("content-type", content_type))
+        self.raw_headers.append(("transfer-encoding", "chunked"))
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        await send(
+            {
+                "type": "http.response.start",
+                "status": self.status_code,
+                "headers": [
+                    (k.encode("latin-1"), v.encode("latin-1"))
+                    for k, v in self.raw_headers
+                ],
+            }
+        )
+        async for chunk in self.generator:
+            await send({"type": "http.response.body", "body": chunk, "more_body": True})
+
+        await send({"type": "http.response.body", "body": b"", "more_body": False})
 
 
 class FileResponse(BaseFileResponse):

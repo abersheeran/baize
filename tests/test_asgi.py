@@ -3,6 +3,7 @@ import sys
 import tempfile
 from inspect import cleandoc
 from pathlib import Path
+from typing import AsyncGenerator
 
 import httpx
 import pytest
@@ -18,6 +19,7 @@ from baize.asgi import (
     Request,
     Response,
     SendEventResponse,
+    StreamResponse,
     WebSocket,
     WebSocketDisconnect,
 )
@@ -506,6 +508,19 @@ async def test_redirect_response():
         response = await client.get("/redirect")
         assert response.text == "hello, world"
         assert response.url == "http://testserver/"
+
+
+@pytest.mark.asyncio
+async def test_stream_response():
+    async def generator(num: int) -> AsyncGenerator[bytes, None]:
+        for i in range(num):
+            yield str(i).encode("utf-8")
+
+    async with httpx.AsyncClient(
+        app=StreamResponse(generator(10)), base_url="http://testServer/"
+    ) as client:
+        response = await client.get("/")
+        assert response.content == b"".join(str(i).encode("utf-8") for i in range(10))
 
 
 README = """\
