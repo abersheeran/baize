@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from baize.common import BaseFileResponse
 from baize.exceptions import HTTPException
+from baize.responses import BaseFileResponse
 
 
 def test_base_file_response_parse_range(tmp_path: Path):
