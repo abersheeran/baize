@@ -32,7 +32,6 @@ from .routing import BaseHosts, BaseRouter
 from .typing import Environ, JSONable, ServerSentEvent, StartResponse, WSGIApp
 from .utils import cached_property
 
-
 StatusStringMapping = defaultdict(
     lambda status: f"{status} Custom status code",
     {int(status): f"{status} {status.phrase}" for status in HTTPStatus},
