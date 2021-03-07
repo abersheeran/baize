@@ -25,7 +25,8 @@ from .exceptions import HTTPException
 from .formparsers import AsyncMultiPartParser
 from .requests import MoreInfoFromHeaderMixin
 from .responses import BaseFileResponse, BaseResponse
-from .typing import JSONable, Message, Receive, Scope, Send, ServerSentEvent
+from .routing import BaseHosts, BaseRouter
+from .typing import ASGIApp, JSONable, Message, Receive, Scope, Send, ServerSentEvent
 from .utils import cached_property
 
 __all__ = [
@@ -697,3 +698,31 @@ class WebSocket(HTTPConnection):
     async def close(self, code: int = 1000) -> None:
         if self.application_state != WebSocketState.DISCONNECTED:
             await self.send({"type": "websocket.close", "code": code})
+
+
+class Router(BaseRouter[ASGIApp]):
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        path = scope["path"]
+        for route in self._route_array:
+            match_up, path_params = route.matches(path)
+            if not match_up:
+                continue
+            scope["path_params"] = path_params
+            scope["router"] = self
+            return await route.endpoint(scope, receive, send)
+
+        return await Response(b"", 404)(scope, receive, send)
+
+
+class Hosts(BaseHosts[ASGIApp]):
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        host = ""
+        for k, v in scope["headers"]:
+            if k == b"host":
+                host = v.decode("latin-1")
+        for host_pattern, endpoint in self._host_array:
+            if host_pattern.fullmatch(host) is None:
+                continue
+            return await endpoint(scope, receive, send)
+
+        return await Response(b"Invalid host", 404)(scope, receive, send)

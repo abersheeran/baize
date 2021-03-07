@@ -3,20 +3,23 @@ import tempfile
 import time
 from inspect import cleandoc
 from pathlib import Path
-from typing import Generator
+from typing import Generator, Iterable
 
 import httpx
 import pytest
 
 from baize.datastructures import Address, UploadFile
 from baize.exceptions import HTTPException
+from baize.typing import Environ, StartResponse
 from baize.wsgi import (
     FileResponse,
+    Hosts,
     JSONResponse,
     PlainTextResponse,
     RedirectResponse,
     Request,
     Response,
+    Router,
     SendEventResponse,
     StreamResponse,
 )
@@ -411,3 +414,46 @@ def test_send_event_response():
             for line in resp.iter_lines():
                 events += line
             assert events.replace(": ping\n\n", "") == expected_events
+
+
+# ######################################################################################
+# #################################### Route tests #####################################
+# ######################################################################################
+
+
+def test_router():
+    def path(environ: Environ, start_response: StartResponse) -> Iterable[bytes]:
+        return JSONResponse(Request(environ).path_params)(environ, start_response)
+
+    def redirect(environ: Environ, start_response: StartResponse) -> Iterable[bytes]:
+        return RedirectResponse(
+            environ["router"].routes["path"].build_url({"path": "cat"})
+        )(environ, start_response)
+
+    with httpx.Client(
+        app=Router(
+            ("/", Response("homepage")),
+            ("/redirect", redirect),
+            ("/{path}", path, "path"),
+        ),
+        base_url="http://testServer/",
+    ) as client:
+        assert client.get("/").text == "homepage"
+        assert client.get("/baize").json() == {"path": "baize"}
+        assert client.get("/baize/").status_code == 404
+        assert (
+            client.get("/redirect", allow_redirects=False).headers["location"] == "/cat"
+        )
+
+
+def test_hosts():
+    with httpx.Client(
+        app=Hosts(
+            ("testServer", Response("testServer")),
+            (".*", Response("default host")),
+        ),
+        base_url="http://testServer/",
+    ) as client:
+        assert client.get("/", headers={"host": "testServer"}).text == "testServer"
+        assert client.get("/", headers={"host": "hhhhhhh"}).text == "default host"
+        assert client.get("/", headers={"host": "qwe\ndsf"}).text == "Invalid host"

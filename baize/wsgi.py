@@ -28,7 +28,8 @@ from .exceptions import HTTPException
 from .formparsers import MultiPartParser
 from .requests import MoreInfoFromHeaderMixin
 from .responses import BaseFileResponse, BaseResponse
-from .typing import Environ, JSONable, ServerSentEvent, StartResponse
+from .routing import BaseHosts, BaseRouter
+from .typing import Environ, JSONable, ServerSentEvent, StartResponse, WSGIApp
 from .utils import cached_property
 
 __all__ = [
@@ -459,3 +460,32 @@ class SendEventResponse(BaseResponse):
         while self.has_more_data:
             time.sleep(self.ping_interval)
             self.queue.put(b": ping\n\n")
+
+
+class Router(BaseRouter[WSGIApp]):
+    def __call__(
+        self, environ: Environ, start_response: StartResponse
+    ) -> Iterable[bytes]:
+        path = environ.get("PATH_INFO", "")
+        for route in self._route_array:
+            match_up, path_params = route.matches(path)
+            if not match_up:
+                continue
+            environ["PATH_PARAMS"] = path_params
+            environ["router"] = self
+            return route.endpoint(environ, start_response)
+
+        return Response(b"", 404)(environ, start_response)
+
+
+class Hosts(BaseHosts[WSGIApp]):
+    def __call__(
+        self, environ: Environ, start_response: StartResponse
+    ) -> Iterable[bytes]:
+        host = environ.get("HTTP_HOST", "")
+        for host_pattern, endpoint in self._host_array:
+            if host_pattern.fullmatch(host) is None:
+                continue
+            return endpoint(environ, start_response)
+
+        return Response(b"Invalid host", 404)(environ, start_response)

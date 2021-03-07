@@ -13,11 +13,13 @@ from starlette.testclient import TestClient
 from baize.asgi import (
     ClientDisconnect,
     FileResponse,
+    Hosts,
     JSONResponse,
     PlainTextResponse,
     RedirectResponse,
     Request,
     Response,
+    Router,
     SendEventResponse,
     StreamResponse,
     WebSocket,
@@ -25,6 +27,7 @@ from baize.asgi import (
 )
 from baize.datastructures import UploadFile
 from baize.exceptions import HTTPException
+from baize.typing import Receive, Scope, Send
 
 starlette.testclient.WebSocketDisconnect = WebSocketDisconnect  # type: ignore
 
@@ -981,3 +984,54 @@ def test_websocket_scope_interface():
     assert websocket["type"] == "websocket"
     assert dict(websocket) == {"type": "websocket", "path": "/abc/", "headers": []}
     assert len(websocket) == 3
+
+
+# ######################################################################################
+# #################################### Route tests #####################################
+# ######################################################################################
+
+
+@pytest.mark.asyncio
+async def test_router():
+    async def path(scope: Scope, receive: Receive, send: Send) -> None:
+        await JSONResponse(Request(scope).path_params)(scope, receive, send)
+
+    async def redirect(scope: Scope, receive: Receive, send: Send) -> None:
+        await RedirectResponse(
+            scope["router"].routes["path"].build_url({"path": "cat"})
+        )(scope, receive, send)
+
+    async with httpx.AsyncClient(
+        app=Router(
+            ("/", Response("homepage")),
+            ("/redirect", redirect),
+            ("/{path}", path, "path"),
+        ),
+        base_url="http://testServer/",
+    ) as client:
+        assert (await client.get("/")).text == "homepage"
+        assert (await client.get("/baize")).json() == {"path": "baize"}
+        assert (await client.get("/baize/")).status_code == 404
+        assert (await (client.get("/redirect", allow_redirects=False))).headers[
+            "location"
+        ] == "/cat"
+
+
+@pytest.mark.asyncio
+async def test_hosts():
+    async with httpx.AsyncClient(
+        app=Hosts(
+            ("testServer", Response("testServer")),
+            (".*", Response("default host")),
+        ),
+        base_url="http://testServer/",
+    ) as client:
+        assert (
+            await client.get("/", headers={"host": "testServer"})
+        ).text == "testServer"
+        assert (
+            await client.get("/", headers={"host": "hhhhhhh"})
+        ).text == "default host"
+        assert (
+            await client.get("/", headers={"host": "qwe\ndsf"})
+        ).text == "Invalid host"
