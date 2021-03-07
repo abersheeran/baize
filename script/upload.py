@@ -1,6 +1,7 @@
 import os
+from pathlib import Path
 
-here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+here = Path(__file__).absolute().parent.parent
 
 package_name = "baize"
 
@@ -10,15 +11,12 @@ def get_version(package: str = package_name) -> str:
     Return version.
     """
     _globals: dict = {}
-    with open(os.path.join(here, package, "__version__.py")) as f:
-        exec(f.read(), _globals)
-
+    exec((here / package / "__version__.py").read_text(encoding="utf8"), _globals)
     return _globals["__version__"]
 
 
 os.chdir(here)
 os.system(f"poetry version {get_version()}")
-os.system("poetry publish --build")
 os.system(f"git add {package_name}/__version__.py pyproject.toml")
 os.system(f'git commit -m "v{get_version()}"')
 os.system("git push")
