@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import uuid
+from datetime import date
 from decimal import Decimal
 from typing import Any, Dict, Generic, Pattern, Sequence, Tuple, TypeVar, Union
 
@@ -71,6 +72,16 @@ class UUIDConvertor(Convertor):
         return str(value)
 
 
+class DateConvertor(Convertor):
+    regex = "[0-9]{4}-[0-9]{2}-[0-9]{2}"
+
+    def to_python(self, value: str) -> date:
+        return date.fromisoformat(value)
+
+    def to_string(self, value: date) -> str:
+        return value.isoformat()
+
+
 class PathConvertor(Convertor):
     regex = ".*"
 
@@ -86,6 +97,7 @@ CONVERTOR_TYPES = {
     "int": IntegerConvertor(),
     "decimal": DecimalConvertor(),
     "uuid": UUIDConvertor(),
+    "date": DateConvertor(),
     "path": PathConvertor(),
 }
 
