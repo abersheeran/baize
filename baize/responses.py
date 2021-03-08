@@ -72,6 +72,7 @@ class BaseFileResponse(BaseResponse):
         headers: Mapping[str, str] = None,
         media_type: str = None,
         download_name: str = None,
+        stat_result: os.stat_result = None,
     ) -> None:
         self.filepath = filepath
         self.media_type = (
@@ -80,15 +81,10 @@ class BaseFileResponse(BaseResponse):
             or "application/octet-stream"
         )
         self.download_name = download_name
+        self.stat_result = stat_result or os.stat(self.filepath)
+        if not stat.S_ISREG(self.stat_result.st_mode):
+            raise FileNotFoundError("Filepath exists, but is not a valid file.")
         super().__init__(status_code=200, headers=headers)
-
-    def stat_file(self) -> os.stat_result:
-        stat_result = os.stat(self.filepath)
-        if not stat.S_ISREG(stat_result.st_mode):
-            raise RuntimeError(
-                f"The filepath is not a valid file path: {self.filepath}"
-            )
-        return stat_result
 
     def generate_required_header(
         self, stat_result: os.stat_result

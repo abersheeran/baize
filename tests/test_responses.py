@@ -7,7 +7,8 @@ from baize.responses import BaseFileResponse
 
 
 def test_base_file_response_parse_range(tmp_path: Path):
-    response = BaseFileResponse(str(tmp_path))
+    (tmp_path / "file").touch()
+    response = BaseFileResponse(str(tmp_path / "file"))
 
     assert response.parse_range("bytes=0-10", 4623) == [(0, 11)]
     assert response.parse_range("bytes=0-10, 11-20", 4623) == [(0, 21)]

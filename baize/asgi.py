@@ -473,7 +473,7 @@ class FileResponse(BaseFileResponse):
         send_header_only = scope["method"] == "HEAD"
 
         loop = asyncio.get_running_loop()
-        stat_result = await loop.run_in_executor(None, self.stat_file)
+        stat_result = self.stat_result
         file_size = stat_result.st_size
         headers = self.generate_required_header(stat_result)
 

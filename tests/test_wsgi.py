@@ -347,14 +347,11 @@ def test_file_response(tmp_path: Path):
 
 
 def test_file_response_with_not_file(tmp_path: Path):
-    file_response = FileResponse(str(tmp_path))
-    with httpx.Client(app=file_response, base_url="http://testServer/") as client:
-        with pytest.raises(RuntimeError):
-            client.get("/")
+    with pytest.raises(FileNotFoundError):
+        FileResponse(str(tmp_path))
 
 
 def test_file_response_with_download_name(tmp_path: Path):
-    file_response = FileResponse(str(tmp_path))
     filepath = tmp_path / "README"
     filepath.write_bytes(README.encode("utf8"))
     file_response = FileResponse(str(filepath), download_name="README.txt")

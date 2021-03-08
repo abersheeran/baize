@@ -348,7 +348,7 @@ class FileResponse(BaseFileResponse):
     ) -> Iterable[bytes]:
         send_header_only = environ["REQUEST_METHOD"] == "HEAD"
 
-        stat_result = self.stat_file()
+        stat_result = self.stat_result
         file_size = stat_result.st_size
         headers = self.generate_required_header(stat_result)
 
