@@ -225,7 +225,7 @@ class Response(SmallResponse[Union[bytes, str]]):
         super().__init__(content, status_code, headers)
 
     def render(self, content: Union[bytes, str]) -> bytes:
-        return content if isinstance(content, bytes) else content.encode(self.charset)  # type: ignore
+        return content if isinstance(content, bytes) else content.encode(self.charset)
 
 
 class PlainTextResponse(Response):
