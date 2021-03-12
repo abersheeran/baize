@@ -1,3 +1,4 @@
+import functools
 import json
 import time
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor
@@ -451,6 +452,16 @@ class SendEventResponse(Response):
         while self.has_more_data:
             time.sleep(self.ping_interval)
             self.queue.put(b": ping\n\n")
+
+
+def request_response(view: Callable[[Request], Response]) -> WSGIApp:
+    @functools.wraps(view)
+    def wsgi(environ: Environ, start_response: StartResponse) -> Iterable[bytes]:
+        request = Request(environ)
+        response = view(request)
+        return response(environ, start_response)
+
+    return wsgi
 
 
 class Router(BaseRouter[WSGIApp]):

@@ -23,6 +23,7 @@ from baize.wsgi import (
     Router,
     SendEventResponse,
     StreamResponse,
+    request_response,
 )
 
 
@@ -433,6 +434,16 @@ def test_responses_inherit(response_class):
 # ######################################################################################
 # #################################### Route tests #####################################
 # ######################################################################################
+
+
+def test_request_response():
+    @request_response
+    def view(request: Request) -> Response:
+        return PlainTextResponse(request.body)
+
+    with httpx.Client(app=view, base_url="http://testServer/") as client:
+        assert client.get("/").text == ""
+        assert client.post("/", content="hello").text == "hello"
 
 
 def test_router():

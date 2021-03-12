@@ -25,6 +25,7 @@ from baize.asgi import (
     StreamResponse,
     WebSocket,
     WebSocketDisconnect,
+    request_response,
 )
 from baize.datastructures import UploadFile
 from baize.exceptions import HTTPException
@@ -1001,6 +1002,17 @@ def test_websocket_scope_interface():
 # ######################################################################################
 # #################################### Route tests #####################################
 # ######################################################################################
+
+
+@pytest.mark.asyncio
+async def test_request_response():
+    @request_response
+    async def view(request: Request) -> Response:
+        return PlainTextResponse(await request.body)
+
+    async with httpx.AsyncClient(app=view, base_url="http://testServer/") as client:
+        assert (await client.get("/")).text == ""
+        assert (await client.post("/", content="hello")).text == "hello"
 
 
 @pytest.mark.asyncio

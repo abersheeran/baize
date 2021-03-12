@@ -1,4 +1,5 @@
 import asyncio
+import functools
 import json
 from enum import Enum
 from itertools import chain
@@ -6,6 +7,7 @@ from typing import (
     Any,
     AsyncGenerator,
     AsyncIterator,
+    Awaitable,
     Callable,
     Dict,
     Generic,
@@ -688,6 +690,16 @@ class WebSocket(HTTPConnection):
     async def close(self, code: int = 1000) -> None:
         if self.application_state != WebSocketState.DISCONNECTED:
             await self.send({"type": "websocket.close", "code": code})
+
+
+def request_response(view: Callable[[Request], Awaitable[Response]]) -> ASGIApp:
+    @functools.wraps(view)
+    async def asgi(scope: Scope, receive: Receive, send: Send) -> None:
+        request = Request(scope, receive, send)
+        resposne = await view(request)
+        return await resposne(scope, receive, send)
+
+    return asgi
 
 
 class Router(BaseRouter[ASGIApp]):
