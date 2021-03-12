@@ -170,10 +170,25 @@ class Request(HTTPConnection):
         return self._is_disconnected
 
 
+class Response(BaseResponse):
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        await send(
+            {
+                "type": "http.response.start",
+                "status": self.status_code,
+                "headers": [
+                    (k.encode("latin-1"), v.encode("latin-1"))
+                    for k, v in self.raw_headers
+                ],
+            }
+        )
+        await send({"type": "http.response.body", "body": b""})
+
+
 ResponseContent = TypeVar("ResponseContent")
 
 
-class SmallResponse(Generic[ResponseContent], BaseResponse):
+class SmallResponse(Generic[ResponseContent], Response):
     media_type: str = ""
     charset = "utf-8"
 
@@ -213,7 +228,9 @@ class SmallResponse(Generic[ResponseContent], BaseResponse):
         await send({"type": "http.response.body", "body": self.body})
 
 
-class Response(SmallResponse[Union[bytes, str]]):
+class PlainTextResponse(SmallResponse[Union[bytes, str]]):
+    media_type = "text/plain"
+
     def __init__(
         self,
         content: Union[bytes, str],
@@ -226,10 +243,6 @@ class Response(SmallResponse[Union[bytes, str]]):
 
     def render(self, content: Union[bytes, str]) -> bytes:
         return content if isinstance(content, bytes) else content.encode(self.charset)
-
-
-class PlainTextResponse(Response):
-    media_type = "text/plain"
 
 
 class HTMLResponse(PlainTextResponse):
@@ -267,7 +280,7 @@ class JSONResponse(SmallResponse[JSONable]):
         return json.dumps(content, **self.json_kwargs).encode("utf-8")  # type: ignore
 
 
-class RedirectResponse(BaseResponse):
+class RedirectResponse(Response):
     def __init__(
         self, url: Union[str, URL], status_code: int = 307, headers: dict = None
     ) -> None:
@@ -276,21 +289,8 @@ class RedirectResponse(BaseResponse):
             ("location", quote_plus(str(url), safe=":/%#?&=@[]!$&'()*+,;"))
         )
 
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        await send(
-            {
-                "type": "http.response.start",
-                "status": self.status_code,
-                "headers": [
-                    (k.encode("latin-1"), v.encode("latin-1"))
-                    for k, v in self.raw_headers
-                ],
-            }
-        )
-        await send({"type": "http.response.body", "body": b""})
 
-
-class StreamResponse(BaseResponse):
+class StreamResponse(Response):
     def __init__(
         self,
         generator: AsyncGenerator[bytes, None],
@@ -320,7 +320,7 @@ class StreamResponse(BaseResponse):
         await send({"type": "http.response.body", "body": b"", "more_body": False})
 
 
-class FileResponse(BaseFileResponse):
+class FileResponse(BaseFileResponse, Response):
     async def handle_all(
         self,
         send_header_only: bool,
@@ -504,7 +504,7 @@ class FileResponse(BaseFileResponse):
             )
 
 
-class SendEventResponse(BaseResponse):
+class SendEventResponse(Response):
     """
     Server-sent events
     """
@@ -701,7 +701,7 @@ class Router(BaseRouter[ASGIApp]):
             scope["router"] = self
             return await route.endpoint(scope, receive, send)
 
-        return await Response(b"", 404)(scope, receive, send)
+        return await PlainTextResponse(b"", 404)(scope, receive, send)
 
 
 class Hosts(BaseHosts[ASGIApp]):
@@ -715,4 +715,4 @@ class Hosts(BaseHosts[ASGIApp]):
                 continue
             return await endpoint(scope, receive, send)
 
-        return await Response(b"Invalid host", 404)(scope, receive, send)
+        return await PlainTextResponse(b"Invalid host", 404)(scope, receive, send)

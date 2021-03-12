@@ -14,6 +14,7 @@ from baize.asgi import (
     ClientDisconnect,
     FileResponse,
     Hosts,
+    HTMLResponse,
     JSONResponse,
     PlainTextResponse,
     RedirectResponse,
@@ -462,7 +463,7 @@ async def test_response_headers():
 
 @pytest.mark.asyncio
 async def test_set_cookie():
-    response = Response("Hello, world!", media_type="text/plain")
+    response = PlainTextResponse("Hello, world!", media_type="text/plain")
     response.set_cookie(
         "mycookie",
         "myvalue",
@@ -484,7 +485,7 @@ async def test_set_cookie():
 async def test_delete_cookie():
     async def app(scope, receive, send):
         request = Request(scope, receive)
-        response = Response("Hello, world!", media_type="text/plain")
+        response = PlainTextResponse("Hello, world!", media_type="text/plain")
         if request.cookies.get("mycookie"):
             response.delete_cookie("mycookie")
         else:
@@ -667,6 +668,22 @@ async def test_send_event_response():
             async for line in resp.aiter_lines():
                 events += line
             assert events.replace(": ping\n\n", "") == expected_events
+
+
+@pytest.mark.parametrize(
+    "response_class",
+    [
+        PlainTextResponse,
+        HTMLResponse,
+        JSONResponse,
+        RedirectResponse,
+        StreamResponse,
+        FileResponse,
+        SendEventResponse,
+    ],
+)
+def test_responses_inherit(response_class):
+    assert issubclass(response_class, Response)
 
 
 # ######################################################################################
@@ -998,7 +1015,7 @@ async def test_router():
 
     async with httpx.AsyncClient(
         app=Router(
-            ("/", Response("homepage")),
+            ("/", PlainTextResponse("homepage")),
             ("/redirect", redirect),
             ("/{path}", path, "path"),
         ),
@@ -1016,8 +1033,8 @@ async def test_router():
 async def test_hosts():
     async with httpx.AsyncClient(
         app=Hosts(
-            ("testServer", Response("testServer")),
-            (".*", Response("default host")),
+            ("testServer", PlainTextResponse("testServer")),
+            (".*", PlainTextResponse("default host")),
         ),
         base_url="http://testServer/",
     ) as client:

@@ -14,6 +14,7 @@ from baize.typing import Environ, StartResponse
 from baize.wsgi import (
     FileResponse,
     Hosts,
+    HTMLResponse,
     JSONResponse,
     PlainTextResponse,
     RedirectResponse,
@@ -39,7 +40,7 @@ def test_request_environ_interface():
 def test_request_url():
     def app(environ, start_response):
         request = Request(environ)
-        response = Response(request.method + " " + str(request.url))
+        response = PlainTextResponse(request.method + " " + str(request.url))
         return response(environ, start_response)
 
     with httpx.Client(app=app, base_url="http://testServer/") as client:
@@ -247,7 +248,7 @@ def test_request_accpet():
 
 
 def test_unknown_status():
-    with httpx.Client(app=Response(b"", 600), base_url="http://testServer/") as client:
+    with httpx.Client(app=Response(600), base_url="http://testServer/") as client:
         response = client.get("/")
         assert response.status_code == 600
 
@@ -413,6 +414,22 @@ def test_send_event_response():
             assert events.replace(": ping\n\n", "") == expected_events
 
 
+@pytest.mark.parametrize(
+    "response_class",
+    [
+        PlainTextResponse,
+        HTMLResponse,
+        JSONResponse,
+        RedirectResponse,
+        StreamResponse,
+        FileResponse,
+        SendEventResponse,
+    ],
+)
+def test_responses_inherit(response_class):
+    assert issubclass(response_class, Response)
+
+
 # ######################################################################################
 # #################################### Route tests #####################################
 # ######################################################################################
@@ -429,7 +446,7 @@ def test_router():
 
     with httpx.Client(
         app=Router(
-            ("/", Response("homepage")),
+            ("/", PlainTextResponse("homepage")),
             ("/redirect", redirect),
             ("/{path}", path, "path"),
         ),
@@ -446,8 +463,8 @@ def test_router():
 def test_hosts():
     with httpx.Client(
         app=Hosts(
-            ("testServer", Response("testServer")),
-            (".*", Response("default host")),
+            ("testServer", PlainTextResponse("testServer")),
+            (".*", PlainTextResponse("default host")),
         ),
         base_url="http://testServer/",
     ) as client:
