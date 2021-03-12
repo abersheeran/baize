@@ -195,7 +195,10 @@ class SmallResponse(Generic[ResponseContent], Response):
     charset = "utf-8"
 
     def __init__(
-        self, content: ResponseContent, status_code: int = 200, headers: dict = None
+        self,
+        content: ResponseContent,
+        status_code: int = 200,
+        headers: Mapping[str, str] = None,
     ) -> None:
         super().__init__(status_code, headers)
         self.body = self.render(content)
@@ -237,7 +240,7 @@ class PlainTextResponse(SmallResponse[Union[bytes, str]]):
         self,
         content: Union[bytes, str],
         status_code: int = 200,
-        headers: dict = None,
+        headers: Mapping[str, str] = None,
         media_type: str = "",
     ) -> None:
         self.media_type = media_type or self.media_type
@@ -258,7 +261,7 @@ class JSONResponse(SmallResponse[JSONable]):
         self,
         content: JSONable,
         status_code: int = 200,
-        headers: dict = None,
+        headers: Mapping[str, str] = None,
         *,
         ensure_ascii: bool = False,
         allow_nan: bool = False,
