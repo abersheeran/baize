@@ -374,6 +374,7 @@ class FileResponse(BaseFileResponse, Response):
         end: int,
     ) -> None:
         headers.append(("content-range", f"bytes {start}-{end-1}/{file_size}"))
+        headers.append(("content-type", str(self.media_type)))
         headers.append(("content-length", str(end - start)))
         await send(
             {
@@ -496,7 +497,22 @@ class FileResponse(BaseFileResponse, Response):
                 send_header_only, file_size, headers, loop, send
             )
 
-        ranges = self.parse_range(http_range, file_size)
+        try:
+            ranges = self.parse_range(http_range, file_size)
+        except HTTPException as exception:
+            await send(
+                {
+                    "type": "http.response.start",
+                    "status": exception.status_code,
+                    "headers": [
+                        (k.encode("latin-1"), v.encode("latin-1"))
+                        for k, v in (exception.headers or {}).items()
+                    ],
+                }
+            )
+            return await send(
+                {"type": "http.response.body", "body": exception.content or b""}
+            )
 
         if len(ranges) == 1:
             start, end = ranges[0]

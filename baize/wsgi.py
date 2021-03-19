@@ -368,7 +368,16 @@ class FileResponse(BaseFileResponse, Response):
             )
             return
 
-        ranges = self.parse_range(environ["HTTP_RANGE"], file_size)
+        try:
+            ranges = self.parse_range(environ["HTTP_RANGE"], file_size)
+        except HTTPException as exception:
+            start_response(
+                StatusStringMapping[exception.status_code],
+                [(k, v) for k, v in (exception.headers or {}).items()],
+                None,
+            )
+            yield b""
+            return
 
         if len(ranges) == 1:
             start, end = ranges[0]

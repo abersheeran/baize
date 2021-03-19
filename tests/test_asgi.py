@@ -593,10 +593,14 @@ async def test_file_response(tmp_path: Path):
         )
         assert response.status_code == 206
 
-        with pytest.raises(HTTPException):
-            await client.head("/", headers={"Range": "bytes: 0-1000"})
-        with pytest.raises(HTTPException):
-            await client.head("/", headers={"Range": "bytes=0-1000"})
+        response = await client.head("/", headers={"Range": "bytes: 0-1000"})
+        assert response.status_code == 400
+
+        response = await client.head(
+            "/", headers={"Range": f"bytes=0-{len(README.encode('utf8'))+1}"}
+        )
+        assert response.status_code == 416
+        assert response.headers["Content-Range"] == f"*/{len(README.encode('utf8'))}"
 
 
 @pytest.mark.asyncio
