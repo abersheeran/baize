@@ -1,10 +1,43 @@
 import re
+import sys
 import uuid
 from datetime import date
 from decimal import Decimal
 from typing import Any, Dict, Generic, Pattern, Sequence, Tuple, TypeVar, Union
 
 from .typing import ASGIApp, WSGIApp
+
+if sys.version_info[:2] < (3, 7):  # pragma: no cover
+    # Copied from the CPython3.7 standard library.
+
+    def _parse_isoformat_date(dtstr):
+        # It is assumed that this function will only be called with a
+        # string of length exactly 10, and (though this is not used) ASCII-only
+        year = int(dtstr[0:4])
+        if dtstr[4] != "-":
+            raise ValueError("Invalid date separator: %s" % dtstr[4])
+
+        month = int(dtstr[5:7])
+
+        if dtstr[7] != "-":
+            raise ValueError("Invalid date separator")
+
+        day = int(dtstr[8:10])
+
+        return [year, month, day]
+
+    def fromisoformat(cls, date_string):
+        """Construct a date from the output of date.isoformat()."""
+        if not isinstance(date_string, str):
+            raise TypeError("fromisoformat: argument must be str")
+
+        try:
+            assert len(date_string) == 10
+            return cls(*_parse_isoformat_date(date_string))
+        except Exception:
+            raise ValueError(f"Invalid isoformat string: {date_string!r}")
+
+    date.fromisoformat = classmethod(fromisoformat)
 
 
 class Convertor:
