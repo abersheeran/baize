@@ -37,7 +37,7 @@ if sys.version_info[:2] < (3, 7):  # pragma: no cover
         except Exception:
             raise ValueError(f"Invalid isoformat string: {date_string!r}")
 
-    date.fromisoformat = classmethod(fromisoformat)
+    date.fromisoformat = classmethod(fromisoformat)  # type: ignore
 
 
 class Convertor:

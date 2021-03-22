@@ -46,7 +46,7 @@ if sys.version_info[:2] < (3, 7):  # pragma: no cover
             raise RuntimeError("no running event loop")
         return loop
 
-    asyncio.get_running_loop = get_running_loop
+    asyncio.get_running_loop = get_running_loop  # type: ignore
 
 
 class ClientDisconnect(Exception):
