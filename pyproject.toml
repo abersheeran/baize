@@ -18,7 +18,7 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.6"
 
 python-multipart = {version = "^0.0.5", optional = true}
 typing-extensions = {version = "^3.7.4", python = "<3.8"}
