@@ -495,7 +495,7 @@ class FileResponse(BaseFileResponse, Response):
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         send_header_only = scope["method"] == "HEAD"
 
-        loop = asyncio.get_running_loop()
+        loop = asyncio.get_running_loop()  # type: ignore
         stat_result = self.stat_result
         file_size = stat_result.st_size
         headers = self.generate_required_header(stat_result)

@@ -107,7 +107,7 @@ class DateConvertor(Convertor):
     regex = "[0-9]{4}-[0-9]{2}-[0-9]{2}"
 
     def to_python(self, value: str) -> date:
-        return date.fromisoformat(value)
+        return date.fromisoformat(value)  # type: ignore
 
     def to_string(self, value: date) -> str:
         return value.isoformat()
