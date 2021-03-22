@@ -26,18 +26,23 @@ if sys.version_info[:2] < (3, 7):  # pragma: no cover
 
         return [year, month, day]
 
-    def fromisoformat(cls, date_string):
+    def date_fromisoformat(date_string):
         """Construct a date from the output of date.isoformat()."""
         if not isinstance(date_string, str):
             raise TypeError("fromisoformat: argument must be str")
 
         try:
             assert len(date_string) == 10
-            return cls(*_parse_isoformat_date(date_string))
+            return date(*_parse_isoformat_date(date_string))
         except Exception:
             raise ValueError(f"Invalid isoformat string: {date_string!r}")
 
-    date.fromisoformat = classmethod(fromisoformat)  # type: ignore
+
+else:
+
+    def date_fromisoformat(date_string):
+        """Construct a date from the output of date.isoformat()."""
+        return date.fromisoformat(date_string)
 
 
 class Convertor:
@@ -107,7 +112,7 @@ class DateConvertor(Convertor):
     regex = "[0-9]{4}-[0-9]{2}-[0-9]{2}"
 
     def to_python(self, value: str) -> date:
-        return date.fromisoformat(value)  # type: ignore
+        return date_fromisoformat(value)
 
     def to_string(self, value: date) -> str:
         return value.isoformat()
