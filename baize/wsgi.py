@@ -442,8 +442,8 @@ class SendEventResponse(Response):
             while self.has_more_data or not self.queue.empty():
                 yield self.queue.get()
         finally:
-            if not future.done():
-                future.cancel()
+            self.has_more_data = False
+            future.cancel()
 
     def send_event(self) -> None:
         for chunk in self.generator:
