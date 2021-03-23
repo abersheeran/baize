@@ -447,10 +447,12 @@ class SendEventResponse(Response):
     def send_event(self) -> None:
         for chunk in self.generator:
             if "data" in chunk:
-                data = (
+                data: Iterable[bytes] = (
                     f"data: {_}".encode(self.charset)
                     for _ in chunk.pop("data").splitlines()
                 )
+            else:
+                data = ()
             event = b"\n".join(
                 chain(
                     (f"{k}: {v}".encode(self.charset) for k, v in chunk.items()),

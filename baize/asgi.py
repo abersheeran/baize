@@ -12,6 +12,7 @@ from typing import (
     Awaitable,
     Callable,
     Dict,
+    Iterable,
     Iterator,
     Mapping,
     MutableSequence,
@@ -594,10 +595,12 @@ class SendEventResponse(Response):
     async def send_event(self, send: Send) -> None:
         async for chunk in self.generator:
             if "data" in chunk:
-                data = (
+                data: Iterable[bytes] = (
                     f"data: {_}".encode(self.charset)
                     for _ in chunk.pop("data").splitlines()
                 )
+            else:
+                data = ()
             event = b"\n".join(
                 chain(
                     (f"{k}: {v}".encode(self.charset) for k, v in chunk.items()),
