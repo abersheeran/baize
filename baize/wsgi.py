@@ -1,3 +1,4 @@
+import abc
 import functools
 import json
 import time
@@ -11,7 +12,6 @@ from typing import (
     Callable,
     Dict,
     Generator,
-    Generic,
     Iterable,
     Iterator,
     Mapping,
@@ -19,7 +19,6 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
-    TypeVar,
     Union,
 )
 from urllib.parse import parse_qsl, quote_plus
@@ -137,31 +136,30 @@ class Response(BaseResponse):
     def __call__(
         self, environ: Environ, start_response: StartResponse
     ) -> Iterable[bytes]:
+        if not any(k == "content-length" for k, _ in self.raw_headers):
+            self.raw_headers.append(("content-length", "0"))
         start_response(StatusStringMapping[self.status_code], self.raw_headers, None)
         return (b"",)
 
 
-ResponseContent = TypeVar("ResponseContent")
-
-
-class SmallResponse(Generic[ResponseContent], Response):
+class SmallResponse(Response):
     media_type: str = ""
     charset: str = "utf-8"
 
     def __init__(
         self,
-        content: ResponseContent,
+        content: Any,
         status_code: int = 200,
         headers: Mapping[str, str] = None,
     ) -> None:
         super().__init__(status_code, headers)
-        self.body = self.render(content)
-        self.generate_more_headers()
+        self.content = content
 
-    def render(self, content: ResponseContent) -> bytes:
+    @abc.abstractmethod
+    def render(self, content: Any) -> bytes:
         raise NotImplementedError
 
-    def generate_more_headers(self) -> None:
+    def generate_content_headers(self) -> None:
         body = getattr(self, "body", b"")
         if body and not any(k == "content-length" for k, _ in self.raw_headers):
             content_length = str(len(body))
@@ -176,11 +174,13 @@ class SmallResponse(Generic[ResponseContent], Response):
     def __call__(
         self, environ: Environ, start_response: StartResponse
     ) -> Iterable[bytes]:
+        self.body = self.render(self.content)
+        self.generate_content_headers()
         start_response(StatusStringMapping[self.status_code], self.raw_headers, None)
         yield self.body
 
 
-class PlainTextResponse(SmallResponse[Union[bytes, str]]):
+class PlainTextResponse(SmallResponse):
     media_type = "text/plain"
 
     def __init__(
@@ -201,7 +201,7 @@ class HTMLResponse(PlainTextResponse):
     media_type = "text/html"
 
 
-class JSONResponse(SmallResponse[JSONable]):
+class JSONResponse(SmallResponse):
     media_type = "application/json"
 
     def __init__(
@@ -228,7 +228,6 @@ class JSONResponse(SmallResponse[JSONable]):
         super().__init__(content, status_code=status_code, headers=headers)
 
     def render(self, content: JSONable) -> bytes:
-        # This is mypy error
         return json.dumps(content, **self.json_kwargs).encode("utf-8")  # type: ignore
 
 

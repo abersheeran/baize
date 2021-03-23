@@ -1,3 +1,4 @@
+import abc
 import asyncio
 import functools
 import json
@@ -11,14 +12,12 @@ from typing import (
     Awaitable,
     Callable,
     Dict,
-    Generic,
     Iterator,
     Mapping,
     MutableSequence,
     Optional,
     Sequence,
     Tuple,
-    TypeVar,
     Union,
 )
 from urllib.parse import parse_qsl, quote_plus
@@ -191,6 +190,8 @@ class Request(HTTPConnection):
 
 class Response(BaseResponse):
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if not any(k == "content-length" for k, _ in self.raw_headers):
+            self.raw_headers.append(("content-length", "0"))
         await send(
             {
                 "type": "http.response.start",
@@ -204,27 +205,24 @@ class Response(BaseResponse):
         await send({"type": "http.response.body", "body": b""})
 
 
-ResponseContent = TypeVar("ResponseContent")
-
-
-class SmallResponse(Generic[ResponseContent], Response):
+class SmallResponse(Response, abc.ABC):
     media_type: str = ""
     charset = "utf-8"
 
     def __init__(
         self,
-        content: ResponseContent,
+        content: Any,
         status_code: int = 200,
         headers: Mapping[str, str] = None,
     ) -> None:
         super().__init__(status_code, headers)
-        self.body = self.render(content)
-        self.generate_more_headers()
+        self.content = content
 
-    def render(self, content: ResponseContent) -> bytes:
+    @abc.abstractmethod
+    async def render(self, content: Any) -> bytes:
         raise NotImplementedError
 
-    def generate_more_headers(self) -> None:
+    def generate_content_headers(self) -> None:
         body = getattr(self, "body", b"")
         if body and not any(k == "content-length" for k, _ in self.raw_headers):
             content_length = str(len(body))
@@ -237,6 +235,8 @@ class SmallResponse(Generic[ResponseContent], Response):
             self.raw_headers.append(("content-type", content_type))
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        self.body = await self.render(self.content)
+        self.generate_content_headers()
         await send(
             {
                 "type": "http.response.start",
@@ -250,7 +250,7 @@ class SmallResponse(Generic[ResponseContent], Response):
         await send({"type": "http.response.body", "body": self.body})
 
 
-class PlainTextResponse(SmallResponse[Union[bytes, str]]):
+class PlainTextResponse(SmallResponse):
     media_type = "text/plain"
 
     def __init__(
@@ -263,7 +263,7 @@ class PlainTextResponse(SmallResponse[Union[bytes, str]]):
         self.media_type = media_type or self.media_type
         super().__init__(content, status_code, headers)
 
-    def render(self, content: Union[bytes, str]) -> bytes:
+    async def render(self, content: Union[bytes, str]) -> bytes:
         return content if isinstance(content, bytes) else content.encode(self.charset)
 
 
@@ -271,7 +271,7 @@ class HTMLResponse(PlainTextResponse):
     media_type = "text/html"
 
 
-class JSONResponse(SmallResponse[JSONable]):
+class JSONResponse(SmallResponse):
     media_type = "application/json"
 
     def __init__(
@@ -297,8 +297,7 @@ class JSONResponse(SmallResponse[JSONable]):
         }
         super().__init__(content, status_code=status_code, headers=headers)
 
-    def render(self, content: JSONable) -> bytes:
-        # This is mypy error
+    async def render(self, content: JSONable) -> bytes:
         return json.dumps(content, **self.json_kwargs).encode("utf-8")  # type: ignore
 
 
