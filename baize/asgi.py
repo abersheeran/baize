@@ -166,8 +166,7 @@ class Request(HTTPConnection):
             data = (await self.body).decode(
                 encoding=self.content_type.options.get("charset", "latin-1")
             )
-            # this is type check error in mypy
-            return FormData(parse_qsl(data, keep_blank_values=True))  # type: ignore
+            return FormData(parse_qsl(data, keep_blank_values=True))
 
         raise HTTPException(
             415, {"Accpet": "multipart/form-data, application/x-www-form-urlencoded"}
