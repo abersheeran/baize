@@ -23,6 +23,7 @@ from baize.asgi import (
     Router,
     SendEventResponse,
     StreamResponse,
+    Subpaths,
     WebSocket,
     WebSocketDisconnect,
     request_response,
@@ -1043,6 +1044,26 @@ async def test_router():
         assert (await (client.get("/redirect", allow_redirects=False))).headers[
             "location"
         ] == "/cat"
+
+
+@pytest.mark.asyncio
+async def test_subpaths():
+    async def root(scope: Scope, receive: Receive, send: Send) -> None:
+        await PlainTextResponse(scope.get("root_path", ""))(scope, receive, send)
+
+    async def path(scope: Scope, receive: Receive, send: Send) -> None:
+        await PlainTextResponse(scope["path"])(scope, receive, send)
+
+    async with httpx.AsyncClient(
+        app=Subpaths(
+            ("/frist", root),
+            ("/latest", path),
+        ),
+        base_url="http://testServer/",
+    ) as client:
+        assert (await client.get("/")).status_code == 404
+        assert (await client.get("/frist")).text == "/frist"
+        assert (await client.get("/latest")).text == ""
 
 
 @pytest.mark.asyncio

@@ -23,6 +23,7 @@ from baize.wsgi import (
     Router,
     SendEventResponse,
     StreamResponse,
+    Subpaths,
     request_response,
 )
 
@@ -473,6 +474,27 @@ def test_router():
         assert (
             client.get("/redirect", allow_redirects=False).headers["location"] == "/cat"
         )
+
+
+def test_subpaths():
+    def root(environ: Environ, start_response: StartResponse) -> Iterable[bytes]:
+        return PlainTextResponse(environ.get("SCRIPT_NAME", ""))(
+            environ, start_response
+        )
+
+    def path(environ: Environ, start_response: StartResponse) -> Iterable[bytes]:
+        return PlainTextResponse(environ.get("PATH_INFO", ""))(environ, start_response)
+
+    with httpx.Client(
+        app=Subpaths(
+            ("/frist", root),
+            ("/latest", path),
+        ),
+        base_url="http://testServer/",
+    ) as client:
+        assert client.get("/").status_code == 404
+        assert client.get("/frist").text == "/frist"
+        assert client.get("/latest").text == ""
 
 
 def test_hosts():

@@ -28,7 +28,7 @@ from .exceptions import HTTPException
 from .formparsers import AsyncMultiPartParser
 from .requests import MoreInfoFromHeaderMixin
 from .responses import BaseFileResponse, BaseResponse
-from .routing import BaseHosts, BaseRouter
+from .routing import BaseHosts, BaseRouter, BaseSubpaths
 from .typing import ASGIApp, JSONable, Message, Receive, Scope, Send, ServerSentEvent
 from .utils import cached_property
 
@@ -750,6 +750,19 @@ class Router(BaseRouter[ASGIApp]):
             scope["path_params"] = path_params
             scope["router"] = self
             return await route.endpoint(scope, receive, send)
+
+        return await PlainTextResponse(b"", 404)(scope, receive, send)
+
+
+class Subpaths(BaseSubpaths[ASGIApp]):
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        path = scope["path"]
+        for prefix, endpoint in self._route_array:
+            if not path.startswith(prefix):
+                continue
+            scope["root_path"] = scope.get("root_path", "") + prefix
+            scope["path"] = path[len(prefix) :]
+            return await endpoint(scope, receive, send)
 
         return await PlainTextResponse(b"", 404)(scope, receive, send)
 

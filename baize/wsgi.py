@@ -28,7 +28,7 @@ from .exceptions import HTTPException
 from .formparsers import MultiPartParser
 from .requests import MoreInfoFromHeaderMixin
 from .responses import BaseFileResponse, BaseResponse
-from .routing import BaseHosts, BaseRouter
+from .routing import BaseHosts, BaseRouter, BaseSubpaths
 from .typing import Environ, JSONable, ServerSentEvent, StartResponse, WSGIApp
 from .utils import cached_property
 
@@ -492,6 +492,21 @@ class Router(BaseRouter[WSGIApp]):
             environ["PATH_PARAMS"] = path_params
             environ["router"] = self
             return route.endpoint(environ, start_response)
+
+        return PlainTextResponse(b"", 404)(environ, start_response)
+
+
+class Subpaths(BaseSubpaths[WSGIApp]):
+    def __call__(
+        self, environ: Environ, start_response: StartResponse
+    ) -> Iterable[bytes]:
+        path = environ.get("PATH_INFO", "")
+        for prefix, endpoint in self._route_array:
+            if not path.startswith(prefix):
+                continue
+            environ["SCRIPT_NAME"] = environ.get("SCRIPT_NAME", "") + prefix
+            environ["PATH_INFO"] = path[len(prefix) :]
+            return endpoint(environ, start_response)
 
         return PlainTextResponse(b"", 404)(environ, start_response)
 

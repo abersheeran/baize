@@ -181,6 +181,14 @@ class BaseRouter(Generic[Interface]):
         self.routes = {route.name: route for route in self._route_array if route.name}
 
 
+class BaseSubpaths(Generic[Interface]):
+    def __init__(self, *routes: Tuple[str, Interface]) -> None:
+        for prefix, _ in routes:
+            assert prefix.startswith("/"), "prefix must be starts with '/'"
+            assert not prefix.endswith("/"), "prefix cannot be ends with '/'"
+        self._route_array = [*routes]
+
+
 class BaseHosts(Generic[Interface]):
     def __init__(self, *hosts: Tuple[str, Interface]) -> None:
         self._host_array: Sequence[Tuple[Pattern, Interface]] = [
