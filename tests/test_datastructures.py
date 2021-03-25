@@ -198,9 +198,9 @@ def test_mutable_headers():
 def test_headers_mutablecopy():
     h = Headers(raw=[("a", "123"), ("a", "456"), ("b", "789")])
     c = h.mutablecopy()
-    assert c.items() == [("a", "123"), ("a", "456"), ("b", "789")]
+    assert list(c.items()) == [("a", "123"), ("a", "456"), ("b", "789")]
     c["a"] = "abc"
-    assert c.items() == [("a", "abc"), ("b", "789")]
+    assert list(c.items()) == [("a", "abc"), ("b", "789")]
 
 
 def test_url_blank_params():
@@ -343,12 +343,13 @@ def test_mutable_multi_mapping():
     q = MutableMultiMapping([("a", "123"), ("a", "456")])
     del q["a"]
     assert q.get("a") is None
-    assert repr(q) == "MutableMultiMapping([])"
+    assert q == MutableMultiMapping()
 
     q = MutableMultiMapping([("a", "123"), ("a", "456"), ("b", "789")])
+    print(q)
     assert q.pop("a") == "456"
     assert q.get("a", None) is None
-    assert repr(q) == "MutableMultiMapping([('b', '789')])"
+    assert q == MutableMultiMapping([("b", "789")])
 
     q = MutableMultiMapping([("a", "123"), ("a", "456"), ("b", "789")])
     item = q.popitem()
@@ -357,12 +358,12 @@ def test_mutable_multi_mapping():
     q = MutableMultiMapping([("a", "123"), ("a", "456"), ("b", "789")])
     assert q.poplist("a") == ["123", "456"]
     assert q.get("a") is None
-    assert repr(q) == "MutableMultiMapping([('b', '789')])"
+    assert q == MutableMultiMapping([("b", "789")])
 
     q = MutableMultiMapping([("a", "123"), ("a", "456"), ("b", "789")])
     q.clear()
     assert q.get("a") is None
-    assert repr(q) == "MutableMultiMapping([])"
+    assert q == MutableMultiMapping([])
 
     q = MutableMultiMapping([("a", "123")])
     q.setlist("a", ["456", "789"])
@@ -375,12 +376,12 @@ def test_mutable_multi_mapping():
     assert q.getlist("a") == ["123"]
     assert q.setdefault("b", "456") == "456"
     assert q.getlist("b") == ["456"]
-    assert repr(q) == "MutableMultiMapping([('a', '123'), ('b', '456')])"
+    assert q == MutableMultiMapping([("a", "123"), ("b", "456")])
 
     q = MutableMultiMapping([("a", "123")])
     q.append("a", "456")
     assert q.getlist("a") == ["123", "456"]
-    assert repr(q) == "MutableMultiMapping([('a', '123'), ('a', '456')])"
+    assert q == MutableMultiMapping([("a", "123"), ("a", "456")])
 
     q = MutableMultiMapping([("a", "123"), ("b", "456")])
     q.update({"a": "789"})
@@ -389,7 +390,7 @@ def test_mutable_multi_mapping():
 
     q = MutableMultiMapping([("a", "123"), ("b", "456")])
     q.update(q)
-    assert repr(q) == "MutableMultiMapping([('a', '123'), ('b', '456')])"
+    assert q == MutableMultiMapping([("a", "123"), ("b", "456")])
 
     q = MutableMultiMapping([("a", "123"), ("a", "456")])
     q.update([("a", "123")])

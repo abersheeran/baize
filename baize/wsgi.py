@@ -72,6 +72,23 @@ class HTTPConnection(Mapping, MoreInfoFromHeaderMixin):
 
     @cached_property
     def headers(self) -> Headers:
+        # return Headers(
+        #     (
+        #         (key.lower().replace("_", "-"), value)
+        #         for key, value in chain(
+        #             (
+        #                 (key[5:], value)
+        #                 for key, value in self._environ.items()
+        #                 if key.startswith("HTTP_")
+        #             ),
+        #             (
+        #                 (key, value)
+        #                 for key, value in self._environ.items()
+        #                 if key in ("CONTENT_TYPE", "CONTENT_LENGTH")
+        #             ),
+        #         )
+        #     )
+        # )
         return Headers(environ=self._environ)
 
 

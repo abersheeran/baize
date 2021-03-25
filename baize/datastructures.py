@@ -441,72 +441,46 @@ class FormData(MultiMapping[str, typing.Union[str, UploadFile]]):
                 await value.aclose()
 
 
-class Headers(MultiMapping[str, str]):
+class Headers(typing.Mapping[str, str]):
     def __init__(
         self,
-        headers: typing.Mapping[str, str] = None,
-        raw: typing.List[typing.Tuple[str, str]] = None,
-        scope: Scope = None,
-        environ: Environ = None,
+        headers: typing.Union[
+            "Headers",
+            typing.Mapping[str, str],
+            typing.Sequence[typing.Tuple[str, str]],
+        ] = None,
     ) -> None:
-        if headers is not None:
-            _items = ((key.lower(), value) for key, value in headers.items())
-        elif raw is not None:
-            _items = raw
-        elif scope is not None:
-            _items = (
-                (key.lower().decode("latin-1"), value.decode("latin-1"))
-                for key, value in scope["headers"]
-            )
-        elif environ is not None:
-            _items = (
-                (key.lower().replace("_", "-"), value)
-                for key, value in chain(
-                    (
-                        (key[5:], value)
-                        for key, value in environ.items()
-                        if key.startswith("HTTP_")
-                    ),
-                    (
-                        (key, value)
-                        for key, value in environ.items()
-                        if key in ("CONTENT_TYPE", "CONTENT_LENGTH")
-                    ),
-                )
-            )
+        self.__dict: typing.Dict[str, str] = {}
+        if isinstance(headers, typing.Mapping):
+            for key, value in headers.items():
+                self.append(key, value)
         else:
-            _items = None
-        super().__init__(_items)
-
-        if raw is not None:
-            self._list = raw
-        self._dict = {}
-
-    @property
-    def raw(self) -> typing.Sequence[typing.Tuple[str, str]]:
-        return self._list
-
-    def mutablecopy(self) -> "MutableHeaders":
-        return MutableHeaders(raw=self.raw[:])
+            for key, value in headers:
+                self.append(key, value)
 
     def __getitem__(self, key: str) -> str:
-        return super().__getitem__(key.lower())
+        return self.__dict[key.lower()]
 
+    def __iter__(self) -> typing.Iterator[str]:
+        return self.__dict.__iter__()
 
-class MutableHeaders(Headers, MutableMultiMapping[str, str]):
-    __slots__ = MultiMapping.__slots__
-
-    def __setitem__(self, key: str, value: str) -> None:
-        super().__setitem__(key.lower(), value)
-
-    def __delitem__(self, key: str) -> None:
-        super().__delitem__(key.lower())
+    def __len__(self) -> int:
+        return self.__dict.__len__()
 
     def append(self, key: str, value: str) -> None:
-        super().append(key.lower(), value)
+        key = key.lower()
+        if key in self.__dict:
+            self.__dict[key] = f"{self.__dict[key]}, {value}"
+        else:
+            self.__dict[key] = value
 
-    def add_vary_header(self, vary: str) -> None:
-        existing = self.get("vary")
-        if existing is not None:
-            vary = ", ".join([existing, vary])
-        self["vary"] = vary
+    def list(self) -> typing.List[typing.Tuple[str, str]]:
+        return list(self.__dict.items())
+
+
+class MutableHeaders(Headers, typing.MutableMapping[str, str]):
+    def __setitem__(self, key: str, value: str) -> None:
+        self.__dict[key.lower()] = value
+
+    def __delitem__(self, key: str) -> None:
+        del self.__dict[key.lower()]

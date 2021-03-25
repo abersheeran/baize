@@ -102,6 +102,10 @@ class HTTPConnection(Mapping, MoreInfoFromHeaderMixin):
 
     @cached_property
     def headers(self) -> Headers:
+        # return Headers(
+        #     (key.decode("latin-1"), value.decode("latin-1"))
+        #     for key, value in self._scope["headers"]
+        # )
         return Headers(scope=self._scope)
 
 
