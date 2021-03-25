@@ -1,4 +1,4 @@
-# BaíZé
+# BáiZé
 
 [![Codecov](https://img.shields.io/codecov/c/github/abersheeran/baize?style=flat-square)](https://codecov.io/gh/abersheeran/baize)
 

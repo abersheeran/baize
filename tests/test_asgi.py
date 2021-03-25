@@ -530,7 +530,7 @@ async def test_stream_response():
 
 
 README = """\
-# BaíZé
+# BáiZé
 
 Powerful and exquisite WSGI/ASGI framework/toolkit.
 
