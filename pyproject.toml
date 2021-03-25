@@ -22,6 +22,7 @@ classifiers = [
   "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
 ]
 
+build = "speedup.py"
 packages = [
   {include = "baize"},
 ]
