@@ -239,7 +239,7 @@ class URL:
         return f"{self.__class__.__name__}({repr(url)})"
 
 
-class MultiMapping(typing.Generic[KT, VT], typing.Mapping[KT, VT]):
+class MultiMapping(typing.Mapping[KT, VT]):
     __slots__ = ("_dict", "_list")
 
     def __init__(
@@ -247,7 +247,7 @@ class MultiMapping(typing.Generic[KT, VT], typing.Mapping[KT, VT]):
         raw: typing.Union[
             "MultiMapping",
             typing.Mapping[KT, VT],
-            typing.Sequence[typing.Tuple[KT, VT]],
+            typing.Iterable[typing.Tuple[KT, VT]],
         ] = None,
     ) -> None:
         if raw is None:
@@ -288,9 +288,7 @@ class MultiMapping(typing.Generic[KT, VT], typing.Mapping[KT, VT]):
         return f"{class_name}({items!r})"
 
 
-class MutableMultiMapping(
-    typing.Generic[KT, VT], MultiMapping[KT, VT], typing.MutableMapping[KT, VT]
-):
+class MutableMultiMapping(MultiMapping[KT, VT], typing.MutableMapping[KT, VT]):
     __slots__ = MultiMapping.__slots__
 
     def __setitem__(self, key: KT, value: VT) -> None:
@@ -445,12 +443,14 @@ class Headers(MultiMapping[str, str]):
     def __init__(
         self,
         headers: typing.Mapping[str, str] = None,
-        raw: typing.List[typing.Tuple[str, str]] = None,
+        raw: typing.Iterable[typing.Tuple[str, str]] = None,
         scope: Scope = None,
         environ: Environ = None,
     ) -> None:
         if headers is not None:
-            _items = ((key.lower(), value) for key, value in headers.items())
+            _items: typing.Optional[typing.Iterable[typing.Tuple[str, str]]] = (
+                (key.lower(), value) for key, value in headers.items()
+            )
         elif raw is not None:
             _items = raw
         elif scope is not None:
@@ -479,7 +479,7 @@ class Headers(MultiMapping[str, str]):
         super().__init__(_items)
 
         if raw is not None:
-            self._list = raw
+            self._list = list(raw)
         self._dict = {}
 
     @property
