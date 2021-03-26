@@ -12,11 +12,13 @@ from typing import (
     Callable,
     Dict,
     Generator,
+    Generic,
     Iterable,
     Iterator,
     Mapping,
     Sequence,
     Tuple,
+    TypeVar,
     Union,
 )
 from typing import cast as typing_cast
@@ -159,21 +161,28 @@ class Response(BaseResponse):
         return (b"",)
 
 
-class SmallResponse(Response):
+_CT = TypeVar("_CT")
+
+
+class SmallResponse(Response, abc.ABC, Generic[_CT]):
     media_type: str = ""
     charset: str = "utf-8"
 
     def __init__(
         self,
-        content: Any,
+        content: _CT,
         status_code: int = 200,
         headers: Mapping[str, str] = None,
+        media_type: str = "",
+        charset: str = "",
     ) -> None:
         super().__init__(status_code, headers)
         self.content = content
+        self.media_type = media_type or self.media_type
+        self.charset = charset or self.charset
 
     @abc.abstractmethod
-    def render(self, content: Any) -> bytes:
+    def render(self, content: _CT) -> bytes:
         raise NotImplementedError
 
     def generate_content_headers(self) -> None:
@@ -201,18 +210,8 @@ class SmallResponse(Response):
         yield self.body
 
 
-class PlainTextResponse(SmallResponse):
+class PlainTextResponse(SmallResponse[Union[bytes, str]]):
     media_type = "text/plain"
-
-    def __init__(
-        self,
-        content: Union[bytes, str],
-        status_code: int = 200,
-        headers: Mapping[str, str] = None,
-        media_type: str = "",
-    ) -> None:
-        self.media_type = media_type or self.media_type
-        super().__init__(content, status_code, headers)
 
     def render(self, content: Union[bytes, str]) -> bytes:
         return content if isinstance(content, bytes) else content.encode(self.charset)
@@ -222,7 +221,7 @@ class HTMLResponse(PlainTextResponse):
     media_type = "text/html"
 
 
-class JSONResponse(SmallResponse):
+class JSONResponse(SmallResponse[JSONable]):
     media_type = "application/json"
 
     def __init__(
