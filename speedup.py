@@ -1,5 +1,4 @@
 import os
-from pathlib import Path
 
 if os.name == "nt":
     from distutils.command import build_ext
@@ -51,8 +50,11 @@ else:
         setup_kwargs.update(
             {
                 "ext_modules": mypycify(
-                    ["--ignore-missing-imports"]
-                    + list(map(str, Path("baize").glob("**/*.py"))),
+                    [
+                        "--ignore-missing-imports",
+                        "baize/datastructures.py",
+                        "baize/routing.py",
+                    ]
                 ),
                 "cmdclass": {"build_ext": build_ext},
             }
