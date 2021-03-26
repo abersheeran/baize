@@ -5,7 +5,7 @@ from email.utils import formatdate
 from hashlib import sha1
 from http import cookies as http_cookies
 from mimetypes import guess_type
-from typing import List, Mapping, MutableSequence, Sequence, Tuple, Union, overload
+from typing import List, Mapping, Sequence, Tuple, Union, overload
 from urllib.parse import quote
 
 from .datastructures import MutableHeaders
