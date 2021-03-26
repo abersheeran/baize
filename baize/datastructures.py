@@ -115,8 +115,12 @@ class URL:
             elif environ is not None:
                 scheme = environ["wsgi.url_scheme"]
                 server = (environ["SERVER_NAME"], environ["SERVER_PORT"])
-                path = environ.get("SCRIPT_NAME", "") + environ.get("PATH_INFO", "")
-                query_string = environ.get("QUERY_STRING", "").encode("ascii")
+                path = (
+                    (environ.get("SCRIPT_NAME", "") + environ.get("PATH_INFO", ""))
+                    .encode("latin1")
+                    .decode("utf8")
+                )
+                query_string = environ.get("QUERY_STRING", "").encode("latin-1")
                 host_header = environ.get("HTTP_HOST", None)
 
             if host_header is not None:
