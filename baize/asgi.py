@@ -552,8 +552,8 @@ class SendEventResponse(Response):
 
         done, pending = await asyncio.wait(
             (
-                asyncio.create_task(self.keep_alive(send)),
-                asyncio.create_task(self.send_event(send)),
+                asyncio.ensure_future(self.keep_alive(send)),
+                asyncio.ensure_future(self.send_event(send)),
             ),
             return_when=asyncio.FIRST_COMPLETED,
         )
