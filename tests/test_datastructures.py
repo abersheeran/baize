@@ -147,29 +147,14 @@ def test_media_type():
 
 
 def test_headers():
-    h = Headers(raw=[("a", "123"), ("a", "456"), ("b", "789")])
+    h = Headers([("a", "123"), ("a", "456"), ("b", "789")])
     assert "a" in h
     assert "A" in h
     assert "b" in h
     assert "B" in h
     assert "c" not in h
-    assert h["a"] == "123"
-    assert h.get("a") == "123"
+    assert h["a"] == "123, 456"
     assert h.get("nope", default=None) is None
-    assert h.getlist("a") == ["123", "456"]
-    assert list(h.keys()) == ["a", "a", "b"]
-    assert list(h.values()) == ["123", "456", "789"]
-    assert list(h.items()) == [("a", "123"), ("a", "456"), ("b", "789")]
-    assert list(h) == ["a", "a", "b"]
-    assert dict(h) == {"a": "123", "b": "789"}
-    assert repr(h) == "Headers(raw=[('a', '123'), ('a', '456'), ('b', '789')])"
-    assert h == Headers(raw=[("a", "123"), ("b", "789"), ("a", "456")])
-    assert h != [("a", "123"), ("A", "456"), ("b", "789")]
-
-    h = Headers({"a": "123", "b": "789"})
-    assert h["A"] == "123"
-    assert h["B"] == "789"
-    assert repr(h) == "Headers({'a': '123', 'b': '789'})"
 
 
 def test_mutable_headers():
@@ -189,18 +174,10 @@ def test_mutable_headers():
     assert dict(h) == {"a": "0", "b": "4"}
     h.append("c", "8")
     assert dict(h) == {"a": "0", "b": "4", "c": "8"}
-    h.add_vary_header("vary")
+    h.append("vary", "vary")
     assert dict(h) == {"vary": "vary", "a": "0", "b": "4", "c": "8"}
-    h.add_vary_header("vary2")
+    h.append("vary", "vary2")
     assert dict(h) == {"vary": "vary, vary2", "a": "0", "b": "4", "c": "8"}
-
-
-def test_headers_mutablecopy():
-    h = Headers(raw=[("a", "123"), ("a", "456"), ("b", "789")])
-    c = h.mutablecopy()
-    assert list(c.items()) == [("a", "123"), ("a", "456"), ("b", "789")]
-    c["a"] = "abc"
-    assert list(c.items()) == [("a", "abc"), ("b", "789")]
 
 
 def test_url_blank_params():
@@ -346,7 +323,6 @@ def test_mutable_multi_mapping():
     assert q == MutableMultiMapping()
 
     q = MutableMultiMapping([("a", "123"), ("a", "456"), ("b", "789")])
-    print(q)
     assert q.pop("a") == "456"
     assert q.get("a", None) is None
     assert q == MutableMultiMapping([("b", "789")])

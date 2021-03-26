@@ -307,8 +307,9 @@ class MutableMultiMapping(
         self._dict[key] = value
 
     def __delitem__(self, key: KT) -> None:
+        _list = self._list[:]
         self._list.clear()
-        self._list.extend((k, v) for k, v in self._list if k != key)
+        self._list.extend((k, v) for k, v in _list if k != key)
         del self._dict[key]
 
     def setlist(self, key: KT, values: typing.Sequence[VT]) -> None:
@@ -450,37 +451,43 @@ class Headers(typing.Mapping[str, str]):
             typing.Sequence[typing.Tuple[str, str]],
         ] = None,
     ) -> None:
-        self.__dict: typing.Dict[str, str] = {}
+        store: typing.Dict[str, str] = {}
+        items: typing.Iterable[typing.Tuple[str, str]]
         if isinstance(headers, typing.Mapping):
-            for key, value in headers.items():
-                self.append(key, value)
+            items = headers.items()
+        elif headers is None:
+            items = ()
         else:
-            for key, value in headers:
-                self.append(key, value)
+            items = headers
+        for key, value in items:
+            key = key.lower()
+            if key in store:
+                store[key] = f"{store[key]}, {value}"
+            else:
+                store[key] = value
+
+        self._dict = store
 
     def __getitem__(self, key: str) -> str:
-        return self.__dict[key.lower()]
+        return self._dict[key.lower()]
 
     def __iter__(self) -> typing.Iterator[str]:
-        return self.__dict.__iter__()
+        return self._dict.__iter__()
 
     def __len__(self) -> int:
-        return self.__dict.__len__()
-
-    def append(self, key: str, value: str) -> None:
-        key = key.lower()
-        if key in self.__dict:
-            self.__dict[key] = f"{self.__dict[key]}, {value}"
-        else:
-            self.__dict[key] = value
-
-    def list(self) -> typing.List[typing.Tuple[str, str]]:
-        return list(self.__dict.items())
+        return self._dict.__len__()
 
 
 class MutableHeaders(Headers, typing.MutableMapping[str, str]):
     def __setitem__(self, key: str, value: str) -> None:
-        self.__dict[key.lower()] = value
+        self._dict[key.lower()] = value
 
     def __delitem__(self, key: str) -> None:
-        del self.__dict[key.lower()]
+        del self._dict[key.lower()]
+
+    def append(self, key: str, value: str) -> None:
+        key = key.lower()
+        if key in self._dict:
+            self._dict[key] = f"{self._dict[key]}, {value}"
+        else:
+            self._dict[key] = value

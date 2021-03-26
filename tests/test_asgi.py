@@ -858,8 +858,8 @@ def test_websocket_concurrency_pattern():
             await websocket.accept()
             done, pending = await asyncio.wait(
                 (
-                    (reader(websocket=websocket, queue=queue)),
-                    (writer(websocket=websocket, queue=queue)),
+                    asyncio.create_task(reader(websocket=websocket, queue=queue)),
+                    asyncio.create_task(writer(websocket=websocket, queue=queue)),
                 ),
                 return_when=asyncio.FIRST_COMPLETED,
             )

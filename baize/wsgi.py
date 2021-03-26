@@ -15,12 +15,11 @@ from typing import (
     Iterable,
     Iterator,
     Mapping,
-    MutableSequence,
-    Optional,
     Sequence,
     Tuple,
     Union,
 )
+from typing import cast as typing_cast
 from urllib.parse import parse_qsl, quote_plus
 
 from .datastructures import URL, Address, FormData, Headers, QueryParams, defaultdict
@@ -72,24 +71,22 @@ class HTTPConnection(Mapping, MoreInfoFromHeaderMixin):
 
     @cached_property
     def headers(self) -> Headers:
-        # return Headers(
-        #     (
-        #         (key.lower().replace("_", "-"), value)
-        #         for key, value in chain(
-        #             (
-        #                 (key[5:], value)
-        #                 for key, value in self._environ.items()
-        #                 if key.startswith("HTTP_")
-        #             ),
-        #             (
-        #                 (key, value)
-        #                 for key, value in self._environ.items()
-        #                 if key in ("CONTENT_TYPE", "CONTENT_LENGTH")
-        #             ),
-        #         )
-        #     )
-        # )
-        return Headers(environ=self._environ)
+        headers = (
+            (key.lower().replace("_", "-"), value)
+            for key, value in chain(
+                (
+                    (key[5:], value)
+                    for key, value in self._environ.items()
+                    if key.startswith("HTTP_")
+                ),
+                (
+                    (key, value)
+                    for key, value in self._environ.items()
+                    if key in ("CONTENT_TYPE", "CONTENT_LENGTH")
+                ),
+            )
+        )
+        return Headers(typing_cast(Sequence[Tuple[str, str]], headers))
 
 
 class Request(HTTPConnection):
@@ -153,9 +150,12 @@ class Response(BaseResponse):
     def __call__(
         self, environ: Environ, start_response: StartResponse
     ) -> Iterable[bytes]:
-        if not any(k == "content-length" for k, _ in self.raw_headers):
-            self.raw_headers.append(("content-length", "0"))
-        start_response(StatusStringMapping[self.status_code], self.raw_headers, None)
+        self.headers["content-length"] = "0"
+        start_response(
+            StatusStringMapping[self.status_code],
+            self.list_headers(as_bytes=False),
+            None,
+        )
         return (b"",)
 
 
@@ -178,22 +178,26 @@ class SmallResponse(Response):
 
     def generate_content_headers(self) -> None:
         body = getattr(self, "body", b"")
-        if body and not any(k == "content-length" for k, _ in self.raw_headers):
+        if body and "content-length" not in self.headers:
             content_length = str(len(body))
-            self.raw_headers.append(("content-length", content_length))
+            self.headers["content-length"] = content_length
 
         content_type = self.media_type
-        if content_type and not any(k == "content-type" for k, _ in self.raw_headers):
+        if content_type and "content-type" not in self.headers:
             if content_type.startswith("text/"):
                 content_type += "; charset=" + self.charset
-            self.raw_headers.append(("content-type", content_type))
+            self.headers["content-type"] = content_type
 
     def __call__(
         self, environ: Environ, start_response: StartResponse
     ) -> Iterable[bytes]:
         self.body = self.render(self.content)
         self.generate_content_headers()
-        start_response(StatusStringMapping[self.status_code], self.raw_headers, None)
+        start_response(
+            StatusStringMapping[self.status_code],
+            self.list_headers(as_bytes=False),
+            None,
+        )
         yield self.body
 
 
@@ -226,26 +230,20 @@ class JSONResponse(SmallResponse):
         content: JSONable,
         status_code: int = 200,
         headers: Mapping[str, str] = None,
-        *,
-        ensure_ascii: bool = False,
-        allow_nan: bool = False,
-        indent: Union[int, str] = None,
-        separators: Optional[Tuple[str, str]] = (",", ":"),
-        default: Callable[[Any], Any] = None,
         **kwargs: Any,
     ) -> None:
-        self.json_kwargs = {
-            "ensure_ascii": ensure_ascii,
-            "allow_nan": allow_nan,
-            "indent": indent,
-            "separators": separators,
-            "default": default,
-            **kwargs,
+        self.json_kwargs: Dict[str, Any] = {
+            "ensure_ascii": False,
+            "allow_nan": False,
+            "indent": None,
+            "separators": (",", ":"),
+            "default": None,
         }
+        self.json_kwargs.update(**kwargs)
         super().__init__(content, status_code=status_code, headers=headers)
 
     def render(self, content: JSONable) -> bytes:
-        return json.dumps(content, **self.json_kwargs).encode("utf-8")  # type: ignore
+        return json.dumps(content, **self.json_kwargs).encode("utf-8")
 
 
 class RedirectResponse(Response):
@@ -256,9 +254,7 @@ class RedirectResponse(Response):
         headers: Mapping[str, str] = None,
     ) -> None:
         super().__init__(status_code=status_code, headers=headers)
-        self.raw_headers.append(
-            ("location", quote_plus(str(url), safe=":/%#?&=@[]!$&'()*+,;"))
-        )
+        self.headers["location"] = quote_plus(str(url), safe=":/%#?&=@[]!$&'()*+,;")
 
 
 class StreamResponse(Response):
@@ -271,13 +267,17 @@ class StreamResponse(Response):
     ) -> None:
         self.generator = generator
         super().__init__(status_code, headers)
-        self.raw_headers.append(("content-type", content_type))
-        self.raw_headers.append(("transfer-encoding", "chunked"))
+        self.headers["content-type"] = content_type
+        self.headers["transfer-encoding"] = "chunked"
 
     def __call__(
         self, environ: Environ, start_response: StartResponse
     ) -> Iterable[bytes]:
-        start_response(StatusStringMapping[self.status_code], self.raw_headers, None)
+        start_response(
+            StatusStringMapping[self.status_code],
+            self.list_headers(as_bytes=False),
+            None,
+        )
         for chunk in self.generator:
             yield chunk
 
@@ -287,13 +287,12 @@ class FileResponse(BaseFileResponse, Response):
         self,
         send_header_only: bool,
         file_size: int,
-        headers: MutableSequence[Tuple[str, str]],
         start_response: StartResponse,
     ) -> Generator[bytes, None, None]:
-        headers.append(("content-type", str(self.media_type)))
-        headers.append(("content-length", str(file_size)))
+        self.headers["content-type"] = str(self.media_type)
+        self.headers["content-length"] = str(file_size)
         start_response(
-            StatusStringMapping[200], list(chain(self.raw_headers, headers)), None
+            StatusStringMapping[200], self.list_headers(as_bytes=False), None
         )
 
         if send_header_only:
@@ -308,16 +307,15 @@ class FileResponse(BaseFileResponse, Response):
         self,
         send_header_only: bool,
         file_size: int,
-        headers: MutableSequence[Tuple[str, str]],
         start_response: StartResponse,
         start: int,
         end: int,
     ) -> Generator[bytes, None, None]:
-        headers.append(("content-range", f"bytes {start}-{end-1}/{file_size}"))
-        headers.append(("content-type", str(self.media_type)))
-        headers.append(("content-length", str(end - start)))
+        self.headers["content-range"] = f"bytes {start}-{end-1}/{file_size}"
+        self.headers["content-type"] = str(self.media_type)
+        self.headers["content-length"] = str(end - start)
         start_response(
-            StatusStringMapping[206], list(chain(self.raw_headers, headers)), None
+            StatusStringMapping[206], self.list_headers(as_bytes=False), None
         )
         if send_header_only:
             yield b""
@@ -327,26 +325,24 @@ class FileResponse(BaseFileResponse, Response):
             file.seek(start)
             for here in range(start, end, 4096):
                 yield file.read(min(4096, end - here))
-            return
 
     def handle_several_ranges(
         self,
         send_header_only: bool,
         file_size: int,
-        headers: MutableSequence[Tuple[str, str]],
         start_response: StartResponse,
         ranges: Sequence[Tuple[int, int]],
     ) -> Generator[bytes, None, None]:
-        headers.append(("content-type", "multipart/byteranges; boundary=3d6b6a416f9b5"))
+        self.headers["content-type"] = "multipart/byteranges; boundary=3d6b6a416f9b5"
         content_length = (
             18
             + len(ranges) * (57 + len(self.media_type) + len(str(file_size)))
             + sum(len(str(start)) + len(str(end - 1)) for start, end in ranges)
         ) + sum(end - start for start, end in ranges)
-        headers.append(("content-length", str(content_length)))
+        self.headers["content-length"] = str(content_length)
 
         start_response(
-            StatusStringMapping[206], list(chain(self.raw_headers, headers)), None
+            StatusStringMapping[206], self.list_headers(as_bytes=False), None
         )
         if send_header_only:
             yield b""
@@ -370,18 +366,14 @@ class FileResponse(BaseFileResponse, Response):
         self, environ: Environ, start_response: StartResponse
     ) -> Iterable[bytes]:
         send_header_only = environ["REQUEST_METHOD"] == "HEAD"
-
         stat_result = self.stat_result
         file_size = stat_result.st_size
-        headers = self.generate_required_header(stat_result)
 
         if "HTTP_RANGE" not in environ or (
             "HTTP_IF_RANGE" in environ
             and not self.judge_if_range(environ["HTTP_IF_RANGE"], stat_result)
         ):
-            yield from self.handle_all(
-                send_header_only, file_size, headers, start_response
-            )
+            yield from self.handle_all(send_header_only, file_size, start_response)
             return
 
         try:
@@ -389,7 +381,7 @@ class FileResponse(BaseFileResponse, Response):
         except HTTPException as exception:
             start_response(
                 StatusStringMapping[exception.status_code],
-                [(k, v) for k, v in (exception.headers or {}).items()],
+                [*(exception.headers or {}).items()],
                 None,
             )
             yield b""
@@ -398,11 +390,11 @@ class FileResponse(BaseFileResponse, Response):
         if len(ranges) == 1:
             start, end = ranges[0]
             yield from self.handle_single_range(
-                send_header_only, file_size, headers, start_response, start, end
+                send_header_only, file_size, start_response, start, end
             )
         else:
             yield from self.handle_several_ranges(
-                send_header_only, file_size, headers, start_response, ranges
+                send_header_only, file_size, start_response, ranges
             )
 
 
@@ -443,7 +435,11 @@ class SendEventResponse(Response):
     def __call__(
         self, environ: Environ, start_response: StartResponse
     ) -> Iterable[bytes]:
-        start_response(StatusStringMapping[self.status_code], self.raw_headers, None)
+        start_response(
+            StatusStringMapping[self.status_code],
+            self.list_headers(as_bytes=False),
+            None,
+        )
 
         future = self.thread_pool.submit(
             wait,

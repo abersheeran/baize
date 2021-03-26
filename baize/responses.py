@@ -5,13 +5,12 @@ from email.utils import formatdate
 from hashlib import sha1
 from http import cookies as http_cookies
 from mimetypes import guess_type
-from typing import List, Mapping, MutableSequence, Sequence, Tuple, Union
+from typing import List, Mapping, MutableSequence, Sequence, Tuple, Union, overload
 from urllib.parse import quote
 
 from .datastructures import MutableHeaders
 from .exceptions import HTTPException
 from .typing import Literal
-from .utils import cached_property
 
 
 class BaseResponse:
@@ -19,14 +18,8 @@ class BaseResponse:
         self, status_code: int = 200, headers: Mapping[str, str] = None
     ) -> None:
         self.status_code = status_code
-        if headers is None:
-            self.raw_headers = []
-        else:
-            self.raw_headers = [(k.lower(), v) for k, v in headers.items()]
-
-    @cached_property
-    def headers(self) -> MutableHeaders:
-        return MutableHeaders(raw=self.raw_headers)
+        self.headers = MutableHeaders(headers)
+        self.cookies: http_cookies.SimpleCookie = http_cookies.SimpleCookie()
 
     def set_cookie(
         self,
@@ -40,27 +33,51 @@ class BaseResponse:
         httponly: bool = False,
         samesite: Literal["strict", "lax", "none"] = "lax",
     ) -> None:
-        cookie: http_cookies.SimpleCookie = http_cookies.SimpleCookie()
-        cookie[key] = value
+        cookies = self.cookies
+        cookies[key] = value
         if max_age is not None:
-            cookie[key]["max-age"] = max_age
+            cookies[key]["max-age"] = max_age
         if expires is not None:
-            cookie[key]["expires"] = expires
+            cookies[key]["expires"] = expires
         if path is not None:
-            cookie[key]["path"] = path
+            cookies[key]["path"] = path
         if domain is not None:
-            cookie[key]["domain"] = domain
+            cookies[key]["domain"] = domain
         if secure:
-            cookie[key]["secure"] = True
+            cookies[key]["secure"] = True
         if httponly:
-            cookie[key]["httponly"] = True
+            cookies[key]["httponly"] = True
         if samesite is not None:
-            cookie[key]["samesite"] = samesite
-        cookie_val = cookie.output(header="").strip()
-        self.raw_headers.append(("set-cookie", cookie_val))
+            cookies[key]["samesite"] = samesite
 
     def delete_cookie(self, key: str, path: str = "/", domain: str = None) -> None:
         self.set_cookie(key, expires=0, max_age=0, path=path, domain=domain)
+
+    @overload
+    def list_headers(self, *, as_bytes: Literal[True]) -> List[Tuple[bytes, bytes]]:
+        raise NotImplementedError
+
+    @overload
+    def list_headers(self, *, as_bytes: Literal[False]) -> List[Tuple[str, str]]:
+        raise NotImplementedError
+
+    def list_headers(self, *, as_bytes):
+        if as_bytes:
+            return [
+                *(
+                    (key.encode("latin-1"), value.encode("latin-1"))
+                    for key, value in self.headers.items()
+                ),
+                *(
+                    (b"set-cookie", c.output(header="").encode("latin-1"))
+                    for c in self.cookies.values()
+                ),
+            ]
+        else:
+            return [
+                *self.headers.items(),
+                *(("set-cookie", c.output(header="")) for c in self.cookies.values()),
+            ]
 
 
 class BaseFileResponse(BaseResponse):
@@ -86,16 +103,7 @@ class BaseFileResponse(BaseResponse):
             raise FileNotFoundError("Filepath exists, but is not a valid file.")
         super().__init__(status_code=200, headers=headers)
 
-    def generate_required_header(
-        self, stat_result: os.stat_result
-    ) -> MutableSequence[Tuple[str, str]]:
-        """
-        Generate `accept-ranges`, `last-modified` and `etag`.
-        If necessary, `content-disposition` will also be generated.
-        """
-        headers: List[Tuple[str, str]] = []
-        headers.append(("accept-ranges", "bytes"))
-
+        self.headers["accept-ranges"] = "bytes"
         if (
             self.download_name is not None
             or self.media_type == "application/octet-stream"
@@ -103,12 +111,11 @@ class BaseFileResponse(BaseResponse):
             content_disposition = "attachment; filename*=utf-8''{}".format(
                 quote(self.download_name or os.path.basename(self.filepath))
             )
-            headers.append(("content-disposition", content_disposition))
-
-        headers.append(("last-modified", formatdate(stat_result.st_mtime, usegmt=True)))
-        headers.append(("etag", self.generate_etag(stat_result)))
-
-        return headers
+            self.headers["content-disposition"] = content_disposition
+        self.headers["last-modified"] = formatdate(
+            self.stat_result.st_mtime, usegmt=True
+        )
+        self.headers["etag"] = self.generate_etag(self.stat_result)
 
     def generate_etag(self, stat_result: os.stat_result) -> str:
         return sha1(
