@@ -12,15 +12,16 @@ from typing import (
     Awaitable,
     Callable,
     Dict,
+    Generic,
     Iterable,
     Iterator,
     Mapping,
-    MutableSequence,
-    Optional,
     Sequence,
     Tuple,
+    TypeVar,
     Union,
 )
+from typing import cast as typing_cast
 from urllib.parse import parse_qsl, quote_plus
 
 from .datastructures import URL, Address, FormData, Headers, QueryParams
@@ -102,7 +103,11 @@ class HTTPConnection(Mapping, MoreInfoFromHeaderMixin):
 
     @cached_property
     def headers(self) -> Headers:
-        return Headers(scope=self._scope)
+        headers = (
+            (key.decode("latin-1"), value.decode("latin-1"))
+            for key, value in self._scope["headers"]
+        )
+        return Headers(typing_cast(Sequence[Tuple[str, str]], headers))
 
 
 class Request(HTTPConnection):
@@ -166,8 +171,7 @@ class Request(HTTPConnection):
             data = (await self.body).decode(
                 encoding=self.content_type.options.get("charset", "latin-1")
             )
-            # this is type check error in mypy
-            return FormData(parse_qsl(data, keep_blank_values=True))  # type: ignore
+            return FormData(parse_qsl(data, keep_blank_values=True))
 
         raise HTTPException(
             415, {"Accpet": "multipart/form-data, application/x-www-form-urlencoded"}
@@ -191,49 +195,52 @@ class Request(HTTPConnection):
 
 class Response(BaseResponse):
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if not any(k == "content-length" for k, _ in self.raw_headers):
-            self.raw_headers.append(("content-length", "0"))
+        self.headers["content-length"] = "0"
         await send(
             {
                 "type": "http.response.start",
                 "status": self.status_code,
-                "headers": [
-                    (k.encode("latin-1"), v.encode("latin-1"))
-                    for k, v in self.raw_headers
-                ],
+                "headers": self.list_headers(as_bytes=True),
             }
         )
         await send({"type": "http.response.body", "body": b""})
 
 
-class SmallResponse(Response, abc.ABC):
+_CT = TypeVar("_CT")
+
+
+class SmallResponse(Response, abc.ABC, Generic[_CT]):
     media_type: str = ""
     charset = "utf-8"
 
     def __init__(
         self,
-        content: Any,
+        content: _CT,
         status_code: int = 200,
         headers: Mapping[str, str] = None,
+        media_type: str = "",
+        charset: str = "",
     ) -> None:
         super().__init__(status_code, headers)
         self.content = content
+        self.media_type = media_type or self.media_type
+        self.charset = charset or self.charset
 
     @abc.abstractmethod
-    async def render(self, content: Any) -> bytes:
+    async def render(self, content: _CT) -> bytes:
         raise NotImplementedError
 
     def generate_content_headers(self) -> None:
         body = getattr(self, "body", b"")
-        if body and not any(k == "content-length" for k, _ in self.raw_headers):
+        if body and "content-length" not in self.headers:
             content_length = str(len(body))
-            self.raw_headers.append(("content-length", content_length))
+            self.headers["content-length"] = content_length
 
         content_type = self.media_type
-        if content_type and not any(k == "content-type" for k, _ in self.raw_headers):
+        if content_type and "content-type" not in self.headers:
             if content_type.startswith("text/"):
                 content_type += "; charset=" + self.charset
-            self.raw_headers.append(("content-type", content_type))
+            self.headers["content-type"] = content_type
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         self.body = await self.render(self.content)
@@ -242,27 +249,14 @@ class SmallResponse(Response, abc.ABC):
             {
                 "type": "http.response.start",
                 "status": self.status_code,
-                "headers": [
-                    (k.encode("latin-1"), v.encode("latin-1"))
-                    for k, v in self.raw_headers
-                ],
+                "headers": self.list_headers(as_bytes=True),
             }
         )
         await send({"type": "http.response.body", "body": self.body})
 
 
-class PlainTextResponse(SmallResponse):
+class PlainTextResponse(SmallResponse[Union[bytes, str]]):
     media_type = "text/plain"
-
-    def __init__(
-        self,
-        content: Union[bytes, str],
-        status_code: int = 200,
-        headers: Mapping[str, str] = None,
-        media_type: str = "",
-    ) -> None:
-        self.media_type = media_type or self.media_type
-        super().__init__(content, status_code, headers)
 
     async def render(self, content: Union[bytes, str]) -> bytes:
         return content if isinstance(content, bytes) else content.encode(self.charset)
@@ -272,7 +266,7 @@ class HTMLResponse(PlainTextResponse):
     media_type = "text/html"
 
 
-class JSONResponse(SmallResponse):
+class JSONResponse(SmallResponse[JSONable]):
     media_type = "application/json"
 
     def __init__(
@@ -280,26 +274,20 @@ class JSONResponse(SmallResponse):
         content: JSONable,
         status_code: int = 200,
         headers: Mapping[str, str] = None,
-        *,
-        ensure_ascii: bool = False,
-        allow_nan: bool = False,
-        indent: Union[int, str] = None,
-        separators: Optional[Tuple[str, str]] = (",", ":"),
-        default: Callable[[Any], Any] = None,
         **kwargs: Any,
     ) -> None:
-        self.json_kwargs = {
-            "ensure_ascii": ensure_ascii,
-            "allow_nan": allow_nan,
-            "indent": indent,
-            "separators": separators,
-            "default": default,
-            **kwargs,
+        self.json_kwargs: Dict[str, Any] = {
+            "ensure_ascii": False,
+            "allow_nan": False,
+            "indent": None,
+            "separators": (",", ":"),
+            "default": None,
         }
+        self.json_kwargs.update(**kwargs)
         super().__init__(content, status_code=status_code, headers=headers)
 
     async def render(self, content: JSONable) -> bytes:
-        return json.dumps(content, **self.json_kwargs).encode("utf-8")  # type: ignore
+        return json.dumps(content, **self.json_kwargs).encode("utf-8")
 
 
 class RedirectResponse(Response):
@@ -307,9 +295,7 @@ class RedirectResponse(Response):
         self, url: Union[str, URL], status_code: int = 307, headers: dict = None
     ) -> None:
         super().__init__(status_code=status_code, headers=headers)
-        self.raw_headers.append(
-            ("location", quote_plus(str(url), safe=":/%#?&=@[]!$&'()*+,;"))
-        )
+        self.headers["location"] = quote_plus(str(url), safe=":/%#?&=@[]!$&'()*+,;")
 
 
 class StreamResponse(Response):
@@ -322,18 +308,15 @@ class StreamResponse(Response):
     ) -> None:
         self.generator = generator
         super().__init__(status_code, headers)
-        self.raw_headers.append(("content-type", content_type))
-        self.raw_headers.append(("transfer-encoding", "chunked"))
+        self.headers["content-type"] = content_type
+        self.headers["transfer-encoding"] = "chunked"
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         await send(
             {
                 "type": "http.response.start",
                 "status": self.status_code,
-                "headers": [
-                    (k.encode("latin-1"), v.encode("latin-1"))
-                    for k, v in self.raw_headers
-                ],
+                "headers": self.list_headers(as_bytes=True),
             }
         )
         async for chunk in self.generator:
@@ -347,20 +330,16 @@ class FileResponse(BaseFileResponse, Response):
         self,
         send_header_only: bool,
         file_size: int,
-        headers: MutableSequence[Tuple[str, str]],
         loop: asyncio.AbstractEventLoop,
         send: Send,
     ) -> None:
-        headers.append(("content-type", str(self.media_type)))
-        headers.append(("content-length", str(file_size)))
+        self.headers["content-type"] = str(self.media_type)
+        self.headers["content-length"] = str(file_size)
         await send(
             {
                 "type": "http.response.start",
                 "status": 200,
-                "headers": [
-                    (k.encode("latin-1"), v.encode("latin-1"))
-                    for k, v in chain(self.raw_headers, headers)
-                ],
+                "headers": self.list_headers(as_bytes=True),
             }
         )
         if send_header_only:
@@ -384,23 +363,19 @@ class FileResponse(BaseFileResponse, Response):
         self,
         send_header_only: bool,
         file_size: int,
-        headers: MutableSequence[Tuple[str, str]],
         loop: asyncio.AbstractEventLoop,
         send: Send,
         start: int,
         end: int,
     ) -> None:
-        headers.append(("content-range", f"bytes {start}-{end-1}/{file_size}"))
-        headers.append(("content-type", str(self.media_type)))
-        headers.append(("content-length", str(end - start)))
+        self.headers["content-range"] = f"bytes {start}-{end-1}/{file_size}"
+        self.headers["content-type"] = str(self.media_type)
+        self.headers["content-length"] = str(end - start)
         await send(
             {
                 "type": "http.response.start",
                 "status": 206,
-                "headers": [
-                    (k.encode("latin-1"), v.encode("latin-1"))
-                    for k, v in chain(self.raw_headers, headers)
-                ],
+                "headers": self.list_headers(as_bytes=True),
             }
         )
         if send_header_only:
@@ -427,26 +402,23 @@ class FileResponse(BaseFileResponse, Response):
         self,
         send_header_only: bool,
         file_size: int,
-        headers: MutableSequence[Tuple[str, str]],
         loop: asyncio.AbstractEventLoop,
         send: Send,
         ranges: Sequence[Tuple[int, int]],
     ) -> None:
-        headers.append(("content-type", "multipart/byteranges; boundary=3d6b6a416f9b5"))
+        self.headers["content-type"] = "multipart/byteranges; boundary=3d6b6a416f9b5"
         content_length = (
             18
             + len(ranges) * (57 + len(self.media_type) + len(str(file_size)))
             + sum(len(str(start)) + len(str(end - 1)) for start, end in ranges)
         ) + sum(end - start for start, end in ranges)
-        headers.append(("content-length", str(content_length)))
+        self.headers["content-length"] = str(content_length)
+
         await send(
             {
                 "type": "http.response.start",
                 "status": 206,
-                "headers": [
-                    (k.encode("latin-1"), v.encode("latin-1"))
-                    for k, v in chain(self.raw_headers, headers)
-                ],
+                "headers": self.list_headers(as_bytes=True),
             }
         )
         if send_header_only:
@@ -498,7 +470,6 @@ class FileResponse(BaseFileResponse, Response):
         loop = asyncio.get_running_loop()  # type: ignore
         stat_result = self.stat_result
         file_size = stat_result.st_size
-        headers = self.generate_required_header(stat_result)
 
         http_range, http_if_range = "", ""
         for key, value in scope["headers"]:
@@ -510,9 +481,7 @@ class FileResponse(BaseFileResponse, Response):
         if http_range == "" or (
             http_if_range != "" and not self.judge_if_range(http_if_range, stat_result)
         ):
-            return await self.handle_all(
-                send_header_only, file_size, headers, loop, send
-            )
+            return await self.handle_all(send_header_only, file_size, loop, send)
 
         try:
             ranges = self.parse_range(http_range, file_size)
@@ -534,11 +503,11 @@ class FileResponse(BaseFileResponse, Response):
         if len(ranges) == 1:
             start, end = ranges[0]
             return await self.handle_single_range(
-                send_header_only, file_size, headers, loop, send, start, end
+                send_header_only, file_size, loop, send, start, end
             )
         else:
             return await self.handle_several_ranges(
-                send_header_only, file_size, headers, loop, send, ranges
+                send_header_only, file_size, loop, send, ranges
             )
 
 
@@ -577,15 +546,15 @@ class SendEventResponse(Response):
             {
                 "type": "http.response.start",
                 "status": self.status_code,
-                "headers": [
-                    (k.encode("latin-1"), v.encode("latin-1"))
-                    for k, v in self.raw_headers
-                ],
+                "headers": self.list_headers(as_bytes=True),
             }
         )
 
         done, pending = await asyncio.wait(
-            (self.keep_alive(send), self.send_event(send)),
+            (
+                asyncio.ensure_future(self.keep_alive(send)),
+                asyncio.ensure_future(self.send_event(send)),
+            ),
             return_when=asyncio.FIRST_COMPLETED,
         )
         [task.cancel() for task in pending]

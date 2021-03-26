@@ -8,8 +8,8 @@ from baize.datastructures import (
     FormData,
     Headers,
     MediaType,
-    MultiDict,
     MutableHeaders,
+    MutableMultiMapping,
     QueryParams,
     UploadFile,
 )
@@ -147,29 +147,14 @@ def test_media_type():
 
 
 def test_headers():
-    h = Headers(raw=[("a", "123"), ("a", "456"), ("b", "789")])
+    h = Headers([("a", "123"), ("a", "456"), ("b", "789")])
     assert "a" in h
     assert "A" in h
     assert "b" in h
     assert "B" in h
     assert "c" not in h
-    assert h["a"] == "123"
-    assert h.get("a") == "123"
+    assert h["a"] == "123, 456"
     assert h.get("nope", default=None) is None
-    assert h.getlist("a") == ["123", "456"]
-    assert h.keys() == ["a", "a", "b"]
-    assert h.values() == ["123", "456", "789"]
-    assert h.items() == [("a", "123"), ("a", "456"), ("b", "789")]
-    assert list(h) == ["a", "a", "b"]
-    assert dict(h) == {"a": "123", "b": "789"}
-    assert repr(h) == "Headers(raw=[('a', '123'), ('a', '456'), ('b', '789')])"
-    assert h == Headers(raw=[("a", "123"), ("b", "789"), ("a", "456")])
-    assert h != [("a", "123"), ("A", "456"), ("b", "789")]
-
-    h = Headers({"a": "123", "b": "789"})
-    assert h["A"] == "123"
-    assert h["B"] == "789"
-    assert repr(h) == "Headers({'a': '123', 'b': '789'})"
 
 
 def test_mutable_headers():
@@ -189,18 +174,10 @@ def test_mutable_headers():
     assert dict(h) == {"a": "0", "b": "4"}
     h.append("c", "8")
     assert dict(h) == {"a": "0", "b": "4", "c": "8"}
-    h.add_vary_header("vary")
+    h.append("vary", "vary")
     assert dict(h) == {"vary": "vary", "a": "0", "b": "4", "c": "8"}
-    h.add_vary_header("vary2")
+    h.append("vary", "vary2")
     assert dict(h) == {"vary": "vary, vary2", "a": "0", "b": "4", "c": "8"}
-
-
-def test_headers_mutablecopy():
-    h = Headers(raw=[("a", "123"), ("a", "456"), ("b", "789")])
-    c = h.mutablecopy()
-    assert c.items() == [("a", "123"), ("a", "456"), ("b", "789")]
-    c["a"] = "abc"
-    assert c.items() == [("a", "abc"), ("b", "789")]
 
 
 def test_url_blank_params():
@@ -303,8 +280,8 @@ def test_formdata():
     assert FormData({"a": "123", "b": "789"}) != {"a": "123", "b": "789"}
 
 
-def test_multidict():
-    q = MultiDict([("a", "123"), ("a", "456"), ("b", "789")])
+def test_mutable_multi_mapping():
+    q = MutableMultiMapping([("a", "123"), ("a", "456"), ("b", "789")])
     assert "a" in q
     assert "A" not in q
     assert "c" not in q
@@ -318,83 +295,79 @@ def test_multidict():
     assert len(q) == 2
     assert list(q) == ["a", "b"]
     assert dict(q) == {"a": "456", "b": "789"}
-    assert str(q) == "MultiDict([('a', '123'), ('a', '456'), ('b', '789')])"
-    assert repr(q) == "MultiDict([('a', '123'), ('a', '456'), ('b', '789')])"
-    assert MultiDict({"a": "123", "b": "456"}) == MultiDict(
+    assert str(q) == "MutableMultiMapping([('a', '123'), ('a', '456'), ('b', '789')])"
+    assert repr(q) == "MutableMultiMapping([('a', '123'), ('a', '456'), ('b', '789')])"
+    assert MutableMultiMapping({"a": "123", "b": "456"}) == MutableMultiMapping(
         [("a", "123"), ("b", "456")]
     )
-    assert MultiDict({"a": "123", "b": "456"}) == MultiDict(
+    assert MutableMultiMapping({"a": "123", "b": "456"}) == MutableMultiMapping(
         [("a", "123"), ("b", "456")]
     )
-    assert MultiDict({"a": "123", "b": "456"}) == MultiDict({"b": "456", "a": "123"})
-    assert MultiDict() == MultiDict({})
-    assert MultiDict({"a": "123", "b": "456"}) != "invalid"
+    assert MutableMultiMapping({"a": "123", "b": "456"}) == MutableMultiMapping(
+        {"b": "456", "a": "123"}
+    )
+    assert MutableMultiMapping() == MutableMultiMapping({})
+    assert MutableMultiMapping({"a": "123", "b": "456"}) != "invalid"
 
-    q = MultiDict([("a", "123"), ("a", "456")])
-    assert MultiDict(q) == q
+    q = MutableMultiMapping([("a", "123"), ("a", "456")])
+    assert MutableMultiMapping(q) == q
 
-    q = MultiDict([("a", "123"), ("a", "456")])
+    q = MutableMultiMapping([("a", "123"), ("a", "456")])
     q["a"] = "789"
     assert q["a"] == "789"
     assert q.getlist("a") == ["789"]
 
-    q = MultiDict([("a", "123"), ("a", "456")])
+    q = MutableMultiMapping([("a", "123"), ("a", "456")])
     del q["a"]
     assert q.get("a") is None
-    assert repr(q) == "MultiDict([])"
+    assert q == MutableMultiMapping()
 
-    q = MultiDict([("a", "123"), ("a", "456"), ("b", "789")])
+    q = MutableMultiMapping([("a", "123"), ("a", "456"), ("b", "789")])
     assert q.pop("a") == "456"
     assert q.get("a", None) is None
-    assert repr(q) == "MultiDict([('b', '789')])"
+    assert q == MutableMultiMapping([("b", "789")])
 
-    q = MultiDict([("a", "123"), ("a", "456"), ("b", "789")])
+    q = MutableMultiMapping([("a", "123"), ("a", "456"), ("b", "789")])
     item = q.popitem()
     assert q.get(item[0]) is None
 
-    q = MultiDict([("a", "123"), ("a", "456"), ("b", "789")])
+    q = MutableMultiMapping([("a", "123"), ("a", "456"), ("b", "789")])
     assert q.poplist("a") == ["123", "456"]
     assert q.get("a") is None
-    assert repr(q) == "MultiDict([('b', '789')])"
+    assert q == MutableMultiMapping([("b", "789")])
 
-    q = MultiDict([("a", "123"), ("a", "456"), ("b", "789")])
+    q = MutableMultiMapping([("a", "123"), ("a", "456"), ("b", "789")])
     q.clear()
     assert q.get("a") is None
-    assert repr(q) == "MultiDict([])"
+    assert q == MutableMultiMapping([])
 
-    q = MultiDict([("a", "123")])
+    q = MutableMultiMapping([("a", "123")])
     q.setlist("a", ["456", "789"])
     assert q.getlist("a") == ["456", "789"]
     q.setlist("b", [])
     assert "b" not in q
 
-    q = MultiDict([("a", "123")])
+    q = MutableMultiMapping([("a", "123")])
     assert q.setdefault("a", "456") == "123"
     assert q.getlist("a") == ["123"]
     assert q.setdefault("b", "456") == "456"
     assert q.getlist("b") == ["456"]
-    assert repr(q) == "MultiDict([('a', '123'), ('b', '456')])"
+    assert q == MutableMultiMapping([("a", "123"), ("b", "456")])
 
-    q = MultiDict([("a", "123")])
+    q = MutableMultiMapping([("a", "123")])
     q.append("a", "456")
     assert q.getlist("a") == ["123", "456"]
-    assert repr(q) == "MultiDict([('a', '123'), ('a', '456')])"
+    assert q == MutableMultiMapping([("a", "123"), ("a", "456")])
 
-    q = MultiDict([("a", "123"), ("b", "456")])
+    q = MutableMultiMapping([("a", "123"), ("b", "456")])
     q.update({"a": "789"})
     assert q.getlist("a") == ["789"]
-    q == MultiDict([("a", "789"), ("b", "456")])
+    q == MutableMultiMapping([("a", "789"), ("b", "456")])
 
-    q = MultiDict([("a", "123"), ("b", "456")])
+    q = MutableMultiMapping([("a", "123"), ("b", "456")])
     q.update(q)
-    assert repr(q) == "MultiDict([('a', '123'), ('b', '456')])"
+    assert q == MutableMultiMapping([("a", "123"), ("b", "456")])
 
-    q = MultiDict([("a", "123"), ("b", "456")])
-    q.update(None)
-    assert repr(q) == "MultiDict([('a', '123'), ('b', '456')])"
-
-    q = MultiDict([("a", "123"), ("a", "456")])
+    q = MutableMultiMapping([("a", "123"), ("a", "456")])
     q.update([("a", "123")])
     assert q.getlist("a") == ["123"]
-    q.update([("a", "456")], a="789", b="123")
-    assert q == MultiDict([("a", "456"), ("a", "789"), ("b", "123")])

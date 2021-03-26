@@ -13,14 +13,19 @@ __all__ = [
     "MediaType",
     "ContentType",
     "URL",
-    "ImmutableMultiDict",
-    "MultiDict",
+    "MultiMapping",
+    "MutableMultiMapping",
     "QueryParams",
     "UploadFile",
     "FormData",
     "Headers",
     "MutableHeaders",
 ]
+
+
+T = typing.TypeVar("T")  # Any type.
+KT = typing.TypeVar("KT")  # Key type.
+VT = typing.TypeVar("VT")  # Value type.
 
 
 Address = namedtuple("Address", ["host", "port"])
@@ -160,15 +165,15 @@ class URL:
         return self.components.fragment
 
     @property
-    def username(self) -> typing.Union[None, str]:
+    def username(self) -> typing.Optional[str]:
         return self.components.username
 
     @property
-    def password(self) -> typing.Union[None, str]:
+    def password(self) -> typing.Optional[str]:
         return self.components.password
 
     @property
-    def hostname(self) -> typing.Union[None, str]:
+    def hostname(self) -> typing.Optional[str]:
         return self.components.hostname
 
     @property
@@ -202,23 +207,22 @@ class URL:
         return self.__class__(components.geturl())
 
     def include_query_params(self, **kwargs: typing.Any) -> "URL":
-        params = MultiDict(parse_qsl(self.query, keep_blank_values=True))
-        params.update({str(key): str(value) for key, value in kwargs.items()})
+        params: MutableMultiMapping[str, str] = MutableMultiMapping(
+            parse_qsl(self.query, keep_blank_values=True)
+        )
+        params.update({key: str(value) for key, value in kwargs.items()})
         query = urlencode(params.multi_items())
         return self.replace(query=query)
 
     def replace_query_params(self, **kwargs: typing.Any) -> "URL":
-        query = urlencode([(str(key), str(value)) for key, value in kwargs.items()])
+        query = urlencode([(key, str(value)) for key, value in kwargs.items()])
         return self.replace(query=query)
 
-    def remove_query_params(
-        self, keys: typing.Union[str, typing.Sequence[str]]
-    ) -> "URL":
-        if isinstance(keys, str):
-            keys = [keys]
-        params = MultiDict(parse_qsl(self.query, keep_blank_values=True))
-        for key in keys:
-            params.pop(key, None)
+    def remove_query_params(self, *keys: str) -> "URL":
+        params: MutableMultiMapping[str, str] = MutableMultiMapping(
+            parse_qsl(self.query, keep_blank_values=True)
+        )
+        [params.pop(key, None) for key in keys]
         query = urlencode(params.multi_items())
         return self.replace(query=query)
 
@@ -235,79 +239,43 @@ class URL:
         return f"{self.__class__.__name__}({repr(url)})"
 
 
-class ImmutableMultiDict(typing.Mapping):
+class MultiMapping(typing.Generic[KT, VT], typing.Mapping[KT, VT]):
     __slots__ = ("_dict", "_list")
 
     def __init__(
         self,
-        *args: typing.Union[
-            "ImmutableMultiDict",
-            typing.Mapping,
-            typing.List[typing.Tuple[typing.Any, typing.Any]],
-        ],
-        **kwargs: typing.Any,
+        raw: typing.Union[
+            "MultiMapping",
+            typing.Mapping[KT, VT],
+            typing.Sequence[typing.Tuple[KT, VT]],
+        ] = None,
     ) -> None:
-        assert len(args) < 2, "Too many arguments."
-
-        if args:
-            value = args[0]
+        if raw is None:
+            _items = []
+        elif isinstance(raw, MultiMapping):
+            _items = list(raw.multi_items())
+        elif isinstance(raw, typing.Mapping):
+            _items = list(raw.items())
         else:
-            value = []
+            _items = list(raw)
 
-        if kwargs:
-            value = (
-                ImmutableMultiDict(value).multi_items()
-                + ImmutableMultiDict(kwargs).multi_items()
-            )
-
-        if not value:
-            _items = []  # type: typing.List[typing.Tuple[typing.Any, typing.Any]]
-        elif hasattr(value, "multi_items"):
-            value = typing.cast(ImmutableMultiDict, value)
-            _items = list(value.multi_items())
-        elif hasattr(value, "items"):
-            value = typing.cast(typing.Mapping, value)
-            _items = list(value.items())
-        else:
-            value = typing.cast(
-                typing.List[typing.Tuple[typing.Any, typing.Any]], value
-            )
-            _items = list(value)
-
-        self._dict = {k: v for k, v in _items}
+        self._dict = dict(_items)
         self._list = _items
 
-    def getlist(self, key: typing.Any) -> typing.List[str]:
-        return [item_value for item_key, item_value in self._list if item_key == key]
-
-    def keys(self) -> typing.KeysView:
-        return self._dict.keys()
-
-    def values(self) -> typing.ValuesView:
-        return self._dict.values()
-
-    def items(self) -> typing.ItemsView:
-        return self._dict.items()
-
-    def multi_items(self) -> typing.List[typing.Tuple[str, str]]:
-        return list(self._list)
-
-    def get(self, key: typing.Any, default: typing.Any = None) -> typing.Any:
-        if key in self._dict:
-            return self._dict[key]
-        return default
-
-    def __getitem__(self, key: typing.Any) -> str:
+    def __getitem__(self, key: KT) -> VT:
         return self._dict[key]
 
-    def __contains__(self, key: typing.Any) -> bool:
-        return key in self._dict
-
-    def __iter__(self) -> typing.Iterator[typing.Any]:
-        return iter(self.keys())
+    def __iter__(self) -> typing.Iterator[KT]:
+        return iter(self._dict)
 
     def __len__(self) -> int:
         return len(self._dict)
+
+    def getlist(self, key: KT) -> typing.Sequence[VT]:
+        return [item_value for item_key, item_value in self._list if item_key == key]
+
+    def multi_items(self) -> typing.Sequence[typing.Tuple[KT, VT]]:
+        return list(self._list)
 
     def __eq__(self, other: typing.Any) -> bool:
         if not isinstance(other, self.__class__):
@@ -320,100 +288,77 @@ class ImmutableMultiDict(typing.Mapping):
         return f"{class_name}({items!r})"
 
 
-class MultiDict(ImmutableMultiDict):
-    __slots__ = ("_dict", "_list")
+class MutableMultiMapping(
+    typing.Generic[KT, VT], MultiMapping[KT, VT], typing.MutableMapping[KT, VT]
+):
+    __slots__ = MultiMapping.__slots__
 
-    def __setitem__(self, key: typing.Any, value: typing.Any) -> None:
-        self.setlist(key, [value])
+    def __setitem__(self, key: KT, value: VT) -> None:
+        indexes = tuple(index for index, kv in enumerate(self._list) if kv[0] == key)
+        if indexes:
+            frist_index = indexes[0]
+            for index in reversed(indexes):
+                if index == frist_index:
+                    self._list[index] = (key, value)
+                else:
+                    del self._list[index]
+        else:
+            self._list.append((key, value))
+        self._dict[key] = value
 
-    def __delitem__(self, key: typing.Any) -> None:
-        self._list = [(k, v) for k, v in self._list if k != key]
+    def __delitem__(self, key: KT) -> None:
+        _list = self._list[:]
+        self._list.clear()
+        self._list.extend((k, v) for k, v in _list if k != key)
         del self._dict[key]
 
-    def pop(self, key: typing.Any, default: typing.Any = None) -> typing.Any:
-        self._list = [(k, v) for k, v in self._list if k != key]
-        return self._dict.pop(key, default)
-
-    def popitem(self) -> typing.Tuple:
-        key, value = self._dict.popitem()
-        self._list = [(k, v) for k, v in self._list if k != key]
-        return key, value
-
-    def poplist(self, key: typing.Any) -> typing.List:
-        values = [v for k, v in self._list if k == key]
-        self.pop(key)
-        return values
-
-    def clear(self) -> None:
-        self._dict.clear()
-        self._list.clear()
-
-    def setdefault(self, key: typing.Any, default: typing.Any = None) -> typing.Any:
-        if key not in self:
-            self._dict[key] = default
-            self._list.append((key, default))
-
-        return self[key]
-
-    def setlist(self, key: typing.Any, values: typing.List) -> None:
+    def setlist(self, key: KT, values: typing.Sequence[VT]) -> None:
         if not values:
-            self.pop(key, None)
+            # This is a mypy error
+            self.pop(key, None)  # type: ignore
         else:
-            existing_items = [(k, v) for (k, v) in self._list if k != key]
-            self._list = existing_items + [(key, value) for value in values]
+            self._list = list(
+                chain(
+                    ((k, v) for (k, v) in self._list if k != key),
+                    ((key, value) for value in values),
+                )
+            )
             self._dict[key] = values[-1]
 
-    def append(self, key: typing.Any, value: typing.Any) -> None:
+    def poplist(self, key: KT) -> typing.Sequence[VT]:
+        values = [v for k, v in self._list if k == key]
+        # This is a mypy error
+        self.pop(key, None)  # type: ignore
+        return values
+
+    def append(self, key: KT, value: VT) -> None:
         self._list.append((key, value))
         self._dict[key] = value
 
-    def update(
-        self,
-        *args: typing.Union[
-            "MultiDict",
-            typing.Mapping,
-            typing.List[typing.Tuple[typing.Any, typing.Any]],
-        ],
-        **kwargs: typing.Any,
-    ) -> None:
-        value = MultiDict(*args, **kwargs)
-        existing_items = [(k, v) for (k, v) in self._list if k not in value.keys()]
-        self._list = existing_items + value.multi_items()
-        self._dict.update(value)
 
-
-class QueryParams(ImmutableMultiDict):
+class QueryParams(MultiMapping[str, str]):
     """
-    An immutable multidict.
+    An immutable MutableMultiMapping.
     """
 
     __slots__ = ("_dict", "_list")
 
     def __init__(
         self,
-        *args: typing.Union[
-            ImmutableMultiDict,
-            typing.Mapping,
-            typing.List[typing.Tuple[typing.Any, typing.Any]],
+        raw: typing.Union[
+            "MultiMapping[str, str]",
+            typing.Mapping[str, str],
+            typing.Sequence[typing.Tuple[str, str]],
             str,
             bytes,
-        ],
-        **kwargs: typing.Any,
+        ] = None,
     ) -> None:
-        assert len(args) < 2, "Too many arguments."
-
-        value = args[0] if args else []
-
-        if isinstance(value, str):
-            super().__init__(parse_qsl(value, keep_blank_values=True), **kwargs)
-        elif isinstance(value, bytes):
-            super().__init__(
-                parse_qsl(value.decode("latin-1"), keep_blank_values=True), **kwargs
-            )
+        if isinstance(raw, str):
+            super().__init__(parse_qsl(raw, keep_blank_values=True))
+        elif isinstance(raw, bytes):
+            super().__init__(parse_qsl(raw.decode("latin-1"), keep_blank_values=True))
         else:
-            super().__init__(*args, **kwargs)  # type: ignore
-        self._list = [(str(k), str(v)) for k, v in self._list]
-        self._dict = {str(k): str(v) for k, v in self._dict.items()}
+            super().__init__(raw)
 
     def __str__(self) -> str:
         return urlencode(self._list)
@@ -479,23 +424,12 @@ class UploadFile:
             await asyncio.get_event_loop().run_in_executor(None, self.close)
 
 
-class FormData(ImmutableMultiDict):
+class FormData(MultiMapping[str, typing.Union[str, UploadFile]]):
     """
-    An immutable multidict, containing both file uploads and text input.
+    An immutable MultiMapping, containing both file uploads and text input.
     """
 
-    __slots__ = ("_dict", "_list")
-
-    def __init__(
-        self,
-        *args: typing.Union[
-            "FormData",
-            typing.Mapping[str, typing.Union[str, UploadFile]],
-            typing.List[typing.Tuple[str, typing.Union[str, UploadFile]]],
-        ],
-        **kwargs: typing.Union[str, UploadFile],
-    ) -> None:
-        super().__init__(*args, **kwargs)
+    __slots__ = MultiMapping.__slots__
 
     def close(self) -> None:
         for key, value in self.multi_items():
@@ -509,167 +443,51 @@ class FormData(ImmutableMultiDict):
 
 
 class Headers(typing.Mapping[str, str]):
-    """
-    An immutable, case-insensitive multidict.
-    """
-
-    __slots__ = ("raw",)
-
     def __init__(
         self,
-        headers: typing.Mapping[str, str] = None,
-        raw: typing.List[typing.Tuple[str, str]] = None,
-        scope: Scope = None,
-        environ: Environ = None,
+        headers: typing.Union[
+            "Headers",
+            typing.Mapping[str, str],
+            typing.Sequence[typing.Tuple[str, str]],
+        ] = None,
     ) -> None:
-        self.raw: typing.List[typing.Tuple[str, str]] = []
-        if headers is not None:
-            self.raw = [(key.lower(), value) for key, value in headers.items()]
-        elif raw is not None:
-            self.raw = raw
-        elif scope is not None:
-            self.raw = [
-                (key.lower().decode("latin-1"), value.decode("latin-1"))
-                for key, value in scope["headers"]
-            ]
-        elif environ is not None:
-            self.raw = [
-                (key.lower().replace("_", "-"), value)
-                for key, value in chain(
-                    (
-                        (key[5:], value)
-                        for key, value in environ.items()
-                        if key.startswith("HTTP_")
-                    ),
-                    (
-                        (key, value)
-                        for key, value in environ.items()
-                        if key in ("CONTENT_TYPE", "CONTENT_LENGTH")
-                    ),
-                )
-            ]
+        store: typing.Dict[str, str] = {}
+        items: typing.Iterable[typing.Tuple[str, str]]
+        if isinstance(headers, typing.Mapping):
+            items = headers.items()
+        elif headers is None:
+            items = ()
+        else:
+            items = headers
+        for key, value in items:
+            key = key.lower()
+            if key in store:
+                store[key] = f"{store[key]}, {value}"
+            else:
+                store[key] = value
 
-    def keys(self) -> typing.List[str]:  # type: ignore
-        return [key for key, _ in self.raw]
-
-    def values(self) -> typing.List[str]:  # type: ignore
-        return [value for _, value in self.raw]
-
-    def items(self) -> typing.List[typing.Tuple[str, str]]:  # type: ignore
-        return [(key, value) for key, value in self.raw]
-
-    def get(self, key: str, default: typing.Any = None) -> typing.Any:
-        try:
-            return self[key]
-        except KeyError:
-            return default
-
-    def getlist(self, key: str) -> typing.List[str]:
-        return [
-            item_value for item_key, item_value in self.raw if item_key == key.lower()
-        ]
-
-    def mutablecopy(self) -> "MutableHeaders":
-        return MutableHeaders(raw=self.raw[:])
+        self._dict = store
 
     def __getitem__(self, key: str) -> str:
-        get_header_key = key.lower()
-        for header_key, header_value in self.raw:
-            if header_key == get_header_key:
-                return header_value
-        raise KeyError(key)
+        return self._dict[key.lower()]
 
-    def __contains__(self, key: typing.Any) -> bool:
-        get_header_key = key.lower()
-        for header_key, header_value in self.raw:
-            if header_key == get_header_key:
-                return True
-        return False
-
-    def __iter__(self) -> typing.Iterator[typing.Any]:
-        return iter(self.keys())
+    def __iter__(self) -> typing.Iterator[str]:
+        return self._dict.__iter__()
 
     def __len__(self) -> int:
-        return len(self.raw)
-
-    def __eq__(self, other: typing.Any) -> bool:
-        if not isinstance(other, Headers):
-            return False
-        return sorted(self.raw) == sorted(other.raw)
-
-    def __repr__(self) -> str:
-        class_name = self.__class__.__name__
-        as_dict = dict(self.items())
-        if len(as_dict) == len(self):
-            return f"{class_name}({as_dict!r})"
-        return f"{class_name}(raw={self.raw!r})"
+        return self._dict.__len__()
 
 
-class MutableHeaders(Headers):
-    __slots__ = ("raw",)
-
+class MutableHeaders(Headers, typing.MutableMapping[str, str]):
     def __setitem__(self, key: str, value: str) -> None:
-        """
-        Set the header `key` to `value`, removing any duplicate entries.
-        Retains insertion order.
-        """
-        set_key = key.lower()
-        set_value = value
-
-        found_indexes = []
-        for idx, (item_key, item_value) in enumerate(self.raw):
-            if item_key == set_key:
-                found_indexes.append(idx)
-
-        for idx in reversed(found_indexes[1:]):
-            del self.raw[idx]
-
-        if found_indexes:
-            idx = found_indexes[0]
-            self.raw[idx] = (set_key, set_value)
-        else:
-            self.raw.append((set_key, set_value))
+        self._dict[key.lower()] = value
 
     def __delitem__(self, key: str) -> None:
-        """
-        Remove the header `key`.
-        """
-        del_key = key.lower()
-
-        pop_indexes = []
-        for idx, (item_key, item_value) in enumerate(self.raw):
-            if item_key == del_key:
-                pop_indexes.append(idx)
-
-        for idx in reversed(pop_indexes):
-            del self.raw[idx]
-
-    def setdefault(self, key: str, value: str) -> str:
-        """
-        If the header `key` does not exist, then set it to `value`.
-        Returns the header value.
-        """
-        set_key = key.lower()
-        set_value = value
-
-        for idx, (item_key, item_value) in enumerate(self.raw):
-            if item_key == set_key:
-                return item_value
-        self.raw.append((set_key, set_value))
-        return value
-
-    def update(self, other: dict) -> None:
-        for key, val in other.items():
-            self[key] = val
+        del self._dict[key.lower()]
 
     def append(self, key: str, value: str) -> None:
-        """
-        Append a header, preserving any duplicate entries.
-        """
-        self.raw.append((key.lower(), value))
-
-    def add_vary_header(self, vary: str) -> None:
-        existing = self.get("vary")
-        if existing is not None:
-            vary = ", ".join([existing, vary])
-        self["vary"] = vary
+        key = key.lower()
+        if key in self._dict:
+            self._dict[key] = f"{self._dict[key]}, {value}"
+        else:
+            self._dict[key] = value
