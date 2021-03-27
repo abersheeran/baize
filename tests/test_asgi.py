@@ -621,7 +621,7 @@ async def test_file_response_with_download_name(tmp_path: Path):
         response = await client.get("/")
         assert (
             response.headers["content-disposition"]
-            == "attachment; filename*=utf-8''README.txt"
+            == "attachment; filename=\"README.txt\"; filename*=utf-8''README.txt"
         )
 
 

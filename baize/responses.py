@@ -87,29 +87,28 @@ class BaseFileResponse(BaseResponse):
         self,
         filepath: str,
         headers: Mapping[str, str] = None,
-        media_type: str = None,
+        content_type: str = None,
         download_name: str = None,
         stat_result: os.stat_result = None,
     ) -> None:
         self.filepath = filepath
-        self.media_type = (
-            media_type
+        self.content_type = (
+            content_type
             or guess_type(download_name or os.path.basename(filepath))[0]
             or "application/octet-stream"
         )
-        self.download_name = download_name
         self.stat_result = stat_result or os.stat(self.filepath)
         if not stat.S_ISREG(self.stat_result.st_mode):
             raise FileNotFoundError("Filepath exists, but is not a valid file.")
         super().__init__(status_code=200, headers=headers)
 
         self.headers["accept-ranges"] = "bytes"
-        if (
-            self.download_name is not None
-            or self.media_type == "application/octet-stream"
-        ):
-            content_disposition = "attachment; filename*=utf-8''{}".format(
-                quote(self.download_name or os.path.basename(self.filepath))
+        if download_name is not None or self.content_type == "application/octet-stream":
+            download_name = download_name or os.path.basename(self.filepath)
+            content_disposition = (
+                "attachment; "
+                f'filename="{download_name}"; '
+                f"filename*=utf-8''{quote(download_name)}"
             )
             self.headers["content-disposition"] = content_disposition
         self.headers["last-modified"] = formatdate(

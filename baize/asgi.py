@@ -333,7 +333,7 @@ class FileResponse(BaseFileResponse, Response):
         loop: asyncio.AbstractEventLoop,
         send: Send,
     ) -> None:
-        self.headers["content-type"] = str(self.media_type)
+        self.headers["content-type"] = str(self.content_type)
         self.headers["content-length"] = str(file_size)
         await send(
             {
@@ -369,7 +369,7 @@ class FileResponse(BaseFileResponse, Response):
         end: int,
     ) -> None:
         self.headers["content-range"] = f"bytes {start}-{end-1}/{file_size}"
-        self.headers["content-type"] = str(self.media_type)
+        self.headers["content-type"] = str(self.content_type)
         self.headers["content-length"] = str(end - start)
         await send(
             {
@@ -409,7 +409,7 @@ class FileResponse(BaseFileResponse, Response):
         self.headers["content-type"] = "multipart/byteranges; boundary=3d6b6a416f9b5"
         content_length = (
             18
-            + len(ranges) * (57 + len(self.media_type) + len(str(file_size)))
+            + len(ranges) * (57 + len(self.content_type) + len(str(file_size)))
             + sum(len(str(start)) + len(str(end - 1)) for start, end in ranges)
         ) + sum(end - start for start, end in ranges)
         self.headers["content-length"] = str(content_length)
@@ -429,7 +429,7 @@ class FileResponse(BaseFileResponse, Response):
             for start, end in ranges:
                 range_header = (
                     "--3d6b6a416f9b5\n"
-                    f"Content-Type: {self.media_type}\n"
+                    f"Content-Type: {self.content_type}\n"
                     f"Content-Range: bytes {start}-{end-1}/{file_size}\n\n"
                 ).encode("latin-1")
                 await send(

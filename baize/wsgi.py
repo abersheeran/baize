@@ -288,7 +288,7 @@ class FileResponse(BaseFileResponse, Response):
         file_size: int,
         start_response: StartResponse,
     ) -> Generator[bytes, None, None]:
-        self.headers["content-type"] = str(self.media_type)
+        self.headers["content-type"] = str(self.content_type)
         self.headers["content-length"] = str(file_size)
         start_response(
             StatusStringMapping[200], self.list_headers(as_bytes=False), None
@@ -311,7 +311,7 @@ class FileResponse(BaseFileResponse, Response):
         end: int,
     ) -> Generator[bytes, None, None]:
         self.headers["content-range"] = f"bytes {start}-{end-1}/{file_size}"
-        self.headers["content-type"] = str(self.media_type)
+        self.headers["content-type"] = str(self.content_type)
         self.headers["content-length"] = str(end - start)
         start_response(
             StatusStringMapping[206], self.list_headers(as_bytes=False), None
@@ -335,7 +335,7 @@ class FileResponse(BaseFileResponse, Response):
         self.headers["content-type"] = "multipart/byteranges; boundary=3d6b6a416f9b5"
         content_length = (
             18
-            + len(ranges) * (57 + len(self.media_type) + len(str(file_size)))
+            + len(ranges) * (57 + len(self.content_type) + len(str(file_size)))
             + sum(len(str(start)) + len(str(end - 1)) for start, end in ranges)
         ) + sum(end - start for start, end in ranges)
         self.headers["content-length"] = str(content_length)
@@ -351,7 +351,7 @@ class FileResponse(BaseFileResponse, Response):
             for start, end in ranges:
                 file.seek(start)
                 yield b"--3d6b6a416f9b5\n"
-                yield f"Content-Type: {self.media_type}\n".encode("latin-1")
+                yield f"Content-Type: {self.content_type}\n".encode("latin-1")
                 yield f"Content-Range: bytes {start}-{end-1}/{file_size}\n".encode(
                     "latin-1"
                 )
