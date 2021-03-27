@@ -333,6 +333,7 @@ def test_mutable_multi_mapping():
 
     q = MutableMultiMapping([("a", "123"), ("a", "456"), ("b", "789")])
     assert q.poplist("a") == ["123", "456"]
+    assert q.poplist("ab") == []
     assert q.get("a") is None
     assert q == MutableMultiMapping([("b", "789")])
 
@@ -346,6 +347,8 @@ def test_mutable_multi_mapping():
     assert q.getlist("a") == ["456", "789"]
     q.setlist("b", [])
     assert "b" not in q
+    q.setlist("a", [])
+    assert "a" not in q
 
     q = MutableMultiMapping([("a", "123")])
     assert q.setdefault("a", "456") == "123"

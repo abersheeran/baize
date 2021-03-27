@@ -2,7 +2,6 @@ import asyncio
 import typing
 from cgi import parse_header
 from collections import namedtuple
-from itertools import chain
 from tempfile import SpooledTemporaryFile
 from urllib.parse import SplitResult, parse_qsl, urlencode, urlsplit
 
@@ -317,22 +316,21 @@ class MutableMultiMapping(
         del self._dict[key]
 
     def setlist(self, key: KT, values: typing.Sequence[VT]) -> None:
-        if not values:
-            # This is a mypy error
-            self.pop(key, None)  # type: ignore
-        else:
-            self._list = list(
-                chain(
-                    ((k, v) for (k, v) in self._list if k != key),
-                    ((key, value) for value in values),
-                )
-            )
+        if values:
+            self._list = [
+                *((k, v) for k, v in self._list if k != key),
+                *((key, value) for value in values),
+            ]
             self._dict[key] = values[-1]
+        elif key in self:
+            del self[key]
 
     def poplist(self, key: KT) -> typing.Sequence[VT]:
         values = [v for k, v in self._list if k == key]
-        # This is a mypy error
-        self.pop(key, None)  # type: ignore
+        try:
+            del self[key]
+        except KeyError:
+            pass
         return values
 
     def append(self, key: KT, value: VT) -> None:
