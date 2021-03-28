@@ -19,3 +19,61 @@ Or install from GitHub master branch
 ```
 pip install -U git+https://github.com/abersheeran/baize@setup.py
 ```
+
+## Usage
+
+```python
+from baize.wsgi import request_response, Router, Request, Response, PlainTextResponse
+
+
+@request_response
+def sayhi(request: Request) -> Response:
+    return PlainTextResponse("hi, " + request.path_params["name"])
+
+
+@request_response
+def echo(request: Request) -> Response:
+    return PlainTextResponse(request.body)
+
+
+application = Router(
+    ("/", PlainTextResponse("homepage")),
+    ("/echo", echo),
+    ("/sayhi/{name}", sayhi),
+)
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(application, interface="wsgi", port=8000)
+```
+
+```python
+from baize.asgi import request_response, Router, Request, Response, PlainTextResponse
+
+
+@request_response
+async def sayhi(request: Request) -> Response:
+    return PlainTextResponse("hi, " + request.path_params["name"])
+
+
+@request_response
+async def echo(request: Request) -> Response:
+    return PlainTextResponse(await request.body)
+
+
+application = Router(
+    ("/", PlainTextResponse("homepage")),
+    ("/echo", echo),
+    ("/sayhi/{name}", sayhi),
+)
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(application, interface="asgi3", port=8000)
+```
+
+The above are two pieces of code for quick reading. If you are a beginner to BáiZé, please refer to the following document to learn how to use it.
