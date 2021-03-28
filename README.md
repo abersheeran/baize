@@ -10,7 +10,7 @@ Under the ASGI/WSGI protocol, the interface of the request object and the respon
 
 - Support range file response, server-sent event response
 - Support WebSocket (only ASGI)
-- WSGI, ASGI routing to combine any application like django(wsgi)/pyramid/bottle/flask or django(asgi)/index-py/starlette/fastapi/sanic/quart
+- WSGI, ASGI routing to combine any application like [Django(wsgi)](https://docs.djangoproject.com/en/3.0/howto/deployment/wsgi/)/[Pyramid](https://trypyramid.com/)/[Bottle](https://bottlepy.org/)/[Flask](https://flask.palletsprojects.com/) or [Django(asgi)](https://docs.djangoproject.com/en/3.0/howto/deployment/asgi/)/[Index.py](https://index-py.aber.sh/)/[Starlette](https://www.starlette.io/)/[FastAPI](https://fastapi.tiangolo.com/)/[Sanic](https://sanic.readthedocs.io/en/stable/)/[Quart](https://pgjones.gitlab.io/quart/)
 
 ## Install
 

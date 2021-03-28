@@ -40,6 +40,13 @@ StatusStringMapping = defaultdict(
 
 
 class HTTPConnection(Mapping, MoreInfoFromHeaderMixin):
+    """
+    A base class for incoming HTTP connections.
+
+    It is a valid Mapping type that allows you to directly
+    access the values in any WSGI `environ` dictionary.
+    """
+
     def __init__(self, environ: Environ) -> None:
         self._environ = environ
         self._stream_consumed = False
@@ -55,6 +62,12 @@ class HTTPConnection(Mapping, MoreInfoFromHeaderMixin):
 
     @cached_property
     def client(self) -> Address:
+        """
+        Client's IP and Port.
+
+        Note that this depends on the `REMOTE_ADDR` and `REMOTE_PORT` values
+        given by the WSGI Server, and is not necessarily accurate.
+        """
         if self.get("REMOTE_ADDR") and self.get("REMOTE_PORT"):
             return Address(self["REMOTE_ADDR"], int(self["REMOTE_PORT"]))
         return Address(host=None, port=None)

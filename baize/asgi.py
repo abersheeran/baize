@@ -46,8 +46,10 @@ async def empty_send(message: Message) -> None:
 
 class HTTPConnection(Mapping, MoreInfoFromHeaderMixin):
     """
-    A base class for incoming HTTP connections, that is used to provide
-    any functionality that is common to both `Request` and `WebSocket`.
+    A base class for incoming HTTP connections.
+
+    It is a valid Mapping type that allows you to directly
+    access the values in any ASGI `scope` dictionary.
     """
 
     def __init__(
@@ -68,6 +70,12 @@ class HTTPConnection(Mapping, MoreInfoFromHeaderMixin):
 
     @cached_property
     def client(self) -> Address:
+        """
+        Client's IP and Port.
+
+        Note that this depends on the "client" value given by
+        the ASGI Server, and is not necessarily accurate.
+        """
         host, port = self.get("client") or (None, None)
         return Address(host=host, port=port)
 
