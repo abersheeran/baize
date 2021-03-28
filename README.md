@@ -8,6 +8,10 @@ The minimize implementation of methods required in the Web framework. No redunda
 
 Under the ASGI/WSGI protocol, the interface of the request object and the response object is almost the same, only need to add or delete `await` in the appropriate place. In addition, it should be noted that ASGI supports WebSocket but WSGI does not.
 
+- Support range file response, server-sent event response
+- Support WebSocket (only ASGI)
+- WSGI, ASGI routing to combine any application like django(wsgi)/pyramid/bottle/flask or django(asgi)/index-py/starlette/fastapi/sanic/quart
+
 ## Install
 
 ```
@@ -21,6 +25,8 @@ pip install -U git+https://github.com/abersheeran/baize@setup.py
 ```
 
 ## Usage
+
+A short example for WSGI application, if you don't know what is WSGI, please read [PEP3333](https://www.python.org/dev/peps/pep-3333/).
 
 ```python
 from baize.wsgi import request_response, Router, Request, Response, PlainTextResponse
@@ -49,6 +55,8 @@ if __name__ == "__main__":
     uvicorn.run(application, interface="wsgi", port=8000)
 ```
 
+A short example for ASGI application, if you don't know what is ASGI, please read [ASGI Documention](https://asgi.readthedocs.io/en/latest/).
+
 ```python
 from baize.asgi import request_response, Router, Request, Response, PlainTextResponse
 
@@ -76,4 +84,4 @@ if __name__ == "__main__":
     uvicorn.run(application, interface="asgi3", port=8000)
 ```
 
-The above are two pieces of code for quick reading. If you are a beginner to BáiZé, please refer to the following document to learn how to use it.
+More usages please read [BáiZé Document](https://abersheeran.github.io/baize/). If you have a question and need help, you can send it to [Discussions](https://github.com/abersheeran/baize/discussions).
