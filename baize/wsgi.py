@@ -114,10 +114,7 @@ class Request(HTTPConnection):
 
     @cached_property
     def body(self) -> bytes:
-        chunks = []
-        for chunk in self.stream():
-            chunks.append(chunk)
-        return b"".join(chunks)
+        return b"".join([chunk for chunk in self.stream()])
 
     @cached_property
     def json(self) -> Any:
