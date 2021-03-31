@@ -24,7 +24,13 @@ Or install from GitHub master branch
 pip install -U git+https://github.com/abersheeran/baize@setup.py
 ```
 
-## Usage
+## Document and other website
+
+[BáiZé Document](https://abersheeran.github.io/baize/)
+
+If you have questions or idea, you can send it to [Discussions](https://github.com/abersheeran/baize/discussions).
+
+## Quick Start
 
 A short example for WSGI application, if you don't know what is WSGI, please read [PEP3333](https://www.python.org/dev/peps/pep-3333/).
 
@@ -84,4 +90,8 @@ if __name__ == "__main__":
     uvicorn.run(application, interface="asgi3", port=8000)
 ```
 
-More usages please read [BáiZé Document](https://abersheeran.github.io/baize/). If you have a question and need help, you can send it to [Discussions](https://github.com/abersheeran/baize/discussions).
+## License
+
+Apache-2.0.
+
+You can do whatever you want with the permission of the license.
