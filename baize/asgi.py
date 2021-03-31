@@ -2,7 +2,6 @@ import abc
 import asyncio
 import functools
 import json
-import sys
 from enum import Enum
 from itertools import chain
 from typing import (
@@ -32,22 +31,6 @@ from .responses import BaseFileResponse, BaseResponse
 from .routing import BaseHosts, BaseRouter, BaseSubpaths
 from .typing import ASGIApp, JSONable, Message, Receive, Scope, Send, ServerSentEvent
 from .utils import cached_property
-
-if sys.version_info[:2] < (3, 7):  # pragma: no cover
-    # Copied from the CPython3.7 standard library.
-    from asyncio.events import _get_running_loop
-
-    def get_running_loop():
-        """Return the running event loop.  Raise a RuntimeError if there is none.
-
-        This function is thread-specific.
-        """
-        loop = _get_running_loop()
-        if loop is None:
-            raise RuntimeError("no running event loop")
-        return loop
-
-    asyncio.get_running_loop = get_running_loop  # type: ignore
 
 
 class ClientDisconnect(Exception):
@@ -467,7 +450,7 @@ class FileResponse(BaseFileResponse, Response):
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         send_header_only = scope["method"] == "HEAD"
 
-        loop = asyncio.get_running_loop()  # type: ignore
+        loop = asyncio.get_event_loop()
         stat_result = self.stat_result
         file_size = stat_result.st_size
 
