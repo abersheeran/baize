@@ -74,6 +74,9 @@ class HTTPConnection(Mapping, MoreInfoFromHeaderMixin):
 
     @cached_property
     def url(self) -> URL:
+        """
+        The full URL of this request.
+        """
         return URL(environ=self._environ)
 
     @cached_property
@@ -82,10 +85,18 @@ class HTTPConnection(Mapping, MoreInfoFromHeaderMixin):
 
     @cached_property
     def query_params(self) -> QueryParams:
+        """
+        Query parameter. It is a multi-value mapping.
+        """
         return QueryParams(self["QUERY_STRING"])
 
     @cached_property
     def headers(self) -> Headers:
+        """
+        A read-only case-independent mapping.
+
+        Note that in its internal storage, all keys are in lower case.
+        """
         headers = (
             (key.lower().replace("_", "-"), value)
             for key, value in chain(
@@ -107,6 +118,9 @@ class HTTPConnection(Mapping, MoreInfoFromHeaderMixin):
 class Request(HTTPConnection):
     @cached_property
     def method(self) -> str:
+        """
+        HTTP method. Uppercase string.
+        """
         return self["REQUEST_METHOD"]
 
     def stream(self) -> Generator[bytes, None, None]:
@@ -153,6 +167,11 @@ class Request(HTTPConnection):
         )
 
     def close(self) -> None:
+        """
+        Close all temporary files in the `self.form`.
+
+        This can always be called, regardless of whether you use form or not.
+        """
         if "form" in self.__dict__:
             self.form.close()
 

@@ -81,6 +81,9 @@ class HTTPConnection(Mapping, MoreInfoFromHeaderMixin):
 
     @cached_property
     def url(self) -> URL:
+        """
+        The full URL of this request.
+        """
         return URL(scope=self._scope)
 
     @cached_property
@@ -89,10 +92,18 @@ class HTTPConnection(Mapping, MoreInfoFromHeaderMixin):
 
     @cached_property
     def query_params(self) -> QueryParams:
+        """
+        Query parameter. It is a multi-value mapping.
+        """
         return QueryParams(self["query_string"])
 
     @cached_property
     def headers(self) -> Headers:
+        """
+        A read-only case-independent mapping.
+
+        Note that in its internal storage, all keys are in lower case.
+        """
         headers = (
             (key.decode("latin-1"), value.decode("latin-1"))
             for key, value in self._scope["headers"]
@@ -111,6 +122,9 @@ class Request(HTTPConnection):
 
     @cached_property
     def method(self) -> str:
+        """
+        HTTP method. Uppercase string.
+        """
         return self._scope["method"]
 
     async def stream(self) -> AsyncGenerator[bytes, None]:
@@ -165,10 +179,18 @@ class Request(HTTPConnection):
         )
 
     async def close(self) -> None:
+        """
+        Close all temporary files in the `self.form`.
+
+        This can always be called, regardless of whether you use form or not.
+        """
         if "form" in self.__dict__ and self.__dict__["form"].done():
             await (await self.form).aclose()
 
     async def is_disconnected(self) -> bool:
+        """
+        The method used to determine whether the connection is interrupted.
+        """
         if not self._is_disconnected:
             try:
                 message = await asyncio.wait_for(self._receive(), timeout=0.0000001)

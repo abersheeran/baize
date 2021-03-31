@@ -63,6 +63,9 @@ class BaseResponse:
         raise NotImplementedError
 
     def list_headers(self, *, as_bytes):
+        """
+        Merge `self.headers` and `self.cookies` then returned as a list.
+        """
         if as_bytes:
             return [
                 *(
