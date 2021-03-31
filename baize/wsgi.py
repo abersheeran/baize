@@ -34,7 +34,7 @@ from .typing import Environ, JSONable, ServerSentEvent, StartResponse, WSGIApp
 from .utils import cached_property
 
 StatusStringMapping = defaultdict(
-    lambda status: f"{status} Custom status code",
+    lambda status: f"{status} Unknown Status Code",
     {int(status): f"{status} {status.phrase}" for status in HTTPStatus},
 )
 
