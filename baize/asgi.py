@@ -3,16 +3,15 @@ import asyncio
 import functools
 import json
 from enum import Enum
-from itertools import chain
 from typing import (
     Any,
     AsyncGenerator,
+    AsyncIterable,
     AsyncIterator,
     Awaitable,
     Callable,
     Dict,
     Generic,
-    Iterable,
     Iterator,
     Mapping,
     Sequence,
@@ -27,7 +26,7 @@ from .datastructures import URL, Address, FormData, Headers, QueryParams
 from .exceptions import HTTPException
 from .formparsers import AsyncMultiPartParser
 from .requests import MoreInfoFromHeaderMixin
-from .responses import BaseFileResponse, BaseResponse
+from .responses import BaseFileResponse, BaseResponse, build_bytes_from_sse
 from .routing import BaseHosts, BaseRouter, BaseSubpaths
 from .typing import ASGIApp, JSONable, Message, Receive, Scope, Send, ServerSentEvent
 from .utils import cached_property
@@ -281,7 +280,7 @@ class RedirectResponse(Response):
 class StreamResponse(Response):
     def __init__(
         self,
-        generator: AsyncGenerator[bytes, None],
+        generator: AsyncIterable[bytes],
         status_code: int = 200,
         headers: Mapping[str, str] = None,
         content_type: str = "application/octet-stream",
@@ -504,7 +503,7 @@ class SendEventResponse(Response):
 
     def __init__(
         self,
-        generator: AsyncGenerator[ServerSentEvent, None],
+        iterable: AsyncIterable[ServerSentEvent],
         status_code: int = 200,
         headers: Mapping[str, str] = None,
         *,
@@ -517,7 +516,7 @@ class SendEventResponse(Response):
             headers = dict(self.required_headers)
         headers["Content-Type"] += f"; charset={charset}"
         super().__init__(status_code, headers)
-        self.generator = generator
+        self.iterable = iterable
         self.ping_interval = ping_interval
         self.charset = charset
 
@@ -542,33 +541,15 @@ class SendEventResponse(Response):
         await send({"type": "http.response.body", "body": b""})
 
     async def send_event(self, send: Send) -> None:
-        async for chunk in self.generator:
-            if "data" in chunk:
-                data: Iterable[bytes] = (
-                    f"data: {_}".encode(self.charset)
-                    for _ in chunk.pop("data").splitlines()
-                )
-            else:
-                data = ()
-            event = b"\n".join(
-                chain(
-                    (f"{k}: {v}".encode(self.charset) for k, v in chunk.items()),
-                    data,
-                    (b"", b""),  # for generate b"\n\n"
-                )
-            )
-            await send({"type": "http.response.body", "body": event, "more_body": True})
+        async for chunk in self.iterable:
+            body = build_bytes_from_sse(chunk, self.charset)
+            await send({"type": "http.response.body", "body": body, "more_body": True})
 
     async def keep_alive(self, send: Send) -> None:
         while True:
             await asyncio.sleep(self.ping_interval)
-            await send(
-                {
-                    "type": "http.response.body",
-                    "body": ": ping\n\n".encode(self.charset),
-                    "more_body": True,
-                }
-            )
+            ping = b": ping\n\n"
+            await send({"type": "http.response.body", "body": ping, "more_body": True})
 
 
 class WebSocketDisconnect(Exception):

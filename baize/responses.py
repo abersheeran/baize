@@ -4,13 +4,14 @@ import stat
 from email.utils import formatdate
 from hashlib import sha1
 from http import cookies as http_cookies
+from itertools import chain
 from mimetypes import guess_type
-from typing import List, Mapping, Sequence, Tuple, Union, overload
+from typing import Iterable, List, Mapping, Sequence, Tuple, Union, overload
 from urllib.parse import quote
 
 from .datastructures import MutableHeaders
 from .exceptions import HTTPException
-from .typing import Literal
+from .typing import Literal, ServerSentEvent
 
 
 class BaseResponse:
@@ -178,3 +179,21 @@ class BaseFileResponse(BaseResponse):
             else:
                 result.append((start, end))
         return result
+
+
+def build_bytes_from_sse(event: ServerSentEvent, charset: str) -> bytes:
+    """
+    helper function for SendEventResponse
+    """
+    data: Iterable[bytes]
+    if "data" in event:
+        data = (f"data: {_}".encode(charset) for _ in event.pop("data").splitlines())
+    else:
+        data = ()
+    return b"\n".join(
+        chain(
+            (f"{k}: {v}".encode(charset) for k, v in event.items()),
+            data,
+            (b"", b""),  # for generate b"\n\n"
+        )
+    )

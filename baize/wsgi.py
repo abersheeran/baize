@@ -28,7 +28,7 @@ from .datastructures import URL, Address, FormData, Headers, QueryParams, defaul
 from .exceptions import HTTPException
 from .formparsers import MultiPartParser
 from .requests import MoreInfoFromHeaderMixin
-from .responses import BaseFileResponse, BaseResponse
+from .responses import BaseFileResponse, BaseResponse, build_bytes_from_sse
 from .routing import BaseHosts, BaseRouter, BaseSubpaths
 from .typing import Environ, JSONable, ServerSentEvent, StartResponse, WSGIApp
 from .utils import cached_property
@@ -255,12 +255,12 @@ class RedirectResponse(Response):
 class StreamResponse(Response):
     def __init__(
         self,
-        generator: Generator[bytes, None, None],
+        iterable: Iterable[bytes],
         status_code: int = 200,
         headers: Mapping[str, str] = None,
         content_type: str = "application/octet-stream",
     ) -> None:
-        self.generator = generator
+        self.iterable = iterable
         super().__init__(status_code, headers)
         self.headers["content-type"] = content_type
         self.headers["transfer-encoding"] = "chunked"
@@ -273,7 +273,7 @@ class StreamResponse(Response):
             self.list_headers(as_bytes=False),
             None,
         )
-        for chunk in self.generator:
+        for chunk in self.iterable:
             yield chunk
 
 
@@ -408,7 +408,7 @@ class SendEventResponse(Response):
 
     def __init__(
         self,
-        generator: Generator[ServerSentEvent, None, None],
+        iterable: Iterable[ServerSentEvent],
         status_code: int = 200,
         headers: Mapping[str, str] = None,
         *,
@@ -421,7 +421,7 @@ class SendEventResponse(Response):
             headers = dict(self.required_headers)
         headers["Content-Type"] += f"; charset={charset}"
         super().__init__(status_code, headers)
-        self.generator = generator
+        self.iterable = iterable
         self.ping_interval = ping_interval
         self.charset = charset
         self.queue: Queue = Queue(13)
@@ -453,23 +453,8 @@ class SendEventResponse(Response):
             future.cancel()
 
     def send_event(self) -> None:
-        for chunk in self.generator:
-            if "data" in chunk:
-                data: Iterable[bytes] = (
-                    f"data: {_}".encode(self.charset)
-                    for _ in chunk.pop("data").splitlines()
-                )
-            else:
-                data = ()
-            event = b"\n".join(
-                chain(
-                    (f"{k}: {v}".encode(self.charset) for k, v in chunk.items()),
-                    data,
-                    (b"", b""),  # for generate b"\n\n"
-                )
-            )
-            self.queue.put(event)
-
+        for chunk in self.iterable:
+            self.queue.put(build_bytes_from_sse(chunk, self.charset))
         self.has_more_data = False
 
     def keep_alive(self) -> None:
