@@ -28,7 +28,7 @@ from .formparsers import AsyncMultiPartParser
 from .requests import MoreInfoFromHeaderMixin
 from .responses import BaseFileResponse, BaseResponse, build_bytes_from_sse
 from .routing import BaseHosts, BaseRouter, BaseSubpaths
-from .typing import ASGIApp, JSONable, Message, Receive, Scope, Send, ServerSentEvent
+from .typing import ASGIApp, Message, Receive, Scope, Send, ServerSentEvent
 from .utils import cached_property
 
 
@@ -275,12 +275,12 @@ class HTMLResponse(PlainTextResponse):
     media_type = "text/html"
 
 
-class JSONResponse(SmallResponse[JSONable]):
+class JSONResponse(SmallResponse[Any]):
     media_type = "application/json"
 
     def __init__(
         self,
-        content: JSONable,
+        content: Any,
         status_code: int = 200,
         headers: Mapping[str, str] = None,
         **kwargs: Any,
@@ -295,7 +295,7 @@ class JSONResponse(SmallResponse[JSONable]):
         self.json_kwargs.update(**kwargs)
         super().__init__(content, status_code=status_code, headers=headers)
 
-    async def render(self, content: JSONable) -> bytes:
+    async def render(self, content: Any) -> bytes:
         return json.dumps(content, **self.json_kwargs).encode("utf-8")
 
 
