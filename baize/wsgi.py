@@ -346,12 +346,12 @@ class FileResponse(BaseFileResponse, Response):
         with open(self.filepath, "rb") as file:
             for start, end in ranges:
                 file.seek(start)
-                yield b"--3d6b6a416f9b5\n"
-                yield f"Content-Type: {self.content_type}\n".encode("latin-1")
-                yield f"Content-Range: bytes {start}-{end-1}/{file_size}\n".encode(
-                    "latin-1"
-                )
-                yield b"\n"
+                yield (
+                    "--3d6b6a416f9b5\n"
+                    f"Content-Type: {self.content_type}\n"
+                    f"Content-Range: bytes {start}-{end-1}/{file_size}\n"
+                    "\n"
+                ).encode("latin-1")
                 for here in range(start, end, 4096):
                     yield file.read(min(4096, end - here))
                 yield b"\n"
