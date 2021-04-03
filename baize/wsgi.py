@@ -471,7 +471,9 @@ class FileResponse(BaseFileResponse, Response):
 
 class SendEventResponse(Response):
     """
-    Server-sent events
+    Server-sent events response.
+
+    :param ping_interval: This determines the time interval (in seconds) between sending ping messages.
     """
 
     thread_pool = ThreadPoolExecutor(max_workers=10)
@@ -564,7 +566,7 @@ class Router(BaseRouter[WSGIApp]):
     A router to assign different paths to different WSGI applications.
 
     ```python
-    asgi_app = Router(
+    applications = Router(
         ("/static/{filepath:path}", static_files),
         ("/api/{any:path}", api_app),
         ("/about/{name}", about_page),
@@ -592,8 +594,10 @@ class Subpaths(BaseSubpaths[WSGIApp]):
     """
     A router allocates different prefix requests to different WSGI applications.
 
+    NOTE: This will change the values of `environ["SCRIPT_NAME"]` and `environ["PATH_INFO"]`.
+
     ```python
-    asgi_app = Subpaths(
+    applications = Subpaths(
         ("/static", static_files),
         ("/api", api_app),
         ("/", default_app),
@@ -620,7 +624,7 @@ class Hosts(BaseHosts[WSGIApp]):
     A router that distributes requests to different WSGI applications based on Host.
 
     ```python
-    asgi_app = Hosts(
+    applications = Hosts(
         (r"static\.example\.com", static_files),
         (r"api\.example\.com", api_app),
         (r"(www\.)?example\.com", default_app),

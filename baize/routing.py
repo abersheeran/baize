@@ -1,3 +1,4 @@
+import abc
 import re
 import uuid
 from datetime import date
@@ -7,12 +8,14 @@ from typing import Any, Dict, Generic, Pattern, Sequence, Tuple, TypeVar, Union
 from .typing import ASGIApp, WSGIApp
 
 
-class Convertor:
+class Convertor(abc.ABC):
     regex: str
 
+    @abc.abstractmethod
     def to_python(self, value: str) -> Any:
         raise NotImplementedError()
 
+    @abc.abstractmethod
     def to_string(self, value: Any) -> str:
         raise NotImplementedError()
 

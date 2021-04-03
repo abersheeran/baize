@@ -480,15 +480,14 @@ class FileResponse(BaseFileResponse, Response):
         file = await loop.run_in_executor(None, open, self.filepath, "rb")
         try:
             for start, end in ranges:
-                range_header = (
-                    "--3d6b6a416f9b5\n"
-                    f"Content-Type: {self.content_type}\n"
-                    f"Content-Range: bytes {start}-{end-1}/{file_size}\n\n"
-                ).encode("latin-1")
                 await send(
                     {
                         "type": "http.response.body",
-                        "body": range_header,
+                        "body": (
+                            "--3d6b6a416f9b5\n"
+                            f"Content-Type: {self.content_type}\n"
+                            f"Content-Range: bytes {start}-{end-1}/{file_size}\n\n"
+                        ).encode("latin-1"),
                         "more_body": True,
                     }
                 )
@@ -566,7 +565,9 @@ class FileResponse(BaseFileResponse, Response):
 
 class SendEventResponse(Response):
     """
-    Server-sent events
+    Server-sent events response.
+
+    :param ping_interval: This determines the time interval (in seconds) between sending ping messages.
     """
 
     required_headers = {
@@ -783,7 +784,7 @@ class Router(BaseRouter[ASGIApp]):
     A router to assign different paths to different ASGI applications.
 
     ```python
-    asgi_app = Router(
+    applications = Router(
         ("/static/{filepath:path}", static_files),
         ("/api/{any:path}", api_app),
         ("/about/{name}", about_page),
@@ -809,8 +810,10 @@ class Subpaths(BaseSubpaths[ASGIApp]):
     """
     A router allocates different prefix requests to different ASGI applications.
 
+    NOTE: This will change the values of `scope["root_path"]` and `scope["path"]`.
+
     ```python
-    asgi_app = Subpaths(
+    applications = Subpaths(
         ("/static", static_files),
         ("/api", api_app),
         ("/", default_app),
@@ -835,7 +838,7 @@ class Hosts(BaseHosts[ASGIApp]):
     A router that distributes requests to different ASGI applications based on Host.
 
     ```python
-    asgi_app = Hosts(
+    applications = Hosts(
         (r"static\.example\.com", static_files),
         (r"api\.example\.com", api_app),
         (r"(www\.)?example\.com", default_app),
