@@ -49,6 +49,10 @@ pytest-cov = "^2.11.1"
 requests = "^2.25.1" # for test ASGI websocket
 starlette = "^0.14.2" # for test ASGI websocket
 
+Sphinx = "^3.5.3"
+recommonmark = "^0.7.1"
+sphinx-autodoc-typehints = "^1.11.1"
+
 [tool.isort]
 profile = "black"
 

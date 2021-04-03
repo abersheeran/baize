@@ -8,6 +8,10 @@ The minimize implementation of methods required in the Web framework. No redunda
 
 Under the ASGI/WSGI protocol, the interface of the request object and the response object is almost the same, only need to add or delete `await` in the appropriate place. In addition, it should be noted that ASGI supports WebSocket but WSGI does not.
 
+- Support range file response, server-sent event response
+- Support WebSocket (only ASGI)
+- WSGI, ASGI routing to combine any application like [Django(wsgi)](https://docs.djangoproject.com/en/3.0/howto/deployment/wsgi/)/[Pyramid](https://trypyramid.com/)/[Bottle](https://bottlepy.org/)/[Flask](https://flask.palletsprojects.com/) or [Django(asgi)](https://docs.djangoproject.com/en/3.0/howto/deployment/asgi/)/[Index.py](https://index-py.aber.sh/)/[Starlette](https://www.starlette.io/)/[FastAPI](https://fastapi.tiangolo.com/)/[Sanic](https://sanic.readthedocs.io/en/stable/)/[Quart](https://pgjones.gitlab.io/quart/)
+
 ## Install
 
 ```
@@ -19,3 +23,75 @@ Or install from GitHub master branch
 ```
 pip install -U git+https://github.com/abersheeran/baize@setup.py
 ```
+
+## Document and other website
+
+[BáiZé Document](https://abersheeran.github.io/baize/)
+
+If you have questions or idea, you can send it to [Discussions](https://github.com/abersheeran/baize/discussions).
+
+## Quick Start
+
+A short example for WSGI application, if you don't know what is WSGI, please read [PEP3333](https://www.python.org/dev/peps/pep-3333/).
+
+```python
+from baize.wsgi import request_response, Router, Request, Response, PlainTextResponse
+
+
+@request_response
+def sayhi(request: Request) -> Response:
+    return PlainTextResponse("hi, " + request.path_params["name"])
+
+
+@request_response
+def echo(request: Request) -> Response:
+    return PlainTextResponse(request.body)
+
+
+application = Router(
+    ("/", PlainTextResponse("homepage")),
+    ("/echo", echo),
+    ("/sayhi/{name}", sayhi),
+)
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(application, interface="wsgi", port=8000)
+```
+
+A short example for ASGI application, if you don't know what is ASGI, please read [ASGI Documention](https://asgi.readthedocs.io/en/latest/).
+
+```python
+from baize.asgi import request_response, Router, Request, Response, PlainTextResponse
+
+
+@request_response
+async def sayhi(request: Request) -> Response:
+    return PlainTextResponse("hi, " + request.path_params["name"])
+
+
+@request_response
+async def echo(request: Request) -> Response:
+    return PlainTextResponse(await request.body)
+
+
+application = Router(
+    ("/", PlainTextResponse("homepage")),
+    ("/echo", echo),
+    ("/sayhi/{name}", sayhi),
+)
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(application, interface="asgi3", port=8000)
+```
+
+## License
+
+Apache-2.0.
+
+You can do whatever you want with the permission of the license.

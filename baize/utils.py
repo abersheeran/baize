@@ -21,8 +21,11 @@ else:
             functools.update_wrapper(self, func)
 
         def __get__(self, obj: typing.Any, cls: typing.Any) -> typing.Any:
-            result = self.func(obj)
-            if inspect.isawaitable(result):
-                result = asyncio.ensure_future(result)
-            value = obj.__dict__[self.func.__name__] = result
+            if obj is None:
+                value = self
+            else:
+                result = self.func(obj)
+                if inspect.isawaitable(result):
+                    result = asyncio.ensure_future(result)
+                value = obj.__dict__[self.func.__name__] = result
             return value

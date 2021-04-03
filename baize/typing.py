@@ -4,14 +4,11 @@ from typing import (
     Any,
     Awaitable,
     Callable,
-    Dict,
     Iterable,
-    List,
     MutableMapping,
     Optional,
     Tuple,
     Type,
-    Union,
 )
 
 if sys.version_info[:2] < (3, 8):
@@ -56,10 +53,6 @@ Environ = MutableMapping[str, Any]
 StartResponse = Callable[[str, Iterable[Tuple[str, str]], Optional[ExcInfo]], None]
 
 WSGIApp = Callable[[Environ, StartResponse], Iterable[bytes]]
-
-# JSONable
-# See mypy issue https://github.com/python/mypy/issues/731
-JSONable = Union[str, bytes, int, float, bool, None, Dict[str, "JSONable"], List["JSONable"]]  # type: ignore
 
 # Server-sent Event
 # https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events

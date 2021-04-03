@@ -13,12 +13,15 @@ class MoreInfoFromHeaderMixin:
     Parse more information from the header for quick use
     """
 
-    @property
+    @cached_property
     def headers(self) -> Headers:
         raise NotImplementedError
 
     @cached_property
     def accepted_types(self) -> List[MediaType]:
+        """
+        Request's accepted types
+        """
         return [
             MediaType(token)
             for token in self.headers.get("Accept", "*/*").split(",")
@@ -35,6 +38,9 @@ class MoreInfoFromHeaderMixin:
 
     @cached_property
     def content_type(self) -> ContentType:
+        """
+        Request's content-type
+        """
         return ContentType(self.headers.get("content-type", ""))
 
     @cached_property
@@ -48,13 +54,7 @@ class MoreInfoFromHeaderMixin:
         cookies: Dict[str, str] = {}
         cookie_header = self.headers.get("cookie", "")
 
-        # This function parses a ``Cookie`` HTTP header into a dict of key/value pairs.
-        # It attempts to mimic browser cookie parsing behavior: browsers and web servers
-        # frequently disregard the spec (RFC 6265) when setting and reading cookies,
-        # so we attempt to suit the common scenarios here.
-
         # This function has been adapted from Django 3.1.0.
-
         # Note: we are explicitly _NOT_ using `SimpleCookie.load` because it is based
         # on an outdated spec and will fail on lots of input we want to support
         for chunk in cookie_header.split(";"):
