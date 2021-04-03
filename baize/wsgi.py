@@ -81,6 +81,9 @@ class HTTPConnection(Mapping, MoreInfoFromHeaderMixin):
 
     @cached_property
     def path_params(self) -> Dict[str, Any]:
+        """
+        The path parameters parsed by the framework.
+        """
         return self.get("PATH_PARAMS", {})
 
     @cached_property
@@ -124,6 +127,13 @@ class Request(HTTPConnection):
         return self["REQUEST_METHOD"]
 
     def stream(self) -> Generator[bytes, None, None]:
+        """
+        Streaming read request body. e.g. `for chunk in request.stream(): ...`
+
+        If you access `.stream()` then the byte chunks are provided
+        without storing the entire body to memory. Any subsequent
+        calls to `.body`, `.form`, or `.json` will raise an error.
+        """
         if "body" in self.__dict__:
             yield self.body
             return
@@ -141,10 +151,19 @@ class Request(HTTPConnection):
 
     @cached_property
     def body(self) -> bytes:
+        """
+        Read all the contents of the request body into the memory and return it.
+        """
         return b"".join([chunk for chunk in self.stream()])
 
     @cached_property
     def json(self) -> Any:
+        """
+        Call `self.body` and use `json.loads` parse it.
+
+        If `content_type` is not equal to `application/json`,
+        an HTTPExcption exception will be thrown.
+        """
         if self.content_type == "application/json":
             return json.loads(
                 self.body.decode(self.content_type.options.get("charset", "utf8"))
@@ -154,6 +173,16 @@ class Request(HTTPConnection):
 
     @cached_property
     def form(self) -> FormData:
+        """
+        Parse the data in the form format and return it as a multi-value mapping.
+
+        If `content_type` is equal to `multipart/form-data`, it will directly
+        perform streaming analysis, and subsequent calls to `self.body`
+        or `self.json` will raise errors.
+
+        If `content_type` is not equal to `multipart/form-data` or
+        `application/x-www-form-urlencoded`, an HTTPExcption exception will be thrown.
+        """
         if self.content_type == "multipart/form-data":
             return MultiPartParser(self.content_type, self.stream()).parse()
         if self.content_type == "application/x-www-form-urlencoded":
@@ -177,6 +206,11 @@ class Request(HTTPConnection):
 
 
 class Response(BaseResponse):
+    """
+    The parent class of all responses, whose objects can be used directly as WSGI
+    application.
+    """
+
     def __call__(
         self, environ: Environ, start_response: StartResponse
     ) -> Iterable[bytes]:
@@ -189,20 +223,24 @@ class Response(BaseResponse):
         return (b"",)
 
 
-_CT = TypeVar("_CT")
+_ContentType = TypeVar("_ContentType")
 
 
-class SmallResponse(Response, abc.ABC, Generic[_CT]):
+class SmallResponse(Response, abc.ABC, Generic[_ContentType]):
+    """
+    Abstract base class for small response objects.
+    """
+
     media_type: str = ""
     charset: str = "utf-8"
 
     def __init__(
         self,
-        content: _CT,
+        content: _ContentType,
         status_code: int = 200,
         headers: Mapping[str, str] = None,
-        media_type: str = "",
-        charset: str = "",
+        media_type: str = None,
+        charset: str = None,
     ) -> None:
         super().__init__(status_code, headers)
         self.content = content
@@ -210,32 +248,27 @@ class SmallResponse(Response, abc.ABC, Generic[_CT]):
         self.charset = charset or self.charset
 
     @abc.abstractmethod
-    def render(self, content: _CT) -> bytes:
+    def render(self, content: _ContentType) -> bytes:
         raise NotImplementedError
 
-    def generate_content_headers(self) -> None:
-        body = getattr(self, "body", b"")
+    def __call__(
+        self, environ: Environ, start_response: StartResponse
+    ) -> Iterable[bytes]:
+        body = self.render(self.content)
         if body and "content-length" not in self.headers:
             content_length = str(len(body))
             self.headers["content-length"] = content_length
-
         content_type = self.media_type
         if content_type and "content-type" not in self.headers:
             if content_type.startswith("text/"):
                 content_type += "; charset=" + self.charset
             self.headers["content-type"] = content_type
-
-    def __call__(
-        self, environ: Environ, start_response: StartResponse
-    ) -> Iterable[bytes]:
-        self.body = self.render(self.content)
-        self.generate_content_headers()
         start_response(
             StatusStringMapping[self.status_code],
             self.list_headers(as_bytes=False),
             None,
         )
-        yield self.body
+        yield body
 
 
 class PlainTextResponse(SmallResponse[Union[bytes, str]]):
@@ -250,6 +283,10 @@ class HTMLResponse(PlainTextResponse):
 
 
 class JSONResponse(SmallResponse[Any]):
+    """
+    `**kwargs` is used to accept all the parameters that `json.loads` can accept.
+    """
+
     media_type = "application/json"
 
     def __init__(
@@ -270,7 +307,7 @@ class JSONResponse(SmallResponse[Any]):
         super().__init__(content, status_code=status_code, headers=headers)
 
     def render(self, content: Any) -> bytes:
-        return json.dumps(content, **self.json_kwargs).encode("utf-8")
+        return json.dumps(content, **self.json_kwargs).encode(self.charset)
 
 
 class RedirectResponse(Response):
@@ -310,6 +347,13 @@ class StreamResponse(Response):
 
 
 class FileResponse(BaseFileResponse, Response):
+    """
+    File response.
+
+    It will automatically determine whether to send only headers
+    and the range of files that need to be sent.
+    """
+
     def handle_all(
         self,
         send_header_only: bool,
@@ -496,6 +540,16 @@ class SendEventResponse(Response):
 
 
 def request_response(view: Callable[[Request], Response]) -> WSGIApp:
+    """
+    This can turn a callable object into a WSGI application.
+
+    ```python
+    @request_response
+    def f(request: Request) -> Response:
+        ...
+    ```
+    """
+
     @functools.wraps(view)
     def wsgi(environ: Environ, start_response: StartResponse) -> Iterable[bytes]:
         request = Request(environ)
@@ -506,6 +560,19 @@ def request_response(view: Callable[[Request], Response]) -> WSGIApp:
 
 
 class Router(BaseRouter[WSGIApp]):
+    """
+    A router to assign different paths to different WSGI applications.
+
+    ```python
+    asgi_app = Router(
+        ("/static/{filepath:path}", static_files),
+        ("/api/{any:path}", api_app),
+        ("/about/{name}", about_page),
+        ("/", homepage),
+    )
+    ```
+    """
+
     def __call__(
         self, environ: Environ, start_response: StartResponse
     ) -> Iterable[bytes]:
@@ -522,6 +589,18 @@ class Router(BaseRouter[WSGIApp]):
 
 
 class Subpaths(BaseSubpaths[WSGIApp]):
+    """
+    A router allocates different prefix requests to different WSGI applications.
+
+    ```python
+    asgi_app = Subpaths(
+        ("/static", static_files),
+        ("/api", api_app),
+        ("/", default_app),
+    )
+    ```
+    """
+
     def __call__(
         self, environ: Environ, start_response: StartResponse
     ) -> Iterable[bytes]:
@@ -537,6 +616,18 @@ class Subpaths(BaseSubpaths[WSGIApp]):
 
 
 class Hosts(BaseHosts[WSGIApp]):
+    r"""
+    A router that distributes requests to different WSGI applications based on Host.
+
+    ```python
+    asgi_app = Hosts(
+        (r"static\.example\.com", static_files),
+        (r"api\.example\.com", api_app),
+        (r"(www\.)?example\.com", default_app),
+    )
+    ```
+    """
+
     def __call__(
         self, environ: Environ, start_response: StartResponse
     ) -> Iterable[bytes]:

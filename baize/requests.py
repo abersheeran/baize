@@ -19,6 +19,9 @@ class MoreInfoFromHeaderMixin:
 
     @cached_property
     def accepted_types(self) -> List[MediaType]:
+        """
+        Request's accepted types
+        """
         return [
             MediaType(token)
             for token in self.headers.get("Accept", "*/*").split(",")
@@ -35,6 +38,9 @@ class MoreInfoFromHeaderMixin:
 
     @cached_property
     def content_type(self) -> ContentType:
+        """
+        Request's content-type
+        """
         return ContentType(self.headers.get("content-type", ""))
 
     @cached_property

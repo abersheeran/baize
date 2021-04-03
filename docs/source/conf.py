@@ -56,13 +56,24 @@ html_theme = "alabaster"
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ["_static"]
+html_static_path = []
 
 
 def setup(app):
     from recommonmark.transform import AutoStructify
 
     app.add_transform(AutoStructify)
+
+    import commonmark
+
+    def docstring(app, what, name, obj, options, lines):
+        md = "\n".join(lines)
+        ast = commonmark.Parser().parse(md)
+        rst = commonmark.ReStructuredTextRenderer().render(ast)
+        lines.clear()
+        lines += rst.splitlines()
+
+    app.connect("autodoc-process-docstring", docstring)
 
     from sphinx.util import inspect
     from baize.utils import cached_property

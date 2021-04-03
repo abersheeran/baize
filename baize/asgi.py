@@ -88,6 +88,9 @@ class HTTPConnection(Mapping, MoreInfoFromHeaderMixin):
 
     @cached_property
     def path_params(self) -> Dict[str, Any]:
+        """
+        The path parameters parsed by the framework.
+        """
         return self.get("path_params", {})
 
     @cached_property
@@ -128,6 +131,13 @@ class Request(HTTPConnection):
         return self._scope["method"]
 
     async def stream(self) -> AsyncGenerator[bytes, None]:
+        """
+        Streaming read request body. e.g. `async for chunk in request.stream(): ...`
+
+        If you access `.stream()` then the byte chunks are provided
+        without storing the entire body to memory. Any subsequent
+        calls to `.body`, `.form`, or `.json` will raise an error.
+        """
         if "body" in self.__dict__ and self.__dict__["body"].done():
             yield await self.body
             yield b""
@@ -152,10 +162,19 @@ class Request(HTTPConnection):
 
     @cached_property
     async def body(self) -> bytes:
+        """
+        Read all the contents of the request body into the memory and return it.
+        """
         return b"".join([chunk async for chunk in self.stream()])
 
     @cached_property
     async def json(self) -> Any:
+        """
+        Call `await self.body` and use `json.loads` parse it.
+
+        If `content_type` is not equal to `application/json`,
+        an HTTPExcption exception will be thrown.
+        """
         if self.content_type == "application/json":
             data = await self.body
             return json.loads(
@@ -166,6 +185,16 @@ class Request(HTTPConnection):
 
     @cached_property
     async def form(self) -> FormData:
+        """
+        Parse the data in the form format and return it as a multi-value mapping.
+
+        If `content_type` is equal to `multipart/form-data`, it will directly
+        perform streaming analysis, and subsequent calls to `self.body`
+        or `self.json` will raise errors.
+
+        If `content_type` is not equal to `multipart/form-data` or
+        `application/x-www-form-urlencoded`, an HTTPExcption exception will be thrown.
+        """
         if self.content_type == "multipart/form-data":
             return await AsyncMultiPartParser(self.content_type, self.stream()).parse()
         if self.content_type == "application/x-www-form-urlencoded":
@@ -203,6 +232,11 @@ class Request(HTTPConnection):
 
 
 class Response(BaseResponse):
+    """
+    The parent class of all responses, whose objects can be used directly as ASGI
+    application.
+    """
+
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         self.headers["content-length"] = "0"
         await send(
@@ -215,20 +249,24 @@ class Response(BaseResponse):
         await send({"type": "http.response.body", "body": b""})
 
 
-_CT = TypeVar("_CT")
+_ContentType = TypeVar("_ContentType")
 
 
-class SmallResponse(Response, abc.ABC, Generic[_CT]):
+class SmallResponse(Response, abc.ABC, Generic[_ContentType]):
+    """
+    Abstract base class for small response objects.
+    """
+
     media_type: str = ""
     charset = "utf-8"
 
     def __init__(
         self,
-        content: _CT,
+        content: _ContentType,
         status_code: int = 200,
         headers: Mapping[str, str] = None,
-        media_type: str = "",
-        charset: str = "",
+        media_type: str = None,
+        charset: str = None,
     ) -> None:
         super().__init__(status_code, headers)
         self.content = content
@@ -236,24 +274,19 @@ class SmallResponse(Response, abc.ABC, Generic[_CT]):
         self.charset = charset or self.charset
 
     @abc.abstractmethod
-    async def render(self, content: _CT) -> bytes:
+    async def render(self, content: _ContentType) -> bytes:
         raise NotImplementedError
 
-    def generate_content_headers(self) -> None:
-        body = getattr(self, "body", b"")
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        body = await self.render(self.content)
         if body and "content-length" not in self.headers:
             content_length = str(len(body))
             self.headers["content-length"] = content_length
-
         content_type = self.media_type
         if content_type and "content-type" not in self.headers:
             if content_type.startswith("text/"):
                 content_type += "; charset=" + self.charset
             self.headers["content-type"] = content_type
-
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        self.body = await self.render(self.content)
-        self.generate_content_headers()
         await send(
             {
                 "type": "http.response.start",
@@ -261,7 +294,7 @@ class SmallResponse(Response, abc.ABC, Generic[_CT]):
                 "headers": self.list_headers(as_bytes=True),
             }
         )
-        await send({"type": "http.response.body", "body": self.body})
+        await send({"type": "http.response.body", "body": body})
 
 
 class PlainTextResponse(SmallResponse[Union[bytes, str]]):
@@ -276,6 +309,10 @@ class HTMLResponse(PlainTextResponse):
 
 
 class JSONResponse(SmallResponse[Any]):
+    """
+    `**kwargs` is used to accept all the parameters that `json.loads` can accept.
+    """
+
     media_type = "application/json"
 
     def __init__(
@@ -296,7 +333,7 @@ class JSONResponse(SmallResponse[Any]):
         super().__init__(content, status_code=status_code, headers=headers)
 
     async def render(self, content: Any) -> bytes:
-        return json.dumps(content, **self.json_kwargs).encode("utf-8")
+        return json.dumps(content, **self.json_kwargs).encode(self.charset)
 
 
 class RedirectResponse(Response):
@@ -310,12 +347,12 @@ class RedirectResponse(Response):
 class StreamResponse(Response):
     def __init__(
         self,
-        generator: AsyncIterable[bytes],
+        iterable: AsyncIterable[bytes],
         status_code: int = 200,
         headers: Mapping[str, str] = None,
         content_type: str = "application/octet-stream",
     ) -> None:
-        self.generator = generator
+        self.iterable = iterable
         super().__init__(status_code, headers)
         self.headers["content-type"] = content_type
         self.headers["transfer-encoding"] = "chunked"
@@ -328,13 +365,20 @@ class StreamResponse(Response):
                 "headers": self.list_headers(as_bytes=True),
             }
         )
-        async for chunk in self.generator:
+        async for chunk in self.iterable:
             await send({"type": "http.response.body", "body": chunk, "more_body": True})
 
         await send({"type": "http.response.body", "body": b"", "more_body": False})
 
 
 class FileResponse(BaseFileResponse, Response):
+    """
+    File response.
+
+    It will automatically determine whether to send only headers
+    and the range of files that need to be sent.
+    """
+
     async def handle_all(
         self,
         send_header_only: bool,
@@ -644,6 +688,9 @@ class WebSocket(HTTPConnection):
             raise RuntimeError('Cannot call "send" once a close message has been sent.')
 
     async def accept(self, subprotocol: str = None) -> None:
+        """
+        Accept websocket connection.
+        """
         if self.client_state == WebSocketState.CONNECTING:
             # If we haven't yet seen the 'connect' message, then wait for it first.
             await self.receive()
@@ -654,18 +701,27 @@ class WebSocket(HTTPConnection):
             raise WebSocketDisconnect(message["code"])
 
     async def receive_text(self) -> str:
+        """
+        Receive a WebSocket text frame and return.
+        """
         assert self.application_state == WebSocketState.CONNECTED
         message = await self.receive()
         self._raise_on_disconnect(message)
         return message["text"]
 
     async def receive_bytes(self) -> bytes:
+        """
+        Receive a WebSocket binary frame and return.
+        """
         assert self.application_state == WebSocketState.CONNECTED
         message = await self.receive()
         self._raise_on_disconnect(message)
         return message["bytes"]
 
     async def iter_text(self) -> AsyncIterator[str]:
+        """
+        Keep receiving text frames until the WebSocket connection is disconnected.
+        """
         try:
             while True:
                 yield await self.receive_text()
@@ -673,6 +729,9 @@ class WebSocket(HTTPConnection):
             pass
 
     async def iter_bytes(self) -> AsyncIterator[bytes]:
+        """
+        Keep receiving binary frames until the WebSocket connection is disconnected.
+        """
         try:
             while True:
                 yield await self.receive_bytes()
@@ -680,17 +739,36 @@ class WebSocket(HTTPConnection):
             pass
 
     async def send_text(self, data: str) -> None:
+        """
+        Send a WebSocket text frame.
+        """
         await self.send({"type": "websocket.send", "text": data})
 
     async def send_bytes(self, data: bytes) -> None:
+        """
+        Send a WebSocket binary frame.
+        """
         await self.send({"type": "websocket.send", "bytes": data})
 
     async def close(self, code: int = 1000) -> None:
+        """
+        Close WebSocket connection. It can be called multiple times.
+        """
         if self.application_state != WebSocketState.DISCONNECTED:
             await self.send({"type": "websocket.close", "code": code})
 
 
 def request_response(view: Callable[[Request], Awaitable[Response]]) -> ASGIApp:
+    """
+    This can turn a callable object into a ASGI application.
+
+    ```python
+    @request_response
+    async def f(request: Request) -> Response:
+        ...
+    ```
+    """
+
     @functools.wraps(view)
     async def asgi(scope: Scope, receive: Receive, send: Send) -> None:
         request = Request(scope, receive, send)
@@ -701,6 +779,19 @@ def request_response(view: Callable[[Request], Awaitable[Response]]) -> ASGIApp:
 
 
 class Router(BaseRouter[ASGIApp]):
+    """
+    A router to assign different paths to different ASGI applications.
+
+    ```python
+    asgi_app = Router(
+        ("/static/{filepath:path}", static_files),
+        ("/api/{any:path}", api_app),
+        ("/about/{name}", about_page),
+        ("/", homepage),
+    )
+    ```
+    """
+
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         path = scope["path"]
         for route in self._route_array:
@@ -715,6 +806,18 @@ class Router(BaseRouter[ASGIApp]):
 
 
 class Subpaths(BaseSubpaths[ASGIApp]):
+    """
+    A router allocates different prefix requests to different ASGI applications.
+
+    ```python
+    asgi_app = Subpaths(
+        ("/static", static_files),
+        ("/api", api_app),
+        ("/", default_app),
+    )
+    ```
+    """
+
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         path = scope["path"]
         for prefix, endpoint in self._route_array:
@@ -728,6 +831,18 @@ class Subpaths(BaseSubpaths[ASGIApp]):
 
 
 class Hosts(BaseHosts[ASGIApp]):
+    r"""
+    A router that distributes requests to different ASGI applications based on Host.
+
+    ```python
+    asgi_app = Hosts(
+        (r"static\.example\.com", static_files),
+        (r"api\.example\.com", api_app),
+        (r"(www\.)?example\.com", default_app),
+    )
+    ```
+    """
+
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         host = ""
         for k, v in scope["headers"]:
