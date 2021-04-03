@@ -3,7 +3,6 @@ import functools
 import inspect
 import typing
 
-
 T = typing.TypeVar("T")
 
 
