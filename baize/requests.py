@@ -13,7 +13,7 @@ class MoreInfoFromHeaderMixin:
     Parse more information from the header for quick use
     """
 
-    @property
+    @cached_property
     def headers(self) -> Headers:
         raise NotImplementedError
 
