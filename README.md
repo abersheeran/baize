@@ -26,7 +26,7 @@ pip install -U git+https://github.com/abersheeran/baize@setup.py
 
 ## Document and other website
 
-[BáiZé Document](https://abersheeran.github.io/baize/)
+[BáiZé Document](https://baize.aber.sh/)
 
 If you have questions or idea, you can send it to [Discussions](https://github.com/abersheeran/baize/discussions).
 
