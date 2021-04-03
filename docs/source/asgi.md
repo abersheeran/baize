@@ -1,12 +1,20 @@
 # ASGI (Asynchronous Server Gateway Interface)
 
+## HTTPConnection
+
+```eval_rst
+.. autoclass:: baize.asgi.HTTPConnection
+   :members:
+   :undoc-members:
+   :inherited-members:
+```
+
 ## Request
 
 ```eval_rst
 .. autoclass:: baize.asgi.Request
    :members:
    :undoc-members:
-   :inherited-members:
 ```
 
 ## Responses
