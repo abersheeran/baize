@@ -10,9 +10,9 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 
+import importlib
 import pathlib
 import sys
-import importlib
 
 sys.path.insert(0, str(pathlib.Path(__file__).absolute().parent.parent.parent))
 
@@ -76,6 +76,7 @@ def setup(app):
     app.connect("autodoc-process-docstring", docstring)
 
     from sphinx.util import inspect
+
     from baize.utils import cached_property
 
     inspect.isproperty = lambda obj: isinstance(obj, (property, cached_property))
