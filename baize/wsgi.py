@@ -600,7 +600,7 @@ class Subpaths(BaseSubpaths[WSGIApp]):
     applications = Subpaths(
         ("/static", static_files),
         ("/api", api_app),
-        ("/", default_app),
+        ("", default_app),
     )
     ```
     """

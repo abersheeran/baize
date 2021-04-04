@@ -1065,6 +1065,16 @@ async def test_subpaths():
         assert (await client.get("/frist")).text == "/frist"
         assert (await client.get("/latest")).text == ""
 
+    async with httpx.AsyncClient(
+        app=Subpaths(
+            ("", path),
+            ("/root", root),
+        ),
+        base_url="http://testServer/",
+    ) as client:
+        assert (await client.get("/")).text == "/"
+        assert (await client.get("/root/")).text == "/root/"
+
 
 @pytest.mark.asyncio
 async def test_hosts():

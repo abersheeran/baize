@@ -816,7 +816,7 @@ class Subpaths(BaseSubpaths[ASGIApp]):
     applications = Subpaths(
         ("/static", static_files),
         ("/api", api_app),
-        ("/", default_app),
+        ("", default_app),
     )
     ```
     """

@@ -187,6 +187,8 @@ class BaseRouter(Generic[Interface]):
 class BaseSubpaths(Generic[Interface]):
     def __init__(self, *routes: Tuple[str, Interface]) -> None:
         for prefix, _ in routes:
+            if prefix == "":  # Allow use "" to set default app
+                continue
             assert prefix.startswith("/"), "prefix must be starts with '/'"
             assert not prefix.endswith("/"), "prefix cannot be ends with '/'"
         self._route_array = [*routes]

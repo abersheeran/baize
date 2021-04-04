@@ -496,6 +496,16 @@ def test_subpaths():
         assert client.get("/frist").text == "/frist"
         assert client.get("/latest").text == ""
 
+    with httpx.Client(
+        app=Subpaths(
+            ("", path),
+            ("/root", root),
+        ),
+        base_url="http://testServer/",
+    ) as client:
+        assert client.get("/").text == "/"
+        assert client.get("/root/").text == "/root/"
+
 
 def test_hosts():
     with httpx.Client(
