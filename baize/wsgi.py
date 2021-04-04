@@ -216,9 +216,7 @@ class Response(BaseResponse):
     ) -> Iterable[bytes]:
         self.headers["content-length"] = "0"
         start_response(
-            StatusStringMapping[self.status_code],
-            self.list_headers(as_bytes=False),
-            None,
+            StatusStringMapping[self.status_code], self.list_headers(as_bytes=False)
         )
         return (b"",)
 
@@ -264,9 +262,7 @@ class SmallResponse(Response, abc.ABC, Generic[_ContentType]):
                 content_type += "; charset=" + self.charset
             self.headers["content-type"] = content_type
         start_response(
-            StatusStringMapping[self.status_code],
-            self.list_headers(as_bytes=False),
-            None,
+            StatusStringMapping[self.status_code], self.list_headers(as_bytes=False)
         )
         yield body
 
@@ -338,9 +334,7 @@ class StreamResponse(Response):
         self, environ: Environ, start_response: StartResponse
     ) -> Iterable[bytes]:
         start_response(
-            StatusStringMapping[self.status_code],
-            self.list_headers(as_bytes=False),
-            None,
+            StatusStringMapping[self.status_code], self.list_headers(as_bytes=False)
         )
         for chunk in self.iterable:
             yield chunk
@@ -362,9 +356,7 @@ class FileResponse(BaseFileResponse, Response):
     ) -> Generator[bytes, None, None]:
         self.headers["content-type"] = str(self.content_type)
         self.headers["content-length"] = str(file_size)
-        start_response(
-            StatusStringMapping[200], self.list_headers(as_bytes=False), None
-        )
+        start_response(StatusStringMapping[200], self.list_headers(as_bytes=False))
 
         if send_header_only:
             yield b""
@@ -385,9 +377,7 @@ class FileResponse(BaseFileResponse, Response):
         self.headers["content-range"] = f"bytes {start}-{end-1}/{file_size}"
         self.headers["content-type"] = str(self.content_type)
         self.headers["content-length"] = str(end - start)
-        start_response(
-            StatusStringMapping[206], self.list_headers(as_bytes=False), None
-        )
+        start_response(StatusStringMapping[206], self.list_headers(as_bytes=False))
         if send_header_only:
             yield b""
             return
@@ -412,9 +402,7 @@ class FileResponse(BaseFileResponse, Response):
         ) + sum(end - start for start, end in ranges)
         self.headers["content-length"] = str(content_length)
 
-        start_response(
-            StatusStringMapping[206], self.list_headers(as_bytes=False), None
-        )
+        start_response(StatusStringMapping[206], self.list_headers(as_bytes=False))
         if send_header_only:
             yield b""
             return
@@ -453,7 +441,6 @@ class FileResponse(BaseFileResponse, Response):
             start_response(
                 StatusStringMapping[exception.status_code],
                 [*(exception.headers or {}).items()],
-                None,
             )
             yield b""
             return
@@ -509,9 +496,7 @@ class SendEventResponse(Response):
         self, environ: Environ, start_response: StartResponse
     ) -> Iterable[bytes]:
         start_response(
-            StatusStringMapping[self.status_code],
-            self.list_headers(as_bytes=False),
-            None,
+            StatusStringMapping[self.status_code], self.list_headers(as_bytes=False)
         )
 
         future = self.thread_pool.submit(

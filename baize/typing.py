@@ -5,6 +5,7 @@ from typing import (
     Awaitable,
     Callable,
     Iterable,
+    List,
     MutableMapping,
     Optional,
     Tuple,
@@ -12,9 +13,9 @@ from typing import (
 )
 
 if sys.version_info[:2] < (3, 8):
-    from typing_extensions import Final, Literal, TypedDict, final
+    from typing_extensions import Final, Literal, Protocol, TypedDict, final
 else:
-    from typing import Final, Literal, TypedDict, final
+    from typing import Final, Literal, Protocol, TypedDict, final
 
 __all__ = [
     "Scope",
@@ -46,11 +47,22 @@ Send = Callable[[Message], Awaitable[None]]
 ASGIApp = Callable[[Scope, Receive, Send], Awaitable[None]]
 
 # WSGI: view PEP3333
-ExcInfo = Tuple[Type[BaseException], BaseException, Optional[TracebackType]]
-
 Environ = MutableMapping[str, Any]
 
-StartResponse = Callable[[str, Iterable[Tuple[str, str]], Optional[ExcInfo]], None]
+ExcInfo = Tuple[Type[BaseException], BaseException, Optional[TracebackType]]
+
+
+class StartResponse(Protocol):
+    __slots__ = ()
+
+    def __call__(
+        self,
+        status: str,
+        response_headers: List[Tuple[str, str]],
+        exc_info: ExcInfo = None,
+    ) -> None:
+        raise NotImplementedError
+
 
 WSGIApp = Callable[[Environ, StartResponse], Iterable[bytes]]
 
