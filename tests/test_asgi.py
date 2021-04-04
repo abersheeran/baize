@@ -30,7 +30,6 @@ from baize.asgi import (
 )
 from baize.datastructures import UploadFile
 from baize.exceptions import HTTPException
-from baize.typing import Receive, Scope, Send
 
 starlette.testclient.WebSocketDisconnect = WebSocketDisconnect  # type: ignore
 
@@ -1022,22 +1021,20 @@ async def test_request_response():
 
 @pytest.mark.asyncio
 async def test_router():
-    async def path(scope: Scope, receive: Receive, send: Send) -> None:
-        await JSONResponse(Request(scope).path_params)(scope, receive, send)
+    @request_response
+    async def path(request: Request) -> Response:
+        return JSONResponse(request.path_params)
 
-    async def redirect(scope: Scope, receive: Receive, send: Send) -> None:
-        await RedirectResponse(
-            scope["router"].routes["path"].build_url({"path": "cat"})
-        )(scope, receive, send)
+    @request_response
+    async def redirect(request: Request) -> Response:
+        return RedirectResponse(request["router"].build_url("path", {"path": "cat"}))
 
-    async with httpx.AsyncClient(
-        app=Router(
-            ("/", PlainTextResponse("homepage")),
-            ("/redirect", redirect),
-            ("/{path}", path, "path"),
-        ),
-        base_url="http://testServer/",
-    ) as client:
+    router = Router(
+        ("/", PlainTextResponse("homepage")),
+        ("/redirect", redirect),
+        ("/{path}", path, "path"),
+    )
+    async with httpx.AsyncClient(app=router, base_url="http://testServer/") as client:
         assert (await client.get("/")).text == "homepage"
         assert (await client.get("/baize")).json() == {"path": "baize"}
         assert (await client.get("/baize/")).status_code == 404
@@ -1045,14 +1042,19 @@ async def test_router():
             "location"
         ] == "/cat"
 
+        with pytest.raises(KeyError, match="The route named 'redirect' was not found."):
+            router.build_url("redirect", {})
+
 
 @pytest.mark.asyncio
 async def test_subpaths():
-    async def root(scope: Scope, receive: Receive, send: Send) -> None:
-        await PlainTextResponse(scope.get("root_path", ""))(scope, receive, send)
+    @request_response
+    async def root(request: Request) -> Response:
+        return PlainTextResponse(request.get("root_path", ""))
 
-    async def path(scope: Scope, receive: Receive, send: Send) -> None:
-        await PlainTextResponse(scope["path"])(scope, receive, send)
+    @request_response
+    async def path(request: Request) -> Response:
+        return PlainTextResponse(request["path"])
 
     async with httpx.AsyncClient(
         app=Subpaths(

@@ -3,14 +3,13 @@ import tempfile
 import time
 from inspect import cleandoc
 from pathlib import Path
-from typing import Generator, Iterable
+from typing import Generator
 
 import httpx
 import pytest
 
 from baize.datastructures import Address, UploadFile
 from baize.exceptions import HTTPException
-from baize.typing import Environ, StartResponse
 from baize.wsgi import (
     FileResponse,
     Hosts,
@@ -452,22 +451,20 @@ def test_request_response():
 
 
 def test_router():
-    def path(environ: Environ, start_response: StartResponse) -> Iterable[bytes]:
-        return JSONResponse(Request(environ).path_params)(environ, start_response)
+    @request_response
+    def path(request: Request) -> Response:
+        return JSONResponse(request.path_params)
 
-    def redirect(environ: Environ, start_response: StartResponse) -> Iterable[bytes]:
-        return RedirectResponse(
-            environ["router"].routes["path"].build_url({"path": "cat"})
-        )(environ, start_response)
+    @request_response
+    def redirect(request: Request) -> Response:
+        return RedirectResponse(request["router"].build_url("path", {"path": "cat"}))
 
-    with httpx.Client(
-        app=Router(
-            ("/", PlainTextResponse("homepage")),
-            ("/redirect", redirect),
-            ("/{path}", path, "path"),
-        ),
-        base_url="http://testServer/",
-    ) as client:
+    router = Router(
+        ("/", PlainTextResponse("homepage")),
+        ("/redirect", redirect),
+        ("/{path}", path, "path"),
+    )
+    with httpx.Client(app=router, base_url="http://testServer/") as client:
         assert client.get("/").text == "homepage"
         assert client.get("/baize").json() == {"path": "baize"}
         assert client.get("/baize/").status_code == 404
@@ -475,15 +472,18 @@ def test_router():
             client.get("/redirect", allow_redirects=False).headers["location"] == "/cat"
         )
 
+        with pytest.raises(KeyError, match="The route named 'redirect' was not found."):
+            router.build_url("redirect", {})
+
 
 def test_subpaths():
-    def root(environ: Environ, start_response: StartResponse) -> Iterable[bytes]:
-        return PlainTextResponse(environ.get("SCRIPT_NAME", ""))(
-            environ, start_response
-        )
+    @request_response
+    def root(request: Request) -> Response:
+        return PlainTextResponse(request.get("SCRIPT_NAME", ""))
 
-    def path(environ: Environ, start_response: StartResponse) -> Iterable[bytes]:
-        return PlainTextResponse(environ.get("PATH_INFO", ""))(environ, start_response)
+    @request_response
+    def path(request: Request) -> Response:
+        return PlainTextResponse(request.get("PATH_INFO", ""))
 
     with httpx.Client(
         app=Subpaths(

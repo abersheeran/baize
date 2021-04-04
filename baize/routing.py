@@ -181,7 +181,21 @@ class BaseRouter(Generic[Interface]):
                 lambda route: route if len(route) == 3 else (*route, ""), routes
             )
         ]
-        self.routes = {route.name: route for route in self._route_array if route.name}
+        self._named_routes = {
+            route.name: route for route in self._route_array if route.name
+        }
+
+    def build_url(self, name: str, params: Dict[str, Any]) -> str:
+        """
+        Find the corresponding route by the name of the route, and then construct
+        the URL path.
+        """
+        try:
+            route = self._named_routes[name]
+        except KeyError:
+            raise KeyError(f"The route named '{name}' was not found.")
+        else:
+            return route.build_url(params)
 
 
 class BaseSubpaths(Generic[Interface]):

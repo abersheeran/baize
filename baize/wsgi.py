@@ -550,12 +550,16 @@ class Router(BaseRouter[WSGIApp]):
     """
     A router to assign different paths to different WSGI applications.
 
+    :param routes: A triple composed of path, endpoint, and name. The name is optional. \
+        If the name is not given, the corresponding URL cannot be constructed through \
+        build_url.
+
     ```python
     applications = Router(
         ("/static/{filepath:path}", static_files),
         ("/api/{any:path}", api_app),
-        ("/about/{name}", about_page),
-        ("/", homepage),
+        ("/about/{name}", about_page, "about"),
+        ("/", homepage, "homepage"),
     )
     ```
     """
