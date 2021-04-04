@@ -51,7 +51,7 @@ class HTTPConnection(Mapping, MoreInfoFromHeaderMixin):
         self._environ = environ
         self._stream_consumed = False
 
-    def __getitem__(self, key: str) -> str:
+    def __getitem__(self, key: str) -> Any:
         return self._environ[key]
 
     def __iter__(self) -> Iterator[str]:

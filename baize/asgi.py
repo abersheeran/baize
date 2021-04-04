@@ -59,7 +59,7 @@ class HTTPConnection(Mapping, MoreInfoFromHeaderMixin):
         self._send = send
         self._receive = receive
 
-    def __getitem__(self, key: str) -> str:
+    def __getitem__(self, key: str) -> Any:
         return self._scope[key]
 
     def __iter__(self) -> Iterator[str]:
