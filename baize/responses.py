@@ -101,8 +101,8 @@ class BaseFileResponse(BaseResponse):
             or guess_type(download_name or os.path.basename(filepath))[0]
             or "application/octet-stream"
         )
-        self.stat_result = stat_result or os.stat(self.filepath)
-        if not stat.S_ISREG(self.stat_result.st_mode):
+        self.stat_result = stat_result = stat_result or os.stat(self.filepath)
+        if not stat.S_ISREG(stat_result.st_mode):
             raise FileNotFoundError("Filepath exists, but is not a valid file.")
         super().__init__(status_code=200, headers=headers)
 
@@ -115,15 +115,13 @@ class BaseFileResponse(BaseResponse):
                 f"filename*=utf-8''{quote(download_name)}"
             )
             self.headers["content-disposition"] = content_disposition
-        self.headers["last-modified"] = formatdate(
-            self.stat_result.st_mtime, usegmt=True
-        )
-        self.headers["etag"] = self.generate_etag(self.stat_result)
+        self.headers["last-modified"] = formatdate(stat_result.st_mtime, usegmt=True)
+        self.headers["etag"] = self.generate_etag(stat_result)
 
-    def generate_etag(self, stat_result: os.stat_result) -> str:
-        return sha1(
-            f"{stat_result.st_mtime}-{stat_result.st_size}".encode("ascii")
-        ).hexdigest()
+    @staticmethod
+    def generate_etag(stat_result: os.stat_result) -> str:
+        data = f"{stat_result.st_mtime}-{stat_result.st_size}"
+        return sha1(data.encode("ascii")).hexdigest()
 
     def judge_if_range(
         self, if_range_raw_line: str, stat_result: os.stat_result

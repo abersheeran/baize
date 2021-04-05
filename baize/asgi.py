@@ -3,6 +3,7 @@ import asyncio
 import functools
 import json
 from enum import Enum
+from io import FileIO
 from typing import (
     Any,
     AsyncGenerator,
@@ -12,6 +13,7 @@ from typing import (
     Callable,
     Dict,
     Generic,
+    Iterable,
     Iterator,
     Mapping,
     Sequence,
@@ -22,6 +24,7 @@ from typing import (
 from typing import cast as typing_cast
 from urllib.parse import parse_qsl, quote_plus
 
+from .concurrency import run_in_threadpool
 from .datastructures import URL, Address, FormData, Headers, QueryParams
 from .exceptions import HTTPException
 from .formparsers import AsyncMultiPartParser
@@ -32,8 +35,35 @@ from .typing import ASGIApp, Message, Receive, Scope, Send, ServerSentEvent
 from .utils import cached_property
 
 
+async def send_http_start(
+    send: Send, status_code: int, headers: Iterable[Tuple[bytes, bytes]] = None
+) -> None:
+    """
+    helper function for send http.response.start
+
+    https://asgi.readthedocs.io/en/latest/specs/www.html#response-start-send-event
+    """
+    message = {"type": "http.response.start", "status": status_code}
+    if headers is not None:
+        message["headers"] = headers
+    await send(message)
+
+
+async def send_http_body(
+    send: Send, body: bytes = b"", *, more_body: bool = False
+) -> None:
+    """
+    helper function for send http.response.body
+
+    https://asgi.readthedocs.io/en/latest/specs/www.html#response-body-send-event
+    """
+    await send({"type": "http.response.body", "body": body, "more_body": more_body})
+
+
 class ClientDisconnect(Exception):
-    pass
+    """
+    HTTP connection disconnected.
+    """
 
 
 async def empty_receive() -> Message:
@@ -223,11 +253,9 @@ class Request(HTTPConnection):
         if not self._is_disconnected:
             try:
                 message = await asyncio.wait_for(self._receive(), timeout=0.0000001)
+                self._is_disconnected = message.get("type") == "http.disconnect"
             except asyncio.TimeoutError:
-                message = {}
-
-            self._is_disconnected = message.get("type") == "http.disconnect"
-
+                pass
         return self._is_disconnected
 
 
@@ -239,14 +267,8 @@ class Response(BaseResponse):
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         self.headers["content-length"] = "0"
-        await send(
-            {
-                "type": "http.response.start",
-                "status": self.status_code,
-                "headers": self.list_headers(as_bytes=True),
-            }
-        )
-        await send({"type": "http.response.body", "body": b""})
+        await send_http_start(send, self.status_code, self.list_headers(as_bytes=True))
+        return await send_http_body(send)
 
 
 _ContentType = TypeVar("_ContentType")
@@ -287,14 +309,8 @@ class SmallResponse(Response, abc.ABC, Generic[_ContentType]):
             if content_type.startswith("text/"):
                 content_type += "; charset=" + self.charset
             self.headers["content-type"] = content_type
-        await send(
-            {
-                "type": "http.response.start",
-                "status": self.status_code,
-                "headers": self.list_headers(as_bytes=True),
-            }
-        )
-        await send({"type": "http.response.body", "body": body})
+        await send_http_start(send, self.status_code, self.list_headers(as_bytes=True))
+        await send_http_body(send, body)
 
 
 class PlainTextResponse(SmallResponse[Union[bytes, str]]):
@@ -358,17 +374,10 @@ class StreamResponse(Response):
         self.headers["transfer-encoding"] = "chunked"
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        await send(
-            {
-                "type": "http.response.start",
-                "status": self.status_code,
-                "headers": self.list_headers(as_bytes=True),
-            }
-        )
+        await send_http_start(send, self.status_code, self.list_headers(as_bytes=True))
         async for chunk in self.iterable:
-            await send({"type": "http.response.body", "body": chunk, "more_body": True})
-
-        await send({"type": "http.response.body", "body": b"", "more_body": False})
+            await send_http_body(send, chunk, more_body=True)
+        return await send_http_body(send)
 
 
 class FileResponse(BaseFileResponse, Response):
@@ -388,29 +397,19 @@ class FileResponse(BaseFileResponse, Response):
     ) -> None:
         self.headers["content-type"] = str(self.content_type)
         self.headers["content-length"] = str(file_size)
-        await send(
-            {
-                "type": "http.response.start",
-                "status": 200,
-                "headers": self.list_headers(as_bytes=True),
-            }
-        )
+        await send_http_start(send, 200, self.list_headers(as_bytes=True))
         if send_header_only:
-            return await send({"type": "http.response.body", "body": b""})
+            return await send_http_body(send)
 
-        file = await loop.run_in_executor(None, open, self.filepath, "rb")
+        file = typing_cast(FileIO, await run_in_threadpool(open, self.filepath, "rb"))
         try:
             for _ in range(0, file_size, 4096):
-                await send(
-                    {
-                        "type": "http.response.body",
-                        "body": await loop.run_in_executor(None, file.read, 4096),
-                        "more_body": True,
-                    }
+                await send_http_body(
+                    send, await run_in_threadpool(file.read, 4096), more_body=True
                 )
-            await send({"type": "http.response.body", "body": b""})
+            return await send_http_body(send)
         finally:
-            await loop.run_in_executor(None, file.close)
+            await run_in_threadpool(file.close)
 
     async def handle_single_range(
         self,
@@ -424,32 +423,22 @@ class FileResponse(BaseFileResponse, Response):
         self.headers["content-range"] = f"bytes {start}-{end-1}/{file_size}"
         self.headers["content-type"] = str(self.content_type)
         self.headers["content-length"] = str(end - start)
-        await send(
-            {
-                "type": "http.response.start",
-                "status": 206,
-                "headers": self.list_headers(as_bytes=True),
-            }
-        )
+        await send_http_start(send, 206, self.list_headers(as_bytes=True))
         if send_header_only:
-            return await send({"type": "http.response.body", "body": b""})
+            return await send_http_body(send)
 
-        file = await loop.run_in_executor(None, open, self.filepath, "rb")
+        file = typing_cast(FileIO, await run_in_threadpool(open, self.filepath, "rb"))
         try:
-            await loop.run_in_executor(None, file.seek, start)
+            await run_in_threadpool(file.seek, start)
             for here in range(start, end, 4096):
-                await send(
-                    {
-                        "type": "http.response.body",
-                        "body": await loop.run_in_executor(
-                            None, file.read, min(4096, end - here)
-                        ),
-                        "more_body": True,
-                    }
+                await send_http_body(
+                    send,
+                    await run_in_threadpool(file.read, min(4096, end - here)),
+                    more_body=True,
                 )
-            await send({"type": "http.response.body", "body": b""})
+            return await send_http_body(send)
         finally:
-            await loop.run_in_executor(None, file.close)
+            await run_in_threadpool(file.close)
 
     async def handle_several_ranges(
         self,
@@ -466,55 +455,33 @@ class FileResponse(BaseFileResponse, Response):
             + sum(len(str(start)) + len(str(end - 1)) for start, end in ranges)
         ) + sum(end - start for start, end in ranges)
         self.headers["content-length"] = str(content_length)
-
-        await send(
-            {
-                "type": "http.response.start",
-                "status": 206,
-                "headers": self.list_headers(as_bytes=True),
-            }
-        )
+        await send_http_start(send, 206, self.list_headers(as_bytes=True))
         if send_header_only:
-            return await send({"type": "http.response.body", "body": b""})
+            return await send_http_body(send)
 
-        file = await loop.run_in_executor(None, open, self.filepath, "rb")
+        file = typing_cast(FileIO, await run_in_threadpool(open, self.filepath, "rb"))
         try:
             for start, end in ranges:
-                await send(
-                    {
-                        "type": "http.response.body",
-                        "body": (
-                            "--3d6b6a416f9b5\n"
-                            f"Content-Type: {self.content_type}\n"
-                            f"Content-Range: bytes {start}-{end-1}/{file_size}\n\n"
-                        ).encode("latin-1"),
-                        "more_body": True,
-                    }
+                await send_http_body(
+                    send,
+                    (
+                        "--3d6b6a416f9b5\n"
+                        f"Content-Type: {self.content_type}\n"
+                        f"Content-Range: bytes {start}-{end-1}/{file_size}\n\n"
+                    ).encode("latin-1"),
+                    more_body=True,
                 )
-                await loop.run_in_executor(None, file.seek, start)
+                await run_in_threadpool(file.seek, start)
                 for here in range(start, end, 4096):
-                    await send(
-                        {
-                            "type": "http.response.body",
-                            "body": await loop.run_in_executor(
-                                None, file.read, min(4096, end - here)
-                            ),
-                            "more_body": True,
-                        }
+                    await send_http_body(
+                        send,
+                        await run_in_threadpool(file.read, min(4096, end - here)),
+                        more_body=True,
                     )
-                await send(
-                    {"type": "http.response.body", "body": b"\n", "more_body": True}
-                )
-            await send(
-                {
-                    "type": "http.response.body",
-                    "body": b"--3d6b6a416f9b5--\n",
-                    "more_body": True,
-                }
-            )
-            await send({"type": "http.response.body", "body": b""})
+                await send_http_body(send, b"\n", more_body=True)
+            return await send_http_body(send, b"--3d6b6a416f9b5--\n", more_body=False)
         finally:
-            await loop.run_in_executor(None, file.close)
+            await run_in_threadpool(file.close)
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         send_header_only = scope["method"] == "HEAD"
@@ -538,19 +505,15 @@ class FileResponse(BaseFileResponse, Response):
         try:
             ranges = self.parse_range(http_range, file_size)
         except HTTPException as exception:
-            await send(
-                {
-                    "type": "http.response.start",
-                    "status": exception.status_code,
-                    "headers": [
-                        (k.encode("latin-1"), v.encode("latin-1"))
-                        for k, v in (exception.headers or {}).items()
-                    ],
-                }
+            await send_http_start(
+                send,
+                exception.status_code,
+                [
+                    (k.encode("latin-1"), v.encode("latin-1"))
+                    for k, v in (exception.headers or {}).items()
+                ],
             )
-            return await send(
-                {"type": "http.response.body", "body": exception.content or b""}
-            )
+            return await send_http_body(send, exception.content or b"")
 
         if len(ranges) == 1:
             start, end = ranges[0]
@@ -613,18 +576,18 @@ class SendEventResponse(Response):
         )
         [task.cancel() for task in pending]
         [task.result() for task in done]
-        await send({"type": "http.response.body", "body": b""})
+        return await send_http_body(send)
 
     async def send_event(self, send: Send) -> None:
         async for chunk in self.iterable:
             body = build_bytes_from_sse(chunk, self.charset)
-            await send({"type": "http.response.body", "body": body, "more_body": True})
+            await send_http_body(send, body, more_body=True)
 
     async def keep_alive(self, send: Send) -> None:
         while True:
             await asyncio.sleep(self.ping_interval)
             ping = b": ping\n\n"
-            await send({"type": "http.response.body", "body": ping, "more_body": True})
+            await send_http_body(send, ping, more_body=True)
 
 
 class WebSocketDisconnect(Exception):
