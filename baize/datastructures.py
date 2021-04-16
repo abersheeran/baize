@@ -248,9 +248,8 @@ class MultiMapping(typing.Generic[KT, VT], typing.Mapping[KT, VT]):
     def __init__(
         self,
         raw: typing.Union[
-            "MultiMapping",
             typing.Mapping[KT, VT],
-            typing.Sequence[typing.Tuple[KT, VT]],
+            typing.Iterable[typing.Tuple[KT, VT]],
         ] = None,
     ) -> None:
         if raw is None:
@@ -350,7 +349,7 @@ class QueryParams(MultiMapping[str, str]):
         raw: typing.Union[
             "MultiMapping[str, str]",
             typing.Mapping[str, str],
-            typing.Sequence[typing.Tuple[str, str]],
+            typing.Iterable[typing.Tuple[str, str]],
             str,
             bytes,
         ] = None,
@@ -445,12 +444,13 @@ class FormData(MultiMapping[str, typing.Union[str, UploadFile]]):
 
 
 class Headers(typing.Mapping[str, str]):
+    __slots__ = ("_dict",)
+
     def __init__(
         self,
         headers: typing.Union[
-            "Headers",
             typing.Mapping[str, str],
-            typing.Sequence[typing.Tuple[str, str]],
+            typing.Iterable[typing.Tuple[str, str]],
         ] = None,
     ) -> None:
         store: typing.Dict[str, str] = {}
@@ -481,6 +481,8 @@ class Headers(typing.Mapping[str, str]):
 
 
 class MutableHeaders(Headers, typing.MutableMapping[str, str]):
+    __slots__ = Headers.__slots__
+
     def __setitem__(self, key: str, value: str) -> None:
         self._dict[key.lower()] = value
 

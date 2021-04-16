@@ -137,11 +137,10 @@ class HTTPConnection(Mapping, MoreInfoFromHeaderMixin):
 
         Note that in its internal storage, all keys are in lower case.
         """
-        headers = (
+        return Headers(
             (key.decode("latin-1"), value.decode("latin-1"))
             for key, value in self._scope["headers"]
         )
-        return Headers(typing_cast(Sequence[Tuple[str, str]], headers))
 
 
 class Request(HTTPConnection):

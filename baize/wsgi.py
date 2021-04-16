@@ -21,7 +21,6 @@ from typing import (
     TypeVar,
     Union,
 )
-from typing import cast as typing_cast
 from urllib.parse import parse_qsl, quote_plus
 
 from .datastructures import URL, Address, FormData, Headers, QueryParams, defaultdict
@@ -30,10 +29,10 @@ from .formparsers import MultiPartParser
 from .requests import MoreInfoFromHeaderMixin
 from .responses import BaseFileResponse, BaseResponse, build_bytes_from_sse
 from .routing import BaseHosts, BaseRouter, BaseSubpaths
-from .typing import Environ, ServerSentEvent, StartResponse, WSGIApp
+from .typing import Environ, Final, ServerSentEvent, StartResponse, WSGIApp
 from .utils import cached_property
 
-StatusStringMapping = defaultdict(
+StatusStringMapping: Final[defaultdict] = defaultdict(
     lambda status: f"{status} Unknown Status Code",
     {int(status): f"{status} {status.phrase}" for status in HTTPStatus},
 )
@@ -100,7 +99,7 @@ class HTTPConnection(Mapping, MoreInfoFromHeaderMixin):
 
         Note that in its internal storage, all keys are in lower case.
         """
-        headers = (
+        return Headers(
             (key.lower().replace("_", "-"), value)
             for key, value in chain(
                 (
@@ -115,7 +114,6 @@ class HTTPConnection(Mapping, MoreInfoFromHeaderMixin):
                 ),
             )
         )
-        return Headers(typing_cast(Sequence[Tuple[str, str]], headers))
 
 
 class Request(HTTPConnection):
