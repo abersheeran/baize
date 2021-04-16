@@ -391,7 +391,6 @@ class FileResponse(BaseFileResponse, Response):
         self,
         send_header_only: bool,
         file_size: int,
-        loop: asyncio.AbstractEventLoop,
         send: Send,
     ) -> None:
         self.headers["content-type"] = str(self.content_type)
@@ -414,7 +413,6 @@ class FileResponse(BaseFileResponse, Response):
         self,
         send_header_only: bool,
         file_size: int,
-        loop: asyncio.AbstractEventLoop,
         send: Send,
         start: int,
         end: int,
@@ -443,7 +441,6 @@ class FileResponse(BaseFileResponse, Response):
         self,
         send_header_only: bool,
         file_size: int,
-        loop: asyncio.AbstractEventLoop,
         send: Send,
         ranges: Sequence[Tuple[int, int]],
     ) -> None:
@@ -485,7 +482,6 @@ class FileResponse(BaseFileResponse, Response):
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         send_header_only = scope["method"] == "HEAD"
 
-        loop = asyncio.get_event_loop()
         stat_result = self.stat_result
         file_size = stat_result.st_size
 
@@ -499,7 +495,7 @@ class FileResponse(BaseFileResponse, Response):
         if http_range == "" or (
             http_if_range != "" and not self.judge_if_range(http_if_range, stat_result)
         ):
-            return await self.handle_all(send_header_only, file_size, loop, send)
+            return await self.handle_all(send_header_only, file_size, send)
 
         try:
             ranges = self.parse_range(http_range, file_size)
@@ -517,11 +513,11 @@ class FileResponse(BaseFileResponse, Response):
         if len(ranges) == 1:
             start, end = ranges[0]
             return await self.handle_single_range(
-                send_header_only, file_size, loop, send, start, end
+                send_header_only, file_size, send, start, end
             )
         else:
             return await self.handle_several_ranges(
-                send_header_only, file_size, loop, send, ranges
+                send_header_only, file_size, send, ranges
             )
 
 
