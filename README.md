@@ -1,6 +1,7 @@
 # BáiZé
 
 [![Codecov](https://img.shields.io/codecov/c/github/abersheeran/baize?style=flat-square)](https://codecov.io/gh/abersheeran/baize)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/baize?label=Support%20Python%20Version&style=flat-square)](https://pypi.org/project/baize/)
 
 Powerful and exquisite WSGI/ASGI framework/toolkit.
 
