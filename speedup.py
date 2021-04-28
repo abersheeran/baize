@@ -44,6 +44,7 @@ except ImportError:
 # Cython is installed. Compile
 else:
     from distutils.command.build_ext import build_ext
+    from pathlib import Path
 
     # This function will be executed in setup.py:
     def build(setup_kwargs):
@@ -52,8 +53,13 @@ else:
                 "ext_modules": mypycify(
                     [
                         "--ignore-missing-imports",
-                        "baize/datastructures.py",
-                        "baize/routing.py",
+                        *list(
+                            filter(
+                                lambda path: path.replace("\\", "/")
+                                not in ("baize/datastructures.py",),
+                                map(str, Path("baize").glob("**/*.py")),
+                            )
+                        ),
                     ]
                 ),
                 "cmdclass": {"build_ext": build_ext},
