@@ -6,7 +6,6 @@ from enum import Enum
 from io import FileIO
 from typing import (
     Any,
-    AsyncGenerator,
     AsyncIterable,
     AsyncIterator,
     Awaitable,
@@ -159,7 +158,7 @@ class Request(HTTPConnection):
         """
         return self._scope["method"]
 
-    async def stream(self) -> AsyncGenerator[bytes, None]:
+    async def stream(self) -> AsyncIterator[bytes]:
         """
         Streaming read request body. e.g. `async for chunk in request.stream(): ...`
 

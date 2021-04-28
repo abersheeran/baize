@@ -124,7 +124,7 @@ class Request(HTTPConnection):
         """
         return self["REQUEST_METHOD"]
 
-    def stream(self) -> Generator[bytes, None, None]:
+    def stream(self) -> Iterator[bytes]:
         """
         Streaming read request body. e.g. `for chunk in request.stream(): ...`
 
