@@ -1,0 +1,168 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BáiZé’s documentation &#8212; BáiZé 0.8.0 documentation</title>
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="WSGI (Web Server Gateway Interface)" href="wsgi.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="baize-s-documentation">
+<h1>BáiZé’s documentation<a class="headerlink" href="#baize-s-documentation" title="Permalink to this headline">¶</a></h1>
+<p><a class="reference external" href="https://codecov.io/gh/abersheeran/baize"><img alt="Codecov" src="https://img.shields.io/codecov/c/github/abersheeran/baize?style=flat-square" /></a></p>
+<p>Powerful and exquisite WSGI/ASGI framework/toolkit.</p>
+<p>The minimize implementation of methods required in the Web framework. No redundant implementation means that you can freely customize functions without considering the conflict with baize’s own implementation.</p>
+<p>Under the ASGI/WSGI protocol, the interface of the request object and the response object is almost the same, only need to add or delete <code class="docutils literal notranslate"><span class="pre">await</span></code> in the appropriate place. In addition, it should be noted that ASGI supports WebSocket but WSGI does not.</p>
+<ul class="simple">
+<li><p>Support range file response, server-sent event response</p></li>
+<li><p>Support WebSocket (only ASGI)</p></li>
+<li><p>WSGI, ASGI routing to combine any application like <a class="reference external" href="https://docs.djangoproject.com/en/3.0/howto/deployment/wsgi/">Django(wsgi)</a>/<a class="reference external" href="https://trypyramid.com/">Pyramid</a>/<a class="reference external" href="https://bottlepy.org/">Bottle</a>/<a class="reference external" href="https://flask.palletsprojects.com/">Flask</a> or <a class="reference external" href="https://docs.djangoproject.com/en/3.0/howto/deployment/asgi/">Django(asgi)</a>/<a class="reference external" href="https://index-py.aber.sh/">Index.py</a>/<a class="reference external" href="https://www.starlette.io/">Starlette</a>/<a class="reference external" href="https://fastapi.tiangolo.com/">FastAPI</a>/<a class="reference external" href="https://sanic.readthedocs.io/en/stable/">Sanic</a>/<a class="reference external" href="https://pgjones.gitlab.io/quart/">Quart</a></p></li>
+</ul>
+<div class="section" id="install">
+<h2>Install<a class="headerlink" href="#install" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">U</span> <span class="n">baize</span>
+</pre></div>
+</div>
+<p>Or install from GitHub master branch</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">U</span> <span class="n">git</span><span class="o">+</span><span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">abersheeran</span><span class="o">/</span><span class="n">baize</span><span class="nd">@setup</span><span class="o">.</span><span class="n">py</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h2>
+<p>BáiZé is a framework and toolkit that directly faces the WSGI and ASGI protocols. Please read the corresponding chapters according to your needs.</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="wsgi.html">WSGI (Web Server Gateway Interface)</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="wsgi.html#httpconnection">HTTPConnection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wsgi.html#request">Request</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wsgi.html#response">Response</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wsgi.html#smallresponse">SmallResponse</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wsgi.html#plaintextresponse">PlainTextResponse</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wsgi.html#htmlresponse">HTMLResponse</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wsgi.html#jsonresponse">JSONResponse</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wsgi.html#redirectresponse">RedirectResponse</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wsgi.html#streamresponse">StreamResponse</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wsgi.html#fileresponse">FileResponse</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wsgi.html#sendeventresponse">SendEventResponse</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wsgi.html#router">Router</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wsgi.html#subpaths">Subpaths</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wsgi.html#hosts">Hosts</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="asgi.html">ASGI (Asynchronous Server Gateway Interface)</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="asgi.html#httpconnection">HTTPConnection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="asgi.html#request">Request</a></li>
+<li class="toctree-l2"><a class="reference internal" href="asgi.html#response">Response</a></li>
+<li class="toctree-l2"><a class="reference internal" href="asgi.html#smallresponse">SmallResponse</a></li>
+<li class="toctree-l2"><a class="reference internal" href="asgi.html#plaintextresponse">PlainTextResponse</a></li>
+<li class="toctree-l2"><a class="reference internal" href="asgi.html#htmlresponse">HTMLResponse</a></li>
+<li class="toctree-l2"><a class="reference internal" href="asgi.html#jsonresponse">JSONResponse</a></li>
+<li class="toctree-l2"><a class="reference internal" href="asgi.html#redirectresponse">RedirectResponse</a></li>
+<li class="toctree-l2"><a class="reference internal" href="asgi.html#streamresponse">StreamResponse</a></li>
+<li class="toctree-l2"><a class="reference internal" href="asgi.html#fileresponse">FileResponse</a></li>
+<li class="toctree-l2"><a class="reference internal" href="asgi.html#sendeventresponse">SendEventResponse</a></li>
+<li class="toctree-l2"><a class="reference internal" href="asgi.html#websocket">WebSocket</a></li>
+<li class="toctree-l2"><a class="reference internal" href="asgi.html#router">Router</a></li>
+<li class="toctree-l2"><a class="reference internal" href="asgi.html#subpaths">Subpaths</a></li>
+<li class="toctree-l2"><a class="reference internal" href="asgi.html#hosts">Hosts</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="#">BáiZé</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="wsgi.html">WSGI (Web Server Gateway Interface)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="asgi.html">ASGI (Asynchronous Server Gateway Interface)</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="#">Documentation overview</a><ul>
+      <li>Next: <a href="wsgi.html" title="next chapter">WSGI (Web Server Gateway Interface)</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;Aber.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.5.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/index.md.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

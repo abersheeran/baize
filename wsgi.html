@@ -1,0 +1,427 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WSGI (Web Server Gateway Interface) &#8212; BáiZé 0.8.0 documentation</title>
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="ASGI (Asynchronous Server Gateway Interface)" href="asgi.html" />
+    <link rel="prev" title="BáiZé’s documentation" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="wsgi-web-server-gateway-interface">
+<h1>WSGI (Web Server Gateway Interface)<a class="headerlink" href="#wsgi-web-server-gateway-interface" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="httpconnection">
+<h2>HTTPConnection<a class="headerlink" href="#httpconnection" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt id="baize.wsgi.HTTPConnection">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">baize.wsgi.</span></code><code class="sig-name descname"><span class="pre">HTTPConnection</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">environ</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">MutableMapping</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#baize.wsgi.HTTPConnection" title="Permalink to this definition">¶</a></dt>
+<dd><p>A base class for incoming HTTP connections.</p>
+<p>It is a valid Mapping type that allows you to directly
+access the values in any WSGI <code class="docutils literal notranslate"><span class="pre">environ</span></code> dictionary.</p>
+<dl class="py method">
+<dt id="baize.wsgi.HTTPConnection.client">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">client</span></code><a class="headerlink" href="#baize.wsgi.HTTPConnection.client" title="Permalink to this definition">¶</a></dt>
+<dd><p>Client’s IP and Port.</p>
+<p>Note that this depends on the <code class="docutils literal notranslate"><span class="pre">REMOTE_ADDR</span></code> and <code class="docutils literal notranslate"><span class="pre">REMOTE_PORT</span></code> values
+given by the WSGI Server, and is not necessarily accurate.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="baize.wsgi.HTTPConnection.url">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">url</span></code><a class="headerlink" href="#baize.wsgi.HTTPConnection.url" title="Permalink to this definition">¶</a></dt>
+<dd><p>The full URL of this request.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="baize.wsgi.HTTPConnection.path_params">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">path_params</span></code><a class="headerlink" href="#baize.wsgi.HTTPConnection.path_params" title="Permalink to this definition">¶</a></dt>
+<dd><p>The path parameters parsed by the framework.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="baize.wsgi.HTTPConnection.query_params">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">query_params</span></code><a class="headerlink" href="#baize.wsgi.HTTPConnection.query_params" title="Permalink to this definition">¶</a></dt>
+<dd><p>Query parameter. It is a multi-value mapping.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="baize.wsgi.HTTPConnection.headers">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">headers</span></code><a class="headerlink" href="#baize.wsgi.HTTPConnection.headers" title="Permalink to this definition">¶</a></dt>
+<dd><p>A read-only case-independent mapping.</p>
+<p>Note that in its internal storage, all keys are in lower case.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="baize.wsgi.HTTPConnection.accepted_types">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">accepted_types</span></code><a class="headerlink" href="#baize.wsgi.HTTPConnection.accepted_types" title="Permalink to this definition">¶</a></dt>
+<dd><p>Request’s accepted types</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="baize.wsgi.HTTPConnection.accepts">
+<code class="sig-name descname"><span class="pre">accepts</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">media_type</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">bool</span><a class="headerlink" href="#baize.wsgi.HTTPConnection.accepts" title="Permalink to this definition">¶</a></dt>
+<dd><p>e.g. <code class="docutils literal notranslate"><span class="pre">request.accepts(&quot;application/json&quot;)</span></code></p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="baize.wsgi.HTTPConnection.content_type">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">content_type</span></code><a class="headerlink" href="#baize.wsgi.HTTPConnection.content_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Request’s content-type</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="baize.wsgi.HTTPConnection.cookies">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">cookies</span></code><a class="headerlink" href="#baize.wsgi.HTTPConnection.cookies" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns cookies in as a <code class="docutils literal notranslate"><span class="pre">dict</span></code>.</p>
+<p>NOTE: Modifications to this dictionary will not affect the
+response value. In fact, this value should not be modified.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="baize.wsgi.HTTPConnection.get">
+<code class="sig-name descname"><span class="pre">get</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="pre">k</span></em><span class="optional">[</span>, <em class="sig-param"><span class="pre">d</span></em><span class="optional">]</span><span class="sig-paren">)</span> &#x2192; <span class="pre">D[k]</span> <span class="pre">if</span> <span class="pre">k</span> <span class="pre">in</span> <span class="pre">D,</span> <span class="pre">else</span> <span class="pre">d.</span>&#160; <span class="pre">d</span> <span class="pre">defaults</span> <span class="pre">to</span> <span class="pre">None.</span><a class="headerlink" href="#baize.wsgi.HTTPConnection.get" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="baize.wsgi.HTTPConnection.items">
+<code class="sig-name descname"><span class="pre">items</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">a</span> <span class="pre">set-like</span> <span class="pre">object</span> <span class="pre">providing</span> <span class="pre">a</span> <span class="pre">view</span> <span class="pre">on</span> <span class="pre">D’s</span> <span class="pre">items</span><a class="headerlink" href="#baize.wsgi.HTTPConnection.items" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="baize.wsgi.HTTPConnection.keys">
+<code class="sig-name descname"><span class="pre">keys</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">a</span> <span class="pre">set-like</span> <span class="pre">object</span> <span class="pre">providing</span> <span class="pre">a</span> <span class="pre">view</span> <span class="pre">on</span> <span class="pre">D’s</span> <span class="pre">keys</span><a class="headerlink" href="#baize.wsgi.HTTPConnection.keys" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="baize.wsgi.HTTPConnection.values">
+<code class="sig-name descname"><span class="pre">values</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">an</span> <span class="pre">object</span> <span class="pre">providing</span> <span class="pre">a</span> <span class="pre">view</span> <span class="pre">on</span> <span class="pre">D’s</span> <span class="pre">values</span><a class="headerlink" href="#baize.wsgi.HTTPConnection.values" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="request">
+<h2>Request<a class="headerlink" href="#request" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt id="baize.wsgi.Request">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">baize.wsgi.</span></code><code class="sig-name descname"><span class="pre">Request</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">environ</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">MutableMapping</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#baize.wsgi.Request" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="py method">
+<dt id="baize.wsgi.Request.method">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">method</span></code><a class="headerlink" href="#baize.wsgi.Request.method" title="Permalink to this definition">¶</a></dt>
+<dd><p>HTTP method. Uppercase string.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="baize.wsgi.Request.stream">
+<code class="sig-name descname"><span class="pre">stream</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">chunk_size</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">4096</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">bytes</span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#baize.wsgi.Request.stream" title="Permalink to this definition">¶</a></dt>
+<dd><p>Streaming read request body. e.g. <code class="docutils literal notranslate"><span class="pre">for</span> <span class="pre">chunk</span> <span class="pre">in</span> <span class="pre">request.stream():</span> <span class="pre">...</span></code></p>
+<p>If you access <code class="docutils literal notranslate"><span class="pre">.stream()</span></code> then the byte chunks are provided
+without storing the entire body to memory. Any subsequent
+calls to <code class="docutils literal notranslate"><span class="pre">.body</span></code>, <code class="docutils literal notranslate"><span class="pre">.form</span></code>, or <code class="docutils literal notranslate"><span class="pre">.json</span></code> will raise an error.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="baize.wsgi.Request.body">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">body</span></code><a class="headerlink" href="#baize.wsgi.Request.body" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read all the contents of the request body into the memory and return it.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="baize.wsgi.Request.json">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">json</span></code><a class="headerlink" href="#baize.wsgi.Request.json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Call <code class="docutils literal notranslate"><span class="pre">self.body</span></code> and use <code class="docutils literal notranslate"><span class="pre">json.loads</span></code> parse it.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">content_type</span></code> is not equal to <code class="docutils literal notranslate"><span class="pre">application/json</span></code>,
+an HTTPExcption exception will be thrown.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="baize.wsgi.Request.form">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">form</span></code><a class="headerlink" href="#baize.wsgi.Request.form" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parse the data in the form format and return it as a multi-value mapping.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">content_type</span></code> is equal to <code class="docutils literal notranslate"><span class="pre">multipart/form-data</span></code>, it will directly
+perform streaming analysis, and subsequent calls to <code class="docutils literal notranslate"><span class="pre">self.body</span></code>
+or <code class="docutils literal notranslate"><span class="pre">self.json</span></code> will raise errors.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">content_type</span></code> is not equal to <code class="docutils literal notranslate"><span class="pre">multipart/form-data</span></code> or
+<code class="docutils literal notranslate"><span class="pre">application/x-www-form-urlencoded</span></code>, an HTTPExcption exception will be thrown.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="baize.wsgi.Request.close">
+<code class="sig-name descname"><span class="pre">close</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">None</span><a class="headerlink" href="#baize.wsgi.Request.close" title="Permalink to this definition">¶</a></dt>
+<dd><p>Close all temporary files in the <code class="docutils literal notranslate"><span class="pre">self.form</span></code>.</p>
+<p>This can always be called, regardless of whether you use form or not.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="response">
+<h2>Response<a class="headerlink" href="#response" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt id="baize.wsgi.Response">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">baize.wsgi.</span></code><code class="sig-name descname"><span class="pre">Response</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">status_code</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">headers</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Mapping</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#baize.wsgi.Response" title="Permalink to this definition">¶</a></dt>
+<dd><p>The parent class of all responses, whose objects can be used directly as WSGI
+application.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="smallresponse">
+<h2>SmallResponse<a class="headerlink" href="#smallresponse" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt id="baize.wsgi.SmallResponse">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">baize.wsgi.</span></code><code class="sig-name descname"><span class="pre">SmallResponse</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">content</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">_ContentType</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">status_code</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">headers</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Mapping</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">media_type</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">charset</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#baize.wsgi.SmallResponse" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#baize.wsgi.Response" title="baize.wsgi.Response"><code class="xref py py-class docutils literal notranslate"><span class="pre">baize.wsgi.Response</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">abc.ABC</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Generic</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">baize.wsgi._ContentType</span></code>]</p>
+<p>Abstract base class for small response objects.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="plaintextresponse">
+<h2>PlainTextResponse<a class="headerlink" href="#plaintextresponse" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt id="baize.wsgi.PlainTextResponse">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">baize.wsgi.</span></code><code class="sig-name descname"><span class="pre">PlainTextResponse</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">content</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">_ContentType</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">status_code</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">headers</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Mapping</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">media_type</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">charset</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#baize.wsgi.PlainTextResponse" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#baize.wsgi.SmallResponse" title="baize.wsgi.SmallResponse"><code class="xref py py-class docutils literal notranslate"><span class="pre">baize.wsgi.SmallResponse</span></code></a>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">Union</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">bytes</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]]</p>
+</dd></dl>
+
+</div>
+<div class="section" id="htmlresponse">
+<h2>HTMLResponse<a class="headerlink" href="#htmlresponse" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt id="baize.wsgi.HTMLResponse">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">baize.wsgi.</span></code><code class="sig-name descname"><span class="pre">HTMLResponse</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">content</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">_ContentType</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">status_code</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">headers</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Mapping</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">media_type</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">charset</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#baize.wsgi.HTMLResponse" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#baize.wsgi.SmallResponse" title="baize.wsgi.SmallResponse"><code class="xref py py-class docutils literal notranslate"><span class="pre">baize.wsgi.SmallResponse</span></code></a>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">Union</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">bytes</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]]</p>
+</dd></dl>
+
+</div>
+<div class="section" id="jsonresponse">
+<h2>JSONResponse<a class="headerlink" href="#jsonresponse" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt id="baize.wsgi.JSONResponse">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">baize.wsgi.</span></code><code class="sig-name descname"><span class="pre">JSONResponse</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">content</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">status_code</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">headers</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Mapping</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#baize.wsgi.JSONResponse" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#baize.wsgi.SmallResponse" title="baize.wsgi.SmallResponse"><code class="xref py py-class docutils literal notranslate"><span class="pre">baize.wsgi.SmallResponse</span></code></a>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">Any</span></code>]</p>
+<p><code class="docutils literal notranslate"><span class="pre">**kwargs</span></code> is used to accept all the parameters that <code class="docutils literal notranslate"><span class="pre">json.loads</span></code> can accept.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="redirectresponse">
+<h2>RedirectResponse<a class="headerlink" href="#redirectresponse" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt id="baize.wsgi.RedirectResponse">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">baize.wsgi.</span></code><code class="sig-name descname"><span class="pre">RedirectResponse</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">baize.datastructures.URL</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">status_code</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">307</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">headers</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Mapping</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#baize.wsgi.RedirectResponse" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#baize.wsgi.Response" title="baize.wsgi.Response"><code class="xref py py-class docutils literal notranslate"><span class="pre">baize.wsgi.Response</span></code></a></p>
+</dd></dl>
+
+</div>
+<div class="section" id="streamresponse">
+<h2>StreamResponse<a class="headerlink" href="#streamresponse" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt id="baize.wsgi.StreamResponse">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">baize.wsgi.</span></code><code class="sig-name descname"><span class="pre">StreamResponse</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">iterable</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><span class="pre">bytes</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">status_code</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">headers</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Mapping</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">content_type</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">'application/octet-stream'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#baize.wsgi.StreamResponse" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#baize.wsgi.Response" title="baize.wsgi.Response"><code class="xref py py-class docutils literal notranslate"><span class="pre">baize.wsgi.Response</span></code></a></p>
+</dd></dl>
+
+</div>
+<div class="section" id="fileresponse">
+<h2>FileResponse<a class="headerlink" href="#fileresponse" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt id="baize.wsgi.FileResponse">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">baize.wsgi.</span></code><code class="sig-name descname"><span class="pre">FileResponse</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filepath</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">headers</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Mapping</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">content_type</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">download_name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stat_result</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">os.stat_result</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#baize.wsgi.FileResponse" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">baize.responses.BaseFileResponse</span></code>, <a class="reference internal" href="#baize.wsgi.Response" title="baize.wsgi.Response"><code class="xref py py-class docutils literal notranslate"><span class="pre">baize.wsgi.Response</span></code></a></p>
+<p>File response.</p>
+<p>It will automatically determine whether to send only headers
+and the range of files that need to be sent.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="sendeventresponse">
+<h2>SendEventResponse<a class="headerlink" href="#sendeventresponse" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt id="baize.wsgi.SendEventResponse">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">baize.wsgi.</span></code><code class="sig-name descname"><span class="pre">SendEventResponse</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">iterable</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><span class="pre">baize.typing.ServerSentEvent</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">status_code</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">headers</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Mapping</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ping_interval</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">charset</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">'utf-8'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#baize.wsgi.SendEventResponse" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#baize.wsgi.Response" title="baize.wsgi.Response"><code class="xref py py-class docutils literal notranslate"><span class="pre">baize.wsgi.Response</span></code></a></p>
+<p>Server-sent events response.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>ping_interval</strong> – This determines the time interval (in seconds) between sending ping messages.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="router">
+<h2>Router<a class="headerlink" href="#router" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt id="baize.wsgi.Router">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">baize.wsgi.</span></code><code class="sig-name descname"><span class="pre">Router</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">routes</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">Interface</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">Interface</span><span class="p"><span class="pre">,</span> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#baize.wsgi.Router" title="Permalink to this definition">¶</a></dt>
+<dd><p>A router to assign different paths to different WSGI applications.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>routes</strong> – A triple composed of path, endpoint, and name. The name is optional.         If the name is not given, the corresponding URL cannot be constructed through         build_url.</p>
+</dd>
+</dl>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">applications</span> <span class="o">=</span> <span class="n">Router</span><span class="p">(</span>
+    <span class="p">(</span><span class="s2">&quot;/static/{filepath:path}&quot;</span><span class="p">,</span> <span class="n">static_files</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;/api/{any:path}&quot;</span><span class="p">,</span> <span class="n">api_app</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;/about/</span><span class="si">{name}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">about_page</span><span class="p">,</span> <span class="s2">&quot;about&quot;</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="n">homepage</span><span class="p">,</span> <span class="s2">&quot;homepage&quot;</span><span class="p">),</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<dl class="py method">
+<dt id="baize.wsgi.Router.build_url">
+<code class="sig-name descname"><span class="pre">build_url</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">str</span><a class="headerlink" href="#baize.wsgi.Router.build_url" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find the corresponding route by the name of the route, and then construct
+the URL path.</p>
+</dd></dl>
+
+</dd></dl>
+
+<p>Use <code class="docutils literal notranslate"><span class="pre">{}</span></code> to mark path parameters, the format is <code class="docutils literal notranslate"><span class="pre">{name[:type]}</span></code>. If type is not explicitly specified, it defaults to <code class="docutils literal notranslate"><span class="pre">str</span></code>.</p>
+<p>The built-in types are <code class="docutils literal notranslate"><span class="pre">str</span></code>, <code class="docutils literal notranslate"><span class="pre">int</span></code>, <code class="docutils literal notranslate"><span class="pre">decimal</span></code>, <code class="docutils literal notranslate"><span class="pre">uuid</span></code>, <code class="docutils literal notranslate"><span class="pre">date</span></code>, <code class="docutils literal notranslate"><span class="pre">path</span></code>. Among them, <code class="docutils literal notranslate"><span class="pre">str</span></code> can match all strings except <code class="docutils literal notranslate"><span class="pre">/</span></code>, and <code class="docutils literal notranslate"><span class="pre">path</span></code> can match all strings.</p>
+<p>If the built-in types are not enough, then you only need to write a class that inherits <code class="docutils literal notranslate"><span class="pre">baize.routing.Convertor</span></code> and register it in <code class="docutils literal notranslate"><span class="pre">baize.routing.CONVERTOR_TYPES</span></code>.</p>
+</div>
+<div class="section" id="subpaths">
+<h2>Subpaths<a class="headerlink" href="#subpaths" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt id="baize.wsgi.Subpaths">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">baize.wsgi.</span></code><code class="sig-name descname"><span class="pre">Subpaths</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">routes</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">Interface</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#baize.wsgi.Subpaths" title="Permalink to this definition">¶</a></dt>
+<dd><p>A router allocates different prefix requests to different WSGI applications.</p>
+<p>NOTE: This will change the values of <code class="docutils literal notranslate"><span class="pre">environ[&quot;SCRIPT_NAME&quot;]</span></code> and <code class="docutils literal notranslate"><span class="pre">environ[&quot;PATH_INFO&quot;]</span></code>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">applications</span> <span class="o">=</span> <span class="n">Subpaths</span><span class="p">(</span>
+    <span class="p">(</span><span class="s2">&quot;/static&quot;</span><span class="p">,</span> <span class="n">static_files</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;/api&quot;</span><span class="p">,</span> <span class="n">api_app</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">default_app</span><span class="p">),</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="hosts">
+<h2>Hosts<a class="headerlink" href="#hosts" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt id="baize.wsgi.Hosts">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">baize.wsgi.</span></code><code class="sig-name descname"><span class="pre">Hosts</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">hosts</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">Interface</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#baize.wsgi.Hosts" title="Permalink to this definition">¶</a></dt>
+<dd><p>A router that distributes requests to different WSGI applications based on Host.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">applications</span> <span class="o">=</span> <span class="n">Hosts</span><span class="p">(</span>
+    <span class="p">(</span><span class="sa">r</span><span class="s2">&quot;static\.example\.com&quot;</span><span class="p">,</span> <span class="n">static_files</span><span class="p">),</span>
+    <span class="p">(</span><span class="sa">r</span><span class="s2">&quot;api\.example\.com&quot;</span><span class="p">,</span> <span class="n">api_app</span><span class="p">),</span>
+    <span class="p">(</span><span class="sa">r</span><span class="s2">&quot;(www\.)?example\.com&quot;</span><span class="p">,</span> <span class="n">default_app</span><span class="p">),</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">BáiZé</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">WSGI (Web Server Gateway Interface)</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#httpconnection">HTTPConnection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#request">Request</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#response">Response</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#smallresponse">SmallResponse</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#plaintextresponse">PlainTextResponse</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#htmlresponse">HTMLResponse</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#jsonresponse">JSONResponse</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#redirectresponse">RedirectResponse</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#streamresponse">StreamResponse</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#fileresponse">FileResponse</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#sendeventresponse">SendEventResponse</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#router">Router</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#subpaths">Subpaths</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#hosts">Hosts</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="asgi.html">ASGI (Asynchronous Server Gateway Interface)</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">BáiZé’s documentation</a></li>
+      <li>Next: <a href="asgi.html" title="next chapter">ASGI (Asynchronous Server Gateway Interface)</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;Aber.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.5.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/wsgi.md.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
