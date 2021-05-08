@@ -86,6 +86,7 @@ class BaseResponse:
 
 class BaseFileResponse(BaseResponse):
     range_re = re.compile(r"(\d+)-(\d*)")
+    chunk_size = 4096 * 64
 
     def __init__(
         self,

@@ -400,9 +400,11 @@ class FileResponse(BaseFileResponse, Response):
 
         file = typing_cast(FileIO, await run_in_threadpool(open, self.filepath, "rb"))
         try:
-            for _ in range(0, file_size, 4096):
+            for _ in range(0, file_size, self.chunk_size):
                 await send_http_body(
-                    send, await run_in_threadpool(file.read, 4096), more_body=True
+                    send,
+                    await run_in_threadpool(file.read, self.chunk_size),
+                    more_body=True,
                 )
             return await send_http_body(send)
         finally:
@@ -426,10 +428,12 @@ class FileResponse(BaseFileResponse, Response):
         file = typing_cast(FileIO, await run_in_threadpool(open, self.filepath, "rb"))
         try:
             await run_in_threadpool(file.seek, start)
-            for here in range(start, end, 4096):
+            for here in range(start, end, self.chunk_size):
                 await send_http_body(
                     send,
-                    await run_in_threadpool(file.read, min(4096, end - here)),
+                    await run_in_threadpool(
+                        file.read, min(self.chunk_size, end - here)
+                    ),
                     more_body=True,
                 )
             return await send_http_body(send)
@@ -467,10 +471,12 @@ class FileResponse(BaseFileResponse, Response):
                     more_body=True,
                 )
                 await run_in_threadpool(file.seek, start)
-                for here in range(start, end, 4096):
+                for here in range(start, end, self.chunk_size):
                     await send_http_body(
                         send,
-                        await run_in_threadpool(file.read, min(4096, end - here)),
+                        await run_in_threadpool(
+                            file.read, min(self.chunk_size, end - here)
+                        ),
                         more_body=True,
                     )
                 await send_http_body(send, b"\n", more_body=True)

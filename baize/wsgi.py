@@ -124,7 +124,7 @@ class Request(HTTPConnection):
         """
         return self["REQUEST_METHOD"]
 
-    def stream(self) -> Iterator[bytes]:
+    def stream(self, chunk_size: int = 4096) -> Iterator[bytes]:
         """
         Streaming read request body. e.g. `for chunk in request.stream(): ...`
 
@@ -142,7 +142,7 @@ class Request(HTTPConnection):
         self._stream_consumed = True
         body = self._environ["wsgi.input"]
         while True:
-            chunk = body.read(4096)
+            chunk = body.read(chunk_size)
             if not chunk:
                 return
             yield chunk
@@ -361,8 +361,8 @@ class FileResponse(BaseFileResponse, Response):
             return
 
         with open(self.filepath, "rb") as file:
-            for _ in range(0, file_size, 4096):
-                yield file.read(4096)
+            for _ in range(0, file_size, self.chunk_size):
+                yield file.read(self.chunk_size)
 
     def handle_single_range(
         self,
@@ -382,8 +382,8 @@ class FileResponse(BaseFileResponse, Response):
 
         with open(self.filepath, "rb") as file:
             file.seek(start)
-            for here in range(start, end, 4096):
-                yield file.read(min(4096, end - here))
+            for here in range(start, end, self.chunk_size):
+                yield file.read(min(self.chunk_size, end - here))
 
     def handle_several_ranges(
         self,
@@ -414,8 +414,8 @@ class FileResponse(BaseFileResponse, Response):
                     f"Content-Range: bytes {start}-{end-1}/{file_size}\n"
                     "\n"
                 ).encode("latin-1")
-                for here in range(start, end, 4096):
-                    yield file.read(min(4096, end - here))
+                for here in range(start, end, self.chunk_size):
+                    yield file.read(min(self.chunk_size, end - here))
                 yield b"\n"
             yield b"--3d6b6a416f9b5--\n"
 
