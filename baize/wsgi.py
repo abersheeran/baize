@@ -38,7 +38,7 @@ StatusStringMapping: Final[defaultdict] = defaultdict(
 )
 
 
-class HTTPConnection(Mapping, MoreInfoFromHeaderMixin):
+class HTTPConnection(Mapping[str, Any], MoreInfoFromHeaderMixin):
     """
     A base class for incoming HTTP connections.
 
