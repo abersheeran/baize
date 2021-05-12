@@ -27,7 +27,7 @@ class MultiPartMessage(Enum):
     END = 8
 
 
-Stream = typing.TypeVar("Stream", typing.Iterator[bytes], typing.AsyncIterator[bytes])
+Stream = typing.TypeVar("Stream", typing.Iterable[bytes], typing.AsyncIterable[bytes])
 
 
 def _user_safe_decode(src: typing.Union[bytes, bytearray], charset: str) -> str:
@@ -90,7 +90,7 @@ class BaseMultiPartParser(typing.Generic[Stream]):
         self.messages.append(message)
 
 
-class MultiPartParser(BaseMultiPartParser[typing.Iterator[bytes]]):
+class MultiPartParser(BaseMultiPartParser[typing.Iterable[bytes]]):
     def parse(self) -> FormData:
         header_field = bytearray()
         header_value = bytearray()
@@ -153,7 +153,7 @@ class MultiPartParser(BaseMultiPartParser[typing.Iterator[bytes]]):
         return FormData(items)
 
 
-class AsyncMultiPartParser(BaseMultiPartParser[typing.AsyncIterator[bytes]]):
+class AsyncMultiPartParser(BaseMultiPartParser[typing.AsyncIterable[bytes]]):
     async def parse(self) -> FormData:
         header_field = bytearray()
         header_value = bytearray()
