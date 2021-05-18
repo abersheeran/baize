@@ -352,7 +352,10 @@ class JSONResponse(SmallResponse[Any]):
 
 class RedirectResponse(Response):
     def __init__(
-        self, url: Union[str, URL], status_code: int = 307, headers: dict = None
+        self,
+        url: Union[str, URL],
+        status_code: int = 307,
+        headers: Mapping[str, str] = None,
     ) -> None:
         super().__init__(status_code=status_code, headers=headers)
         self.headers["location"] = quote_plus(str(url), safe=":/%#?&=@[]!$&'()*+,;")
