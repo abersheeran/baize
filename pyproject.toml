@@ -4,7 +4,7 @@ description = "Powerful and exquisite WSGI/ASGI framework/toolkit."
 license = "Apache-2.0"
 name = "baize"
 readme = "README.md"
-version = "0.8.0"
+version = "0.8.1"
 
 homepage = "https://github.com/abersheeran/baize"
 repository = "https://github.com/abersheeran/baize"
