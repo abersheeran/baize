@@ -559,6 +559,7 @@ class SendEventResponse(Response):
         super().__init__(status_code, headers)
         self.iterable = iterable
         self.ping_interval = ping_interval
+        self.client_closed = False
         self.charset = charset
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
@@ -574,6 +575,7 @@ class SendEventResponse(Response):
             (
                 asyncio.ensure_future(self.keep_alive(send)),
                 asyncio.ensure_future(self.send_event(send)),
+                asyncio.ensure_future(self.wait_close(receive)),
             ),
             return_when=asyncio.FIRST_COMPLETED,
         )
@@ -587,10 +589,15 @@ class SendEventResponse(Response):
             await send_http_body(send, body, more_body=True)
 
     async def keep_alive(self, send: Send) -> None:
-        while True:
+        while not self.client_closed:
             await asyncio.sleep(self.ping_interval)
             ping = b": ping\n\n"
             await send_http_body(send, ping, more_body=True)
+
+    async def wait_close(self, receive: Receive) -> None:
+        while not self.client_closed:
+            message = await receive()
+            self.client_closed = message["type"] == "http.disconnect"
 
 
 class WebSocketDisconnect(Exception):
