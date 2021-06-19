@@ -32,6 +32,7 @@ BáiZé is a framework and toolkit that directly faces the WSGI and ASGI protoco
 .. toctree::
    :maxdepth: 2
 
-   wsgi
-   asgi
+   WSGI <wsgi>
+   ASGI <asgi>
+   exceptions
 ```
