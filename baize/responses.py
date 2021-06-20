@@ -9,11 +9,10 @@ from mimetypes import guess_type
 from typing import Iterable, List, Mapping, Sequence, Tuple, Union, overload
 from urllib.parse import quote
 
+from . import status
 from .datastructures import MutableHeaders
 from .exceptions import HTTPException
 from .typing import Literal, ServerSentEvent
-
-from . import status
 
 
 class BaseResponse:

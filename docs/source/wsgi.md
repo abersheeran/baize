@@ -91,7 +91,7 @@
 
 Use `{}` to mark path parameters, the format is `{name[:type]}`. If type is not explicitly specified, it defaults to `str`.
 
-The built-in types are `str`, `int`, `decimal`, `uuid`, `date`, `path`. Among them, `str` can match all strings except `/`, and `path` can match all strings.
+The built-in types are `str`, `int`, `decimal`, `uuid`, `date`, `any`. Among them, `str` can match all strings except `/`, and `any` can match all strings.
 
 If the built-in types are not enough, then you only need to write a class that inherits `baize.routing.Convertor` and register it in `baize.routing.CONVERTOR_TYPES`.
 

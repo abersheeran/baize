@@ -83,7 +83,7 @@ class DateConvertor(Convertor):
         return value.isoformat()
 
 
-class PathConvertor(Convertor):
+class AnyConvertor(Convertor):
     regex = ".*"
 
     def to_python(self, value: str) -> str:
@@ -99,7 +99,8 @@ CONVERTOR_TYPES = {
     "decimal": DecimalConvertor(),
     "uuid": UUIDConvertor(),
     "date": DateConvertor(),
-    "path": PathConvertor(),
+    "path": AnyConvertor(),  # will be delete
+    "any": AnyConvertor(),
 }
 
 # Match parameters in URL paths, eg. '{param}', and '{param:int}'

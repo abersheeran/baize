@@ -19,7 +19,7 @@ from baize.routing import compile_path
         (CTS["decimal"], "inf"),
         (CTS["uuid"], "90478484-0988-45fc-91fe-757d90136892"),
         (CTS["date"], "2021-03-07"),
-        (CTS["path"], "123/123/123"),
+        (CTS["any"], "123/123/123"),
     ],
 )
 def test_convertors(convertor, value):
