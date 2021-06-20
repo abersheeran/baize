@@ -13,10 +13,12 @@ from .datastructures import MutableHeaders
 from .exceptions import HTTPException
 from .typing import Literal, ServerSentEvent
 
+from . import status
+
 
 class BaseResponse:
     def __init__(
-        self, status_code: int = 200, headers: Mapping[str, str] = None
+        self, status_code: int = status.HTTP_200_OK, headers: Mapping[str, str] = None
     ) -> None:
         self.status_code = status_code
         self.headers = MutableHeaders(headers)
@@ -105,7 +107,7 @@ class BaseFileResponse(BaseResponse):
         self.stat_result = stat_result = stat_result or os.stat(self.filepath)
         if not stat.S_ISREG(stat_result.st_mode):
             raise FileNotFoundError("Filepath exists, but is not a valid file.")
-        super().__init__(status_code=200, headers=headers)
+        super().__init__(status_code=status.HTTP_200_OK, headers=headers)
 
         self.headers["accept-ranges"] = "bytes"
         if download_name is not None or self.content_type == "application/octet-stream":
@@ -143,9 +145,9 @@ class BaseFileResponse(BaseResponse):
         try:
             unit, ranges_str = range_raw_line.split("=", maxsplit=1)
         except ValueError:
-            raise HTTPException(status_code=400)
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
         if unit != "bytes":
-            raise HTTPException(status_code=400)
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
 
         ranges = [
             (int(_[0]), int(_[1]) + 1 if _[1] else max_size)
@@ -153,14 +155,12 @@ class BaseFileResponse(BaseResponse):
         ]
 
         if any(start > end for start, end in ranges):
-            raise HTTPException(status_code=400)
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
 
         if any(end > max_size for _, end in ranges):
             raise HTTPException(
-                status_code=416,
-                headers={
-                    "Content-Range": f"*/{max_size}",
-                },
+                status_code=status.HTTP_416_REQUESTED_RANGE_NOT_SATISFIABLE,
+                headers={"Content-Range": f"*/{max_size}"},
             )
 
         if len(ranges) == 1:
