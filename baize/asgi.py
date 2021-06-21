@@ -762,8 +762,8 @@ class Router(BaseRouter[ASGIApp]):
 
     ```python
     applications = Router(
-        ("/static/{filepath:path}", static_files),
-        ("/api/{any:path}", api_app),
+        ("/static/{filepath:any}", static_files),
+        ("/api/{_:any}", api_app),
         ("/about/{name}", about_page, "about"),
         ("/", homepage, "homepage"),
     )
