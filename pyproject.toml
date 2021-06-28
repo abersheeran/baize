@@ -41,7 +41,7 @@ black = {version = "*", allow-prereleases = true}
 isort = "^5.7.0"
 
 flake8 = "*"
-mypy = "^0.812"
+mypy = "^0.910"
 
 httpx = "^0.16.1"
 pytest = "^5.4.3"

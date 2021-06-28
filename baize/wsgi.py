@@ -152,7 +152,10 @@ class Request(HTTPConnection):
         """
         Read all the contents of the request body into the memory and return it.
         """
-        return b"".join([chunk for chunk in self.stream()])
+        body = bytearray()
+        for chunk in self.stream():
+            body.extend(chunk)
+        return bytes(body)
 
     @cached_property
     def json(self) -> Any:
