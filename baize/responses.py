@@ -188,12 +188,15 @@ def build_bytes_from_sse(event: ServerSentEvent, charset: str) -> bytes:
     """
     data: Iterable[bytes]
     if "data" in event:
-        data = (f"data: {_}".encode(charset) for _ in event.pop("data").splitlines())
+        data = map(
+            lambda line: f"data: {line}".encode(charset),
+            event.pop("data").splitlines(),
+        )
     else:
         data = ()
     return b"\n".join(
         chain(
-            (f"{k}: {v}".encode(charset) for k, v in event.items()),
+            map(lambda kv: f"{kv[0]}: {kv[1]}".encode(charset), event.items()),
             data,
             (b"", b""),  # for generate b"\n\n"
         )

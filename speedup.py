@@ -56,7 +56,11 @@ else:
                         *list(
                             filter(
                                 lambda path: path.replace("\\", "/")
-                                not in ("baize/datastructures.py",),
+                                not in (
+                                    "baize/typing.py",
+                                    "baize/formparsers.py",
+                                    "baize/asgi.py",
+                                ),
                                 map(str, Path("baize").glob("**/*.py")),
                             )
                         ),
