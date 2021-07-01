@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import Mapping
 
-from baize.datastructures import Headers, URL
+from baize.datastructures import URL, Headers
 from baize.requests import MoreInfoFromHeaderMixin
 
 
