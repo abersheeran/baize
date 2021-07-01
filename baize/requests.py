@@ -1,7 +1,9 @@
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from http import cookies as http_cookies
-from typing import Dict, List
+from typing import Dict, List, Optional
 
-from .datastructures import ContentType, Headers, MediaType
+from .datastructures import URL, ContentType, Headers, MediaType
 from .utils import cached_property
 
 # Workaround for adding samesite support to pre 3.8 python
@@ -44,6 +46,23 @@ class MoreInfoFromHeaderMixin:
         return ContentType(self.headers.get("content-type", ""))
 
     @cached_property
+    def content_length(self) -> Optional[int]:
+        """
+        Request's content-length
+        """
+        if self.headers.get("transfer-encoding", "") == "chunked":
+            return None
+
+        content_length = self.headers.get("content-length", None)
+        if content_length is None:
+            return None
+
+        try:
+            return max(0, int(content_length))
+        except (ValueError, TypeError):
+            return None
+
+    @cached_property
     def cookies(self) -> Dict[str, str]:
         """
         Returns cookies in as a `dict`.
@@ -71,3 +90,36 @@ class MoreInfoFromHeaderMixin:
                 # unquote using Python's algorithm.
                 cookies[key] = http_cookies._unquote(val)  # type: ignore
         return cookies
+
+    @cached_property
+    def date(self) -> Optional[datetime]:
+        """
+        The sending time of the request.
+
+        NOTE: The datetime object is timezone-aware.
+        """
+        value = self.headers.get("date", None)
+        if value is None:
+            return None
+
+        try:
+            date = parsedate_to_datetime(value)
+        except (TypeError, ValueError):
+            return None
+
+        if date.tzinfo is None:
+            return date.replace(tzinfo=timezone.utc)
+
+        return date
+
+    @cached_property
+    def referrer(self) -> Optional[URL]:
+        """
+        The `Referer` HTTP request header contains an absolute or partial address
+        of the page making the request.
+        """
+        referrer = self.headers.get("referer", None)
+        if referrer is None:
+            return None
+
+        return URL(url=referrer)
