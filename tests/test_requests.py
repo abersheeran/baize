@@ -3,13 +3,14 @@ from typing import Mapping
 
 from baize.datastructures import URL, Headers
 from baize.requests import MoreInfoFromHeaderMixin
+from baize.utils import cached_property
 
 
 class FakeRequest(MoreInfoFromHeaderMixin):
     def __init__(self, headers: Mapping[str, str]) -> None:
         self.raw_headers = headers
 
-    @property
+    @cached_property
     def headers(self) -> Headers:
         return Headers(self.raw_headers)
 
