@@ -6,7 +6,7 @@ from hashlib import sha1
 from http import cookies as http_cookies
 from itertools import chain
 from mimetypes import guess_type
-from typing import Iterable, List, Mapping, Sequence, Tuple, Union, overload
+from typing import Callable, Iterable, List, Mapping, Sequence, Tuple, Union, overload
 from urllib.parse import quote
 
 from . import status
@@ -86,9 +86,6 @@ class BaseResponse:
 
 
 class BaseFileResponse(BaseResponse):
-    range_re = re.compile(r"(\d+)-(\d*)")
-    chunk_size = 4096 * 64
-
     def __init__(
         self,
         filepath: str,
@@ -96,6 +93,7 @@ class BaseFileResponse(BaseResponse):
         content_type: str = None,
         download_name: str = None,
         stat_result: os.stat_result = None,
+        chunk_size: int = 4096 * 64,
     ) -> None:
         self.filepath = filepath
         self.content_type = (
@@ -104,6 +102,7 @@ class BaseFileResponse(BaseResponse):
             or "application/octet-stream"
         )
         self.stat_result = stat_result = stat_result or os.stat(self.filepath)
+        self.chunk_size = chunk_size
         if not stat.S_ISREG(stat_result.st_mode):
             raise FileNotFoundError("Filepath exists, but is not a valid file.")
         super().__init__(status_code=status.HTTP_200_OK, headers=headers)
@@ -125,18 +124,20 @@ class BaseFileResponse(BaseResponse):
         data = f"{stat_result.st_mtime}-{stat_result.st_size}"
         return sha1(data.encode("ascii")).hexdigest()
 
+    @classmethod
     def judge_if_range(
-        self, if_range_raw_line: str, stat_result: os.stat_result
+        cls, if_range_raw_line: str, stat_result: os.stat_result
     ) -> bool:
         """
         Judge whether if-range is consistent with the value of etag or last-modified
         """
         return (
-            if_range_raw_line == self.generate_etag(stat_result)
+            if_range_raw_line == cls.generate_etag(stat_result)
         ) or if_range_raw_line == formatdate(stat_result.st_mtime, usegmt=True)
 
+    @staticmethod
     def parse_range(
-        self, range_raw_line: str, max_size: int
+        range_raw_line: str, max_size: int
     ) -> Sequence[Tuple[int, Union[int, int]]]:
         """
         Parse the Range header and make appropriate merge or cut processing
@@ -150,7 +151,7 @@ class BaseFileResponse(BaseResponse):
 
         ranges = [
             (int(_[0]), int(_[1]) + 1 if _[1] else max_size)
-            for _ in self.range_re.findall(ranges_str)
+            for _ in re.findall(r"(\d+)-(\d*)", ranges_str)
         ]
 
         if any(start > end for start, end in ranges):
@@ -180,6 +181,29 @@ class BaseFileResponse(BaseResponse):
             else:
                 result.append((start, end))
         return result
+
+    def generate_multipart(
+        self, ranges: Sequence[Tuple[int, int]], boundary: str, max_size: int
+    ) -> Tuple[int, Callable[[int, int], bytes]]:
+        boundary_len = len(boundary)
+        content_length = (
+            (
+                len(ranges)
+                * (44 + boundary_len + len(self.content_type) + len(str(max_size)))
+                + sum(len(str(start)) + len(str(end - 1)) for start, end in ranges)
+            )  # Headers
+            + sum(end - start for start, end in ranges)  # Content
+            + (5 + boundary_len)  # --boundary--\n
+        )
+        return (
+            content_length,
+            lambda start, end: (
+                f"--{boundary}\n"
+                f"Content-Type: {self.content_type}\n"
+                f"Content-Range: bytes {start}-{end-1}/{max_size}\n"
+                "\n"
+            ).encode("latin-1"),
+        )
 
 
 def build_bytes_from_sse(event: ServerSentEvent, charset: str) -> bytes:
