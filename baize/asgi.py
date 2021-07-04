@@ -4,6 +4,7 @@ import functools
 import json
 from enum import Enum
 from io import FileIO
+from random import choices as random_choices
 from typing import (
     Any,
     AsyncIterable,
@@ -450,12 +451,11 @@ class FileResponse(BaseFileResponse, Response):
         send: Send,
         ranges: Sequence[Tuple[int, int]],
     ) -> None:
-        self.headers["content-type"] = "multipart/byteranges; boundary=3d6b6a416f9b5"
-        content_length = (
-            18
-            + len(ranges) * (57 + len(self.content_type) + len(str(file_size)))
-            + sum(len(str(start)) + len(str(end - 1)) for start, end in ranges)
-        ) + sum(end - start for start, end in ranges)
+        boundary = "".join(random_choices("abcdefghijklmnopqrstuvwxyz0123456789", k=13))
+        self.headers["content-type"] = f"multipart/byteranges; boundary={boundary}"
+        content_length, generate_headers = self.generate_multipart(
+            ranges, boundary, file_size
+        )
         self.headers["content-length"] = str(content_length)
         await send_http_start(send, 206, self.list_headers(as_bytes=True))
         if send_header_only:
@@ -464,15 +464,7 @@ class FileResponse(BaseFileResponse, Response):
         file = typing_cast(FileIO, await run_in_threadpool(open, self.filepath, "rb"))
         try:
             for start, end in ranges:
-                await send_http_body(
-                    send,
-                    (
-                        "--3d6b6a416f9b5\n"
-                        f"Content-Type: {self.content_type}\n"
-                        f"Content-Range: bytes {start}-{end-1}/{file_size}\n\n"
-                    ).encode("latin-1"),
-                    more_body=True,
-                )
+                await send_http_body(send, generate_headers(start, end), more_body=True)
                 await run_in_threadpool(file.seek, start)
                 for here in range(start, end, self.chunk_size):
                     await send_http_body(
@@ -483,7 +475,7 @@ class FileResponse(BaseFileResponse, Response):
                         more_body=True,
                     )
                 await send_http_body(send, b"\n", more_body=True)
-            return await send_http_body(send, b"--3d6b6a416f9b5--\n", more_body=False)
+            return await send_http_body(send, f"--{boundary}--\n".encode("ascii"))
         finally:
             await run_in_threadpool(file.close)
 

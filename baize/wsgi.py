@@ -7,6 +7,7 @@ from concurrent.futures import wait as wait
 from http import HTTPStatus
 from itertools import chain
 from queue import Queue
+from random import choices as random_choices
 from typing import (
     Any,
     Callable,
@@ -392,12 +393,11 @@ class FileResponse(BaseFileResponse, Response):
         start_response: StartResponse,
         ranges: Sequence[Tuple[int, int]],
     ) -> Generator[bytes, None, None]:
-        self.headers["content-type"] = "multipart/byteranges; boundary=3d6b6a416f9b5"
-        content_length = (
-            18
-            + len(ranges) * (57 + len(self.content_type) + len(str(file_size)))
-            + sum(len(str(start)) + len(str(end - 1)) for start, end in ranges)
-        ) + sum(end - start for start, end in ranges)
+        boundary = "".join(random_choices("abcdefghijklmnopqrstuvwxyz0123456789", k=13))
+        self.headers["content-type"] = f"multipart/byteranges; boundary={boundary}"
+        content_length, generate_headers = self.generate_multipart(
+            ranges, boundary, file_size
+        )
         self.headers["content-length"] = str(content_length)
 
         start_response(StatusStringMapping[206], self.list_headers(as_bytes=False))
@@ -408,16 +408,11 @@ class FileResponse(BaseFileResponse, Response):
         with open(self.filepath, "rb") as file:
             for start, end in ranges:
                 file.seek(start)
-                yield (
-                    "--3d6b6a416f9b5\n"
-                    f"Content-Type: {self.content_type}\n"
-                    f"Content-Range: bytes {start}-{end-1}/{file_size}\n"
-                    "\n"
-                ).encode("latin-1")
+                yield generate_headers(start, end)
                 for here in range(start, end, self.chunk_size):
                     yield file.read(min(self.chunk_size, end - here))
                 yield b"\n"
-            yield b"--3d6b6a416f9b5--\n"
+            yield f"--{boundary}--\n".encode("ascii")
 
     def __call__(
         self, environ: Environ, start_response: StartResponse
