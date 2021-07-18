@@ -63,6 +63,7 @@ if os.environ.get("WITHOUT_MYPYC", "False") == "False":
                     "cmdclass": {"build_ext": build_ext},
                 }
             )
+            setup_kwargs.update(dict(long_description_content_type="text/markdown"))
 
 
 try:
@@ -70,4 +71,4 @@ try:
 except NameError:
     # Got to provide this function. Otherwise, poetry will fail
     def build(setup_kwargs):
-        pass
+        setup_kwargs.update(dict(long_description_content_type="text/markdown"))

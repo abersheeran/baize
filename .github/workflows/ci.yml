@@ -112,4 +112,4 @@ jobs:
 
       - name: Publish
         run: |
-          twine upload --username AberSheeran --password ${{ secrets.PYPIPASS }} --skip-existing dist/*
+          twine upload --username AberSheeran --password ${{ secrets.PYPIPASS }} --verbose --skip-existing dist/*
