@@ -244,15 +244,16 @@ async def test_async_upload_file():
 
 @pytest.mark.asyncio
 async def test_async_big_upload_file():
-    class BigUploadFile(UploadFile):
-        spool_max_size = 1024
-
-    big_file = BigUploadFile("big-file")
-    await big_file.awrite(b"big-data" * 512)
-    await big_file.awrite(b"big-data")
-    await big_file.aseek(0)
-    assert await big_file.aread(8 * 128) == b"big-data" * 128
-    await big_file.aclose()
+    UploadFile.spool_max_size = 1024
+    try:
+        big_file = UploadFile("big-file")
+        await big_file.awrite(b"big-data" * 512)
+        await big_file.awrite(b"big-data")
+        await big_file.aseek(0)
+        assert await big_file.aread(8 * 128) == b"big-data" * 128
+        await big_file.aclose()
+    finally:
+        UploadFile.spool_max_size = 1024 * 1024
 
 
 def test_formdata():
