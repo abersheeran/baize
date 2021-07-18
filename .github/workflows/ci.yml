@@ -103,6 +103,7 @@ jobs:
 
       - name: Build
         run: |
+          poetry2setup > setup.py
           python setup.py sdist
           python setup.py bdist_wheel
           pip uninstall mypy
