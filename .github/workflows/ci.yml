@@ -106,7 +106,7 @@ jobs:
           poetry2setup > setup.py
           python setup.py sdist
           python setup.py bdist_wheel
-          pip uninstall mypy
+          pip uninstall -y mypy
           python setup.py bdist_wheel
 
       - name: Publish
