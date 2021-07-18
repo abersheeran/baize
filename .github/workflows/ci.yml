@@ -97,7 +97,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip poetry poetry2setup twine
+          python -m pip install --upgrade pip poetry poetry2setup wheel twine
           poetry config virtualenvs.create false --local
           poetry install --no-root
 
