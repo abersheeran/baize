@@ -22,7 +22,7 @@ from typing import (
     TypeVar,
     Union,
 )
-from urllib.parse import parse_qsl, quote_plus
+from urllib.parse import parse_qsl, quote
 
 from .datastructures import URL, Address, FormData, Headers, QueryParams, defaultdict
 from .exceptions import HTTPException
@@ -313,7 +313,7 @@ class RedirectResponse(Response):
         headers: Mapping[str, str] = None,
     ) -> None:
         super().__init__(status_code=status_code, headers=headers)
-        self.headers["location"] = quote_plus(str(url), safe=":/%#?&=@[]!$&'()*+,;")
+        self.headers["location"] = quote(str(url), safe="/#%[]=:;$&()+,!?*@'~")
 
 
 class StreamResponse(Response):
