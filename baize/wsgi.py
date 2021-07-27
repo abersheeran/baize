@@ -60,6 +60,11 @@ class HTTPConnection(Mapping[str, Any], MoreInfoFromHeaderMixin):
     def __len__(self) -> int:
         return len(self._environ)
 
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, self.__class__):
+            return NotImplemented
+        return self._environ == other._environ
+
     @cached_property
     def client(self) -> Address:
         """

@@ -36,6 +36,12 @@ def test_request_environ_interface():
     assert request["method"] == "GET"
     assert dict(request) == {"type": "http", "method": "GET", "path": "/abc/"}
     assert len(request) == 3
+    # test eq
+    assert request == Request({"type": "http", "method": "GET", "path": "/abc/"})
+    assert request != Request(
+        {"type": "http", "method": "GET", "path": "/abc/", "query_params": {}}
+    )
+    assert request != dict({"type": "http", "method": "GET", "path": "/abc/"})
 
 
 def test_request_url():

@@ -98,6 +98,15 @@ class HTTPConnection(Mapping[str, Any], MoreInfoFromHeaderMixin):
     def __len__(self) -> int:
         return len(self._scope)
 
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, self.__class__):
+            return NotImplemented
+        return (
+            self._scope == other._scope
+            and self._send == other._send
+            and self._receive == other._receive
+        )
+
     @cached_property
     def client(self) -> Address:
         """
