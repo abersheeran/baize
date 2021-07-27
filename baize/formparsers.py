@@ -7,7 +7,7 @@ from .datastructures import ContentType, FormData, UploadFile
 
 try:
     from multipart import MultipartParser
-except ImportError:
+except ImportError:  # pragma: no cover
 
     class MultipartParser:  # type: ignore
         def __init__(self, *args, **kwargs) -> None:
