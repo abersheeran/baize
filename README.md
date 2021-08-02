@@ -3,12 +3,13 @@
 [![Codecov](https://img.shields.io/codecov/c/github/abersheeran/baize?style=flat-square)](https://codecov.io/gh/abersheeran/baize)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/baize?label=Support%20Python%20Version&style=flat-square)](https://pypi.org/project/baize/)
 
-Powerful and exquisite WSGI/ASGI framework/toolkit.
+Powerful and exquisite WSGI/ASGI framework/toolkit. Use [MyPyC](https://mypyc.readthedocs.io/en/latest/) to improve code running speed.
 
 The minimize implementation of methods required in the Web framework. No redundant implementation means that you can freely customize functions without considering the conflict with baize's own implementation.
 
 Under the ASGI/WSGI protocol, the interface of the request object and the response object is almost the same, only need to add or delete `await` in the appropriate place. In addition, it should be noted that ASGI supports WebSocket but WSGI does not.
 
+- Type annotations as strict as possible (almost no Any)
 - Support range file response, server-sent event response
 - Support WebSocket (only ASGI)
 - WSGI, ASGI routing to combine any application like [Django(wsgi)](https://docs.djangoproject.com/en/3.0/howto/deployment/wsgi/)/[Pyramid](https://trypyramid.com/)/[Bottle](https://bottlepy.org/)/[Flask](https://flask.palletsprojects.com/) or [Django(asgi)](https://docs.djangoproject.com/en/3.0/howto/deployment/asgi/)/[Index.py](https://index-py.aber.sh/)/[Starlette](https://www.starlette.io/)/[FastAPI](https://fastapi.tiangolo.com/)/[Sanic](https://sanic.readthedocs.io/en/stable/)/[Quart](https://pgjones.gitlab.io/quart/)
@@ -94,5 +95,3 @@ if __name__ == "__main__":
 ## License
 
 Apache-2.0.
-
-You can do whatever you want with the permission of the license.
