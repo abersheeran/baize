@@ -9,7 +9,7 @@ try:
     from mypy_extensions import mypyc_attr
 except ImportError:  # pragma: no cover
 
-    def mypyc_attr(*attrs, **kwattrs):
+    def mypyc_attr(*attrs, **kwattrs):  # type: ignore
         return lambda x: x
 
 
