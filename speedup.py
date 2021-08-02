@@ -53,6 +53,7 @@ if os.environ.get("WITHOUT_MYPYC", "False") == "False":
                         "baize/datastructures.py",
                         "baize/utils.py",
                         "baize/status.py",
+                        "baize/routing.py",
                     ),
                     map(str, Path("baize").glob("**/*.py")),
                 )
@@ -63,6 +64,7 @@ if os.environ.get("WITHOUT_MYPYC", "False") == "False":
                     "cmdclass": {"build_ext": build_ext},
                 }
             )
+            setup_kwargs["install_requires"] = ["mypy-extensions"]
             setup_kwargs.update(dict(long_description_content_type="text/markdown"))
 
 

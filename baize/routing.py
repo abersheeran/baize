@@ -5,10 +5,19 @@ from datetime import date
 from decimal import Decimal
 from typing import Any, Dict, Generic, Pattern, Sequence, Tuple, TypeVar, Union
 
+try:
+    from mypy_extensions import mypyc_attr
+except ImportError:  # pragma: no cover
+
+    def mypyc_attr(*attrs, **kwattrs):
+        return lambda x: x
+
+
 from .typing import ASGIApp, WSGIApp
 
 
-class Convertor(abc.ABC):
+@mypyc_attr(allow_interpreted_subclasses=True)
+class Convertor:
     regex: str
 
     @abc.abstractmethod
@@ -20,6 +29,7 @@ class Convertor(abc.ABC):
         raise NotImplementedError()
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class StringConvertor(Convertor):
     regex = "[^/]+"
 
@@ -35,6 +45,7 @@ class StringConvertor(Convertor):
         return value
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class IntegerConvertor(Convertor):
     regex = "[0-9]+"
 
@@ -47,6 +58,7 @@ class IntegerConvertor(Convertor):
         return str(value)
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class DecimalConvertor(Convertor):
     regex = "[0-9]+(.[0-9]+)?"
 
@@ -63,6 +75,7 @@ class DecimalConvertor(Convertor):
         return str(value).rstrip("0").rstrip(".")
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class UUIDConvertor(Convertor):
     regex = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
 
@@ -73,6 +86,7 @@ class UUIDConvertor(Convertor):
         return str(value)
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class DateConvertor(Convertor):
     regex = "[0-9]{4}-[0-9]{2}-[0-9]{2}"
 
@@ -83,6 +97,7 @@ class DateConvertor(Convertor):
         return value.isoformat()
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class AnyConvertor(Convertor):
     regex = ".*"
 
@@ -99,7 +114,6 @@ CONVERTOR_TYPES = {
     "decimal": DecimalConvertor(),
     "uuid": UUIDConvertor(),
     "date": DateConvertor(),
-    "path": AnyConvertor(),  # will be delete
     "any": AnyConvertor(),
 }
 
@@ -140,6 +154,7 @@ def compile_path(path: str) -> Tuple[str, Dict[str, Convertor]]:
 Interface = TypeVar("Interface", ASGIApp, WSGIApp)
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class Route(Generic[Interface]):
     endpoint: Interface
     name: str
@@ -172,6 +187,7 @@ class Route(Generic[Interface]):
         return self.path_format.format_map(params)
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class BaseRouter(Generic[Interface]):
     def __init__(
         self, *routes: Union[Tuple[str, Interface], Tuple[str, Interface, str]]
@@ -199,6 +215,7 @@ class BaseRouter(Generic[Interface]):
             return route.build_url(params)
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class BaseSubpaths(Generic[Interface]):
     def __init__(self, *routes: Tuple[str, Interface]) -> None:
         for prefix, _ in routes:
@@ -209,6 +226,7 @@ class BaseSubpaths(Generic[Interface]):
         self._route_array = [*routes]
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class BaseHosts(Generic[Interface]):
     def __init__(self, *hosts: Tuple[str, Interface]) -> None:
         self._host_array: Sequence[Tuple[Pattern, Interface]] = [
