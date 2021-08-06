@@ -4,7 +4,7 @@ from http import cookies as http_cookies
 from typing import Dict, List, Optional
 
 try:
-    from mypy_extensions import trait, mypyc_attr
+    from mypy_extensions import mypyc_attr, trait
 except ImportError:  # pragma: no cover
 
     def trait(cls):  # type: ignore
