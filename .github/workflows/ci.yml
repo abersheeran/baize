@@ -57,6 +57,7 @@ jobs:
           files: ./coverage.xml
           directory: ./coverage/reports/
           verbose: true
+
       - name: Install extras
         run: |
           poetry install -E multipart
@@ -69,11 +70,16 @@ jobs:
           files: ./coverage.xml
           directory: ./coverage/reports/
           verbose: true
+
       - name: Install with mypyc
         run: |
           poetry install
       - name: Tests built by mypyc
         run: |
+          pytest -o log_cli=true -o log_cli_level=DEBUG
+      - name: Test without mypy-extensions
+        run: |
+          pip uninstall -y mypy-extensions
           pytest -o log_cli=true -o log_cli_level=DEBUG
 
   publish:
