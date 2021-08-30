@@ -1,13 +1,33 @@
 import os
 import re
-import stat
 from email.utils import formatdate
 from hashlib import sha1
 from http import cookies as http_cookies
 from itertools import chain
-from mimetypes import guess_type
-from typing import Callable, Iterable, List, Mapping, Sequence, Tuple, Union, overload
+from typing import (
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+    overload,
+)
 from urllib.parse import quote
+
+try:
+    from mypy_extensions import mypyc_attr, trait
+except ImportError:  # pragma: no cover
+
+    def trait(cls):  # type: ignore
+        return cls
+
+    def mypyc_attr(*attrs, **kwattrs):  # type: ignore
+        return lambda x: x
+
 
 from . import status
 from .datastructures import MutableHeaders
@@ -15,6 +35,7 @@ from .exceptions import HTTPException
 from .typing import Literal, ServerSentEvent
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class BaseResponse:
     def __init__(
         self, status_code: int = status.HTTP_200_OK, headers: Mapping[str, str] = None
@@ -85,39 +106,28 @@ class BaseResponse:
             ]
 
 
-class BaseFileResponse(BaseResponse):
-    def __init__(
+@trait
+class FileResponseMixin:
+    def generate_common_headers(
         self,
         filepath: str,
-        headers: Mapping[str, str] = None,
-        content_type: str = None,
-        download_name: str = None,
-        stat_result: os.stat_result = None,
-        chunk_size: int = 4096 * 64,
-    ) -> None:
-        self.filepath = filepath
-        self.content_type = (
-            content_type
-            or guess_type(download_name or os.path.basename(filepath))[0]
-            or "application/octet-stream"
-        )
-        self.stat_result = stat_result = stat_result or os.stat(self.filepath)
-        self.chunk_size = chunk_size
-        if not stat.S_ISREG(stat_result.st_mode):
-            raise FileNotFoundError("Filepath exists, but is not a valid file.")
-        super().__init__(status_code=status.HTTP_200_OK, headers=headers)
-
-        self.headers["accept-ranges"] = "bytes"
-        if download_name is not None or self.content_type == "application/octet-stream":
-            download_name = download_name or os.path.basename(self.filepath)
+        content_type: str,
+        download_name: Optional[str],
+        stat_result: os.stat_result,
+    ) -> Dict[str, str]:
+        headers: Dict[str, str] = {}
+        headers["accept-ranges"] = "bytes"
+        if download_name or content_type == "application/octet-stream":
+            download_name = download_name or os.path.basename(filepath)
             content_disposition = (
                 "attachment; "
                 f'filename="{download_name}"; '
                 f"filename*=utf-8''{quote(download_name)}"
             )
-            self.headers["content-disposition"] = content_disposition
-        self.headers["last-modified"] = formatdate(stat_result.st_mtime, usegmt=True)
-        self.headers["etag"] = self.generate_etag(stat_result)
+            headers["content-disposition"] = content_disposition
+        headers["last-modified"] = formatdate(stat_result.st_mtime, usegmt=True)
+        headers["etag"] = self.generate_etag(stat_result)
+        return headers
 
     @staticmethod
     def generate_etag(stat_result: os.stat_result) -> str:
@@ -183,13 +193,17 @@ class BaseFileResponse(BaseResponse):
         return result
 
     def generate_multipart(
-        self, ranges: Sequence[Tuple[int, int]], boundary: str, max_size: int
+        self,
+        ranges: Sequence[Tuple[int, int]],
+        boundary: str,
+        max_size: int,
+        content_type: str,
     ) -> Tuple[int, Callable[[int, int], bytes]]:
         boundary_len = len(boundary)
         content_length = (
             (
                 len(ranges)
-                * (44 + boundary_len + len(self.content_type) + len(str(max_size)))
+                * (44 + boundary_len + len(content_type) + len(str(max_size)))
                 + sum(len(str(start)) + len(str(end - 1)) for start, end in ranges)
             )  # Headers
             + sum(end - start for start, end in ranges)  # Content
@@ -199,7 +213,7 @@ class BaseFileResponse(BaseResponse):
             content_length,
             lambda start, end: (
                 f"--{boundary}\n"
-                f"Content-Type: {self.content_type}\n"
+                f"Content-Type: {content_type}\n"
                 f"Content-Range: bytes {start}-{end-1}/{max_size}\n"
                 "\n"
             ).encode("latin-1"),
@@ -217,7 +231,7 @@ def build_bytes_from_sse(event: ServerSentEvent, charset: str) -> bytes:
         data = ()
     return b"\n".join(
         chain(
-            (f"{k}: {v}".encode(charset) for k, v in event.items()),
+            map(lambda k, v: f"{k}: {v}".encode(charset), event.keys(), event.values()),
             data,
             (b"", b""),  # for generate b"\n\n"
         )

@@ -55,6 +55,7 @@ if os.environ.get("WITHOUT_MYPYC", "False") == "False":
                         "baize/status.py",
                         "baize/routing.py",
                         "baize/requests.py",
+                        "baize/responses.py",
                     ),
                     map(str, Path("baize").glob("**/*.py")),
                 )

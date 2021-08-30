@@ -613,8 +613,8 @@ async def test_file_response(tmp_path: Path):
 
 
 @pytest.mark.asyncio
-async def test_file_response_with_not_file(tmp_path: Path):
-    with pytest.raises(FileNotFoundError):
+async def test_file_response_with_directory(tmp_path: Path):
+    with pytest.raises(IsADirectoryError):
         FileResponse(str(tmp_path))
 
 

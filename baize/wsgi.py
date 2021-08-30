@@ -1,11 +1,14 @@
 import abc
 import functools
 import json
+import os
+import stat
 import time
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor
 from concurrent.futures import wait as wait
 from http import HTTPStatus
 from itertools import chain
+from mimetypes import guess_type
 from queue import Queue
 from random import choices as random_choices
 from typing import (
@@ -28,7 +31,7 @@ from .datastructures import URL, Address, FormData, Headers, QueryParams, defaul
 from .exceptions import HTTPException
 from .formparsers import MultiPartParser
 from .requests import MoreInfoFromHeaderMixin
-from .responses import BaseFileResponse, BaseResponse, build_bytes_from_sse
+from .responses import BaseResponse, FileResponseMixin, build_bytes_from_sse
 from .routing import BaseHosts, BaseRouter, BaseSubpaths
 from .typing import Environ, Final, ServerSentEvent, StartResponse, WSGIApp
 from .utils import cached_property
@@ -344,13 +347,35 @@ class StreamResponse(Response):
             yield chunk
 
 
-class FileResponse(BaseFileResponse, Response):
+class FileResponse(Response, FileResponseMixin):
     """
     File response.
 
     It will automatically determine whether to send only headers
     and the range of files that need to be sent.
     """
+
+    def __init__(
+        self,
+        filepath: str,
+        headers: Mapping[str, str] = None,
+        content_type: str = None,
+        download_name: str = None,
+        stat_result: os.stat_result = None,
+        chunk_size: int = 4096 * 64,
+    ) -> None:
+        super().__init__(headers=headers)
+        self.filepath = filepath
+        self.content_type = (
+            content_type
+            or guess_type(download_name or os.path.basename(filepath))[0]
+            or "application/octet-stream"
+        )
+        self.download_name = download_name
+        self.stat_result = stat_result or os.stat(filepath)
+        if stat.S_ISDIR(self.stat_result.st_mode):
+            raise IsADirectoryError(f"{filepath} is a directory")
+        self.chunk_size = chunk_size
 
     def handle_all(
         self,
@@ -401,7 +426,7 @@ class FileResponse(BaseFileResponse, Response):
         boundary = "".join(random_choices("abcdefghijklmnopqrstuvwxyz0123456789", k=13))
         self.headers["content-type"] = f"multipart/byteranges; boundary={boundary}"
         content_length, generate_headers = self.generate_multipart(
-            ranges, boundary, file_size
+            ranges, boundary, file_size, self.content_type
         )
         self.headers["content-length"] = str(content_length)
 
@@ -423,8 +448,15 @@ class FileResponse(BaseFileResponse, Response):
         self, environ: Environ, start_response: StartResponse
     ) -> Iterable[bytes]:
         send_header_only = environ["REQUEST_METHOD"] == "HEAD"
+
         stat_result = self.stat_result
         file_size = stat_result.st_size
+
+        self.headers.update(
+            self.generate_common_headers(
+                self.filepath, self.content_type, self.download_name, stat_result
+            )
+        )
 
         if "HTTP_RANGE" not in environ or (
             "HTTP_IF_RANGE" in environ

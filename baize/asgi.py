@@ -2,8 +2,11 @@ import abc
 import asyncio
 import functools
 import json
+import os
+import stat
 from enum import Enum
 from io import FileIO
+from mimetypes import guess_type
 from random import choices as random_choices
 from typing import (
     Any,
@@ -29,7 +32,7 @@ from .datastructures import URL, Address, FormData, Headers, QueryParams
 from .exceptions import HTTPException
 from .formparsers import AsyncMultiPartParser
 from .requests import MoreInfoFromHeaderMixin
-from .responses import BaseFileResponse, BaseResponse, build_bytes_from_sse
+from .responses import BaseResponse, FileResponseMixin, build_bytes_from_sse
 from .routing import BaseHosts, BaseRouter, BaseSubpaths
 from .typing import ASGIApp, Message, Receive, Scope, Send, ServerSentEvent
 from .utils import cached_property
@@ -391,13 +394,35 @@ class StreamResponse(Response):
         return await send_http_body(send)
 
 
-class FileResponse(BaseFileResponse, Response):
+class FileResponse(Response, FileResponseMixin):
     """
     File response.
 
     It will automatically determine whether to send only headers
     and the range of files that need to be sent.
     """
+
+    def __init__(
+        self,
+        filepath: str,
+        headers: Mapping[str, str] = None,
+        content_type: str = None,
+        download_name: str = None,
+        stat_result: os.stat_result = None,
+        chunk_size: int = 4096 * 64,
+    ) -> None:
+        super().__init__(headers=headers)
+        self.filepath = filepath
+        self.content_type = (
+            content_type
+            or guess_type(download_name or os.path.basename(filepath))[0]
+            or "application/octet-stream"
+        )
+        self.download_name = download_name
+        self.stat_result = stat_result or os.stat(filepath)
+        if stat.S_ISDIR(self.stat_result.st_mode):
+            raise IsADirectoryError(f"{filepath} is a directory")
+        self.chunk_size = chunk_size
 
     async def handle_all(
         self,
@@ -463,7 +488,7 @@ class FileResponse(BaseFileResponse, Response):
         boundary = "".join(random_choices("abcdefghijklmnopqrstuvwxyz0123456789", k=13))
         self.headers["content-type"] = f"multipart/byteranges; boundary={boundary}"
         content_length, generate_headers = self.generate_multipart(
-            ranges, boundary, file_size
+            ranges, boundary, file_size, self.content_type
         )
         self.headers["content-length"] = str(content_length)
         await send_http_start(send, 206, self.list_headers(as_bytes=True))
@@ -493,6 +518,12 @@ class FileResponse(BaseFileResponse, Response):
 
         stat_result = self.stat_result
         file_size = stat_result.st_size
+
+        self.headers.update(
+            self.generate_common_headers(
+                self.filepath, self.content_type, self.download_name, stat_result
+            )
+        )
 
         http_range, http_if_range = "", ""
         for key, value in scope["headers"]:
