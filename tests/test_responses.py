@@ -3,12 +3,12 @@ from pathlib import Path
 import pytest
 
 from baize.exceptions import HTTPException
-from baize.responses import BaseFileResponse
+from baize.responses import FileResponseMixin
 
 
 def test_base_file_response_parse_range(tmp_path: Path):
     (tmp_path / "file").touch()
-    response = BaseFileResponse(str(tmp_path / "file"))
+    response = FileResponseMixin
 
     assert response.parse_range("bytes=0-10", 4623) == [(0, 11)]
     assert response.parse_range("bytes=0-10, 11-20", 4623) == [(0, 21)]
