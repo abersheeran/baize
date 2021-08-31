@@ -102,3 +102,7 @@ ENV/
 
 # mkdocs
 site/
+
+# pdm
+__pypackages__
+.pdm.toml
