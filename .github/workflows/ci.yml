@@ -44,7 +44,7 @@ jobs:
           path: ${{ env.pythonLocation }}
           key: ${{ env.pythonLocation }}-${{ matrix.python-version }}-${{ hashFiles('pdm.lock', 'pyproject.toml') }}
       - name: Install dependencies
-        run: pdm install -dG dev --no-self
+        run: pdm install -dG dev test
       - name: Static type and format checking
         run: python script/check.py
       - name: Generate coverage report
@@ -68,7 +68,7 @@ jobs:
           verbose: true
 
       - name: Install with mypyc
-        run: pdm install
+        run: pdm install -dG build
       - name: Tests built by mypyc
         run: pdm run pytest -o log_cli=true -o log_cli_level=DEBUG
       - name: Test without mypy-extensions
