@@ -1,9 +1,10 @@
 import asyncio
 import sys
 import tempfile
+from functools import partial
 from inspect import cleandoc
 from pathlib import Path
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Type
 
 import httpx
 import pytest
@@ -548,14 +549,23 @@ Under the ASGI/WSGI protocol, the interface of the request object and the respon
 """
 
 
+@pytest.mark.parametrize(
+    "response_class",
+    [
+        FileResponse,
+        partial(FileResponse, chunk_size=1),
+        partial(FileResponse, chunk_size=len(README.encode("utf8"))),
+    ],
+)
 @pytest.mark.asyncio
-async def test_file_response(tmp_path: Path):
+async def test_file_response(tmp_path: Path, response_class: Type[FileResponse]):
     filepath = tmp_path / "README.txt"
     filepath.write_bytes(README.encode("utf8"))
-    file_response = FileResponse(str(filepath))
-    async with httpx.AsyncClient(
-        app=file_response, base_url="http://testServer/"
-    ) as client:
+
+    async def app(scope, r, s):
+        return await response_class(str(filepath))(scope, r, s)
+
+    async with httpx.AsyncClient(app=app, base_url="http://testServer/") as client:
         response = await client.get("/")
         assert response.status_code == 200
         assert response.headers["content-length"] == str(len(README.encode("utf8")))

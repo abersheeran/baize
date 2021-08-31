@@ -5,7 +5,6 @@ import json
 import os
 import stat
 from enum import Enum
-from io import FileIO
 from mimetypes import guess_type
 from random import choices as random_choices
 from typing import (
@@ -19,12 +18,12 @@ from typing import (
     Iterable,
     Iterator,
     Mapping,
+    Protocol,
     Sequence,
     Tuple,
     TypeVar,
     Union,
 )
-from typing import cast as typing_cast
 from urllib.parse import parse_qsl, quote
 
 from .concurrency import run_in_threadpool
@@ -394,6 +393,17 @@ class StreamResponse(Response):
         return await send_http_body(send)
 
 
+class Sendfile(Protocol):
+    async def __call__(
+        self,
+        file_descriptor: int,
+        offset: int = None,
+        count: int = None,
+        more_body: bool = False,
+    ) -> None:
+        pass
+
+
 class FileResponse(Response, FileResponseMixin):
     """
     File response.
@@ -423,12 +433,76 @@ class FileResponse(Response, FileResponseMixin):
         if stat.S_ISDIR(self.stat_result.st_mode):
             raise IsADirectoryError(f"{filepath} is a directory")
         self.chunk_size = chunk_size
+        self.headers.update(
+            self.generate_common_headers(
+                self.filepath, self.content_type, self.download_name, self.stat_result
+            )
+        )
+
+    def create_send_or_zerocopy(self, scope: Scope, send: Send) -> Sendfile:
+        """
+        https://asgi.readthedocs.io/en/latest/extensions.html#zero-copy-send
+        """
+        if (
+            "extensions" in scope
+            and "http.response.zerocopysend" in scope["extensions"]
+        ):  # pragma: no cover
+
+            async def sendfile(
+                file_descriptor: int,
+                offset: int = None,
+                count: int = None,
+                more_body: bool = False,
+            ) -> None:
+                message = {
+                    "type": "http.response.zerocopysend",
+                    "file": file_descriptor,
+                    "more_body": more_body,
+                }
+                if offset is not None:
+                    message["offset"] = offset
+                if count is not None:
+                    message["count"] = count
+                await send(message)
+
+        else:
+
+            async def sendfile(
+                file_descriptor: int,
+                offset: int = None,
+                count: int = None,
+                more_body: bool = False,
+            ) -> None:
+                if offset is not None:
+                    await run_in_threadpool(
+                        os.lseek, file_descriptor, offset, os.SEEK_SET
+                    )
+
+                here = 0
+                should_stop = False
+                if count is None:
+                    length = self.chunk_size
+                    while not should_stop:
+                        data = await run_in_threadpool(os.read, file_descriptor, length)
+                        if len(data) == length:
+                            await send_http_body(send, data, more_body=True)
+                        else:
+                            await send_http_body(send, data, more_body=more_body)
+                            should_stop = True
+                else:
+                    while not should_stop:
+                        length = min(self.chunk_size, count - here)
+                        should_stop = length == count - here
+                        here += length
+                        data = await run_in_threadpool(os.read, file_descriptor, length)
+                        await send_http_body(
+                            send, data, more_body=more_body if should_stop else True
+                        )
+
+        return sendfile
 
     async def handle_all(
-        self,
-        send_header_only: bool,
-        file_size: int,
-        send: Send,
+        self, send_header_only: bool, file_size: int, scope: Scope, send: Send
     ) -> None:
         self.headers["content-type"] = str(self.content_type)
         self.headers["content-length"] = str(file_size)
@@ -436,22 +510,22 @@ class FileResponse(Response, FileResponseMixin):
         if send_header_only:
             return await send_http_body(send)
 
-        file = typing_cast(FileIO, await run_in_threadpool(open, self.filepath, "rb"))
+        sendfile = self.create_send_or_zerocopy(scope, send)
+        if os.name == "nt":
+            open_mode = os.O_RDONLY | os.O_BINARY
+        else:
+            open_mode = os.O_RDONLY
+        file_descriptor = await run_in_threadpool(os.open, self.filepath, open_mode)
         try:
-            for _ in range(0, file_size, self.chunk_size):
-                await send_http_body(
-                    send,
-                    await run_in_threadpool(file.read, self.chunk_size),
-                    more_body=True,
-                )
-            return await send_http_body(send)
+            await sendfile(file_descriptor)
         finally:
-            await run_in_threadpool(file.close)
+            await run_in_threadpool(os.close, file_descriptor)
 
     async def handle_single_range(
         self,
         send_header_only: bool,
         file_size: int,
+        scope: Scope,
         send: Send,
         start: int,
         end: int,
@@ -463,25 +537,22 @@ class FileResponse(Response, FileResponseMixin):
         if send_header_only:
             return await send_http_body(send)
 
-        file = typing_cast(FileIO, await run_in_threadpool(open, self.filepath, "rb"))
+        sendfile = self.create_send_or_zerocopy(scope, send)
+        if os.name == "nt":
+            open_mode = os.O_RDONLY | os.O_BINARY
+        else:
+            open_mode = os.O_RDONLY
+        file_descriptor = await run_in_threadpool(os.open, self.filepath, open_mode)
         try:
-            await run_in_threadpool(file.seek, start)
-            for here in range(start, end, self.chunk_size):
-                await send_http_body(
-                    send,
-                    await run_in_threadpool(
-                        file.read, min(self.chunk_size, end - here)
-                    ),
-                    more_body=True,
-                )
-            return await send_http_body(send)
+            await sendfile(file_descriptor, start, end - start)
         finally:
-            await run_in_threadpool(file.close)
+            await run_in_threadpool(os.close, file_descriptor)
 
     async def handle_several_ranges(
         self,
         send_header_only: bool,
         file_size: int,
+        scope: Scope,
         send: Send,
         ranges: Sequence[Tuple[int, int]],
     ) -> None:
@@ -494,36 +565,26 @@ class FileResponse(Response, FileResponseMixin):
         await send_http_start(send, 206, self.list_headers(as_bytes=True))
         if send_header_only:
             return await send_http_body(send)
-
-        file = typing_cast(FileIO, await run_in_threadpool(open, self.filepath, "rb"))
+        sendfile = self.create_send_or_zerocopy(scope, send)
+        if os.name == "nt":
+            open_mode = os.O_RDONLY | os.O_BINARY
+        else:
+            open_mode = os.O_RDONLY
+        file_descriptor = await run_in_threadpool(os.open, self.filepath, open_mode)
         try:
             for start, end in ranges:
                 await send_http_body(send, generate_headers(start, end), more_body=True)
-                await run_in_threadpool(file.seek, start)
-                for here in range(start, end, self.chunk_size):
-                    await send_http_body(
-                        send,
-                        await run_in_threadpool(
-                            file.read, min(self.chunk_size, end - here)
-                        ),
-                        more_body=True,
-                    )
+                await sendfile(file_descriptor, start, end - start, True)
                 await send_http_body(send, b"\n", more_body=True)
             return await send_http_body(send, f"--{boundary}--\n".encode("ascii"))
         finally:
-            await run_in_threadpool(file.close)
+            await run_in_threadpool(os.close, file_descriptor)
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         send_header_only = scope["method"] == "HEAD"
 
         stat_result = self.stat_result
         file_size = stat_result.st_size
-
-        self.headers.update(
-            self.generate_common_headers(
-                self.filepath, self.content_type, self.download_name, stat_result
-            )
-        )
 
         http_range, http_if_range = "", ""
         for key, value in scope["headers"]:
@@ -535,7 +596,7 @@ class FileResponse(Response, FileResponseMixin):
         if http_range == "" or (
             http_if_range != "" and not self.judge_if_range(http_if_range, stat_result)
         ):
-            return await self.handle_all(send_header_only, file_size, send)
+            return await self.handle_all(send_header_only, file_size, scope, send)
 
         try:
             ranges = self.parse_range(http_range, file_size)
@@ -553,11 +614,11 @@ class FileResponse(Response, FileResponseMixin):
         if len(ranges) == 1:
             start, end = ranges[0]
             return await self.handle_single_range(
-                send_header_only, file_size, send, start, end
+                send_header_only, file_size, scope, send, start, end
             )
         else:
             return await self.handle_several_ranges(
-                send_header_only, file_size, send, ranges
+                send_header_only, file_size, scope, send, ranges
             )
 
 
