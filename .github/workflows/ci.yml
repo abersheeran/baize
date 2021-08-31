@@ -31,10 +31,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v1
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+      - uses: pdm-project/setup-pdm@v2.1
+        name: Setup Python and PDM
         with:
           python-version: ${{ matrix.python-version }}
+          architecture: x64
+          version: 1.8.1
+          enable-pep582: true # Enable PEP 582 package loading globally
       - uses: actions/cache@v2.1.6
         id: cache-requirements
         with:
@@ -95,14 +98,17 @@ jobs:
     steps:
       - uses: actions/checkout@v1
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+      - uses: pdm-project/setup-pdm@v2.1
+        name: Setup Python and PDM
         with:
           python-version: ${{ matrix.python-version }}
+          architecture: x64
+          version: 1.8.1
+          enable-pep582: true # Enable PEP 582 package loading globally
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip==21.1.3 pdm wheel twine
+          python -m pip install wheel twine
           pdm install -dG build
 
       - name: Build
@@ -115,4 +121,4 @@ jobs:
 
       - name: Publish
         run: |
-          twine upload --username AberSheeran --password ${{ secrets.PYPIPASS }} --verbose --skip-existing dist/*
+          twine upload --username __token__ --password ${{ secrets.PYPI_API_TOKEN }} --verbose --skip-existing dist/*
