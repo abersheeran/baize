@@ -136,7 +136,7 @@ async def test_request_body():
         response = await client.post("/", json={"a": "123"})
         assert response.json() == {"body": '{"a": "123"}'}
 
-        response = await client.post("/", data="abc")
+        response = await client.post("/", content="abc")
         assert response.json() == {"body": "abc"}
 
 
@@ -157,7 +157,7 @@ async def test_request_stream():
         response = await client.post("/", json={"a": "123"})
         assert response.json() == {"body": '{"a": "123"}'}
 
-        response = await client.post("/", data="abc")
+        response = await client.post("/", content="abc")
         assert response.json() == {"body": "abc"}
 
 
@@ -214,7 +214,7 @@ async def test_request_body_then_stream():
         await response(scope, receive, send)
 
     async with httpx.AsyncClient(app=app, base_url="http://testServer/") as client:
-        response = await client.post("/", data="abc")
+        response = await client.post("/", content="abc")
         assert response.json() == {"body": "abc", "stream": "abc"}
 
 
@@ -233,7 +233,7 @@ async def test_request_stream_then_body():
         await response(scope, receive, send)
 
     async with httpx.AsyncClient(app=app, base_url="http://testServer/") as client:
-        response = await client.post("/", data="abc")
+        response = await client.post("/", content="abc")
         assert response.json() == {"body": "<stream consumed>", "stream": "abc"}
 
 

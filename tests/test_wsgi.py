@@ -120,7 +120,7 @@ def test_request_body():
         response = client.post("/", json={"a": "123"})
         assert response.json() == {"body": '{"a": "123"}'}
 
-        response = client.post("/", data="abc")
+        response = client.post("/", content="abc")
         assert response.json() == {"body": "abc"}
 
 
@@ -140,7 +140,7 @@ def test_request_stream():
         response = client.post("/", json={"a": "123"})
         assert response.text == '{"a": "123"}'
 
-        response = client.post("/", data="abc")
+        response = client.post("/", content="abc")
         assert response.text == "abc"
 
 
@@ -192,7 +192,7 @@ def test_request_body_then_stream():
         return response(environ, start_response)
 
     with httpx.Client(app=app, base_url="http://testServer/") as client:
-        response = client.post("/", data="abc")
+        response = client.post("/", content="abc")
         assert response.json() == {"body": "abc", "stream": "abc"}
 
 
@@ -210,7 +210,7 @@ def test_request_stream_then_body():
         return response(environ, start_response)
 
     with httpx.Client(app=app, base_url="http://testServer/") as client:
-        response = client.post("/", data="abc")
+        response = client.post("/", content="abc")
         assert response.json() == {"body": "<stream consumed>", "stream": "abc"}
 
 

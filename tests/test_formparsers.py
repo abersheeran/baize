@@ -181,7 +181,7 @@ def test_multipart_request_mixed_files_and_data(tmpdir):
     with httpx.Client(app=app, base_url="http://testServer/") as client:
         response = client.post(
             "/",
-            data=(
+            content=(
                 # data
                 b"--a7f7ac8d4e2e437c877bb7b8d7cc549c\r\n"
                 b'Content-Disposition: form-data; name="field0"\r\n\r\n'
@@ -219,7 +219,7 @@ def test_multipart_request_with_charset_for_filename(tmpdir):
     with httpx.Client(app=app, base_url="http://testServer/") as client:
         response = client.post(
             "/",
-            data=(
+            content=(
                 # file
                 b"--a7f7ac8d4e2e437c877bb7b8d7cc549c\r\n"
                 b'Content-Disposition: form-data; name="file"; filename="\xe6\x96\x87\xe6\x9b\xb8.txt"\r\n'  # noqa: E501
@@ -248,7 +248,7 @@ def test_multipart_request_without_charset_for_filename(tmpdir):
     with httpx.Client(app=app, base_url="http://testServer/") as client:
         response = client.post(
             "/",
-            data=(
+            content=(
                 # file
                 b"--a7f7ac8d4e2e437c877bb7b8d7cc549c\r\n"
                 b'Content-Disposition: form-data; name="file"; filename="\xe7\x94\xbb\xe5\x83\x8f.jpg"\r\n'  # noqa: E501
@@ -276,7 +276,7 @@ def test_multipart_request_with_encoded_value(tmpdir):
     with httpx.Client(app=app, base_url="http://testServer/") as client:
         response = client.post(
             "/",
-            data=(
+            content=(
                 b"--20b303e711c4ab8c443184ac833ab00f\r\n"
                 b"Content-Disposition: form-data; "
                 b'name="value"\r\n\r\n'
