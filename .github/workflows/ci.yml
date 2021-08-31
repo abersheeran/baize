@@ -44,7 +44,7 @@ jobs:
           path: ${{ env.pythonLocation }}
           key: ${{ env.pythonLocation }}-${{ matrix.python-version }}-${{ hashFiles('pdm.lock', 'pyproject.toml') }}
       - name: Install dependencies
-        run: pdm install -dG dev test
+        run: pdm install -dG dev -dG test
       - name: Static type and format checking
         run: python script/check.py
       - name: Generate coverage report
