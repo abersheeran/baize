@@ -376,6 +376,11 @@ class FileResponse(Response, FileResponseMixin):
         if stat.S_ISDIR(self.stat_result.st_mode):
             raise IsADirectoryError(f"{filepath} is a directory")
         self.chunk_size = chunk_size
+        self.headers.update(
+            self.generate_common_headers(
+                self.filepath, self.content_type, self.download_name, self.stat_result
+            )
+        )
 
     def handle_all(
         self,
@@ -451,12 +456,6 @@ class FileResponse(Response, FileResponseMixin):
 
         stat_result = self.stat_result
         file_size = stat_result.st_size
-
-        self.headers.update(
-            self.generate_common_headers(
-                self.filepath, self.content_type, self.download_name, stat_result
-            )
-        )
 
         if "HTTP_RANGE" not in environ or (
             "HTTP_IF_RANGE" in environ
