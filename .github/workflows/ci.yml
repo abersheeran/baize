@@ -44,15 +44,11 @@ jobs:
           path: ${{ env.pythonLocation }}
           key: ${{ env.pythonLocation }}-${{ matrix.python-version }}-${{ hashFiles('pdm.lock', 'pyproject.toml') }}
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip pdm
-          pdm install -dG dev --no-self
+        run: pdm install -dG dev --no-self
       - name: Static type and format checking
-        run: |
-          python script/check.py
+        run: python script/check.py
       - name: Generate coverage report
-        run: |
-          pytest --cov=./baize --cov-report=xml -o log_cli=true -o log_cli_level=DEBUG
+        run: pytest --cov=./baize --cov-report=xml -o log_cli=true -o log_cli_level=DEBUG
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v1
         with:
@@ -61,11 +57,9 @@ jobs:
           verbose: true
 
       - name: Install extras
-        run: |
-          pdm install -G multipart --no-self
+        run: pdm install -G multipart --no-self
       - name: Tests
-        run: |
-          pytest --cov=./baize --cov-report=xml -o log_cli=true -o log_cli_level=DEBUG
+        run: pytest --cov=./baize --cov-report=xml -o log_cli=true -o log_cli_level=DEBUG
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v1
         with:
@@ -74,11 +68,9 @@ jobs:
           verbose: true
 
       - name: Install with mypyc
-        run: |
-          pdm install
+        run: pdm install
       - name: Tests built by mypyc
-        run: |
-          pytest -o log_cli=true -o log_cli_level=DEBUG
+        run: pytest -o log_cli=true -o log_cli_level=DEBUG
       - name: Test without mypy-extensions
         run: |
           pip uninstall -y mypy-extensions
