@@ -48,7 +48,7 @@ jobs:
       - name: Static type and format checking
         run: python script/check.py
       - name: Generate coverage report
-        run: pdm run pytest --cov=./baize --cov-report=xml -o log_cli=true -o log_cli_level=DEBUG
+        run: pdm run pytest tests --cov=./baize --cov-report=xml -o log_cli=true -o log_cli_level=DEBUG
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v1
         with:
@@ -59,7 +59,7 @@ jobs:
       - name: Install extras
         run: pdm install -G multipart --no-self
       - name: Tests
-        run: pdm run pytest --cov=./baize --cov-report=xml -o log_cli=true -o log_cli_level=DEBUG
+        run: pdm run pytest tests --cov=./baize --cov-report=xml -o log_cli=true -o log_cli_level=DEBUG
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v1
         with:
@@ -67,14 +67,14 @@ jobs:
           directory: ./coverage/reports/
           verbose: true
 
-      - name: Install with mypyc
-        run: pdm install -dG build
-      - name: Tests built by mypyc
-        run: pdm run pytest -o log_cli=true -o log_cli_level=DEBUG
+      - name: Tests with mypyc
+        run: |
+          pdm install -dG build
+          pdm run pytest tests -o log_cli=true -o log_cli_level=DEBUG
       - name: Test without mypy-extensions
         run: |
           pdm run pip uninstall -y mypy-extensions
-          pdm run pytest -o log_cli=true -o log_cli_level=DEBUG
+          pdm run pytest tests -o log_cli=true -o log_cli_level=DEBUG
 
   publish:
     needs: tests
