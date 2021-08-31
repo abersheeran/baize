@@ -18,7 +18,6 @@ from typing import (
     Iterable,
     Iterator,
     Mapping,
-    Protocol,
     Sequence,
     Tuple,
     TypeVar,
@@ -33,7 +32,7 @@ from .formparsers import AsyncMultiPartParser
 from .requests import MoreInfoFromHeaderMixin
 from .responses import BaseResponse, FileResponseMixin, build_bytes_from_sse
 from .routing import BaseHosts, BaseRouter, BaseSubpaths
-from .typing import ASGIApp, Message, Receive, Scope, Send, ServerSentEvent
+from .typing import ASGIApp, Message, Protocol, Receive, Scope, Send, ServerSentEvent
 from .utils import cached_property
 
 
