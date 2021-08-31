@@ -67,7 +67,6 @@ if os.environ.get("WITHOUT_MYPYC", "False") == "False":
                     "cmdclass": {"build_ext": build_ext},
                 }
             )
-            setup_kwargs["install_requires"] = ["mypy-extensions"]
             setup_kwargs.update(dict(long_description_content_type="text/markdown"))
 
 
