@@ -55,15 +55,12 @@ build = "speedup.py"
 includes = ["baize"]
 
 [tool.pdm.dev-dependencies]
-build = [
+dev = [
+  "black~=20.8b1",
+  "isort<6.0.0,>=5.7.0",
+  "flake8~=3.9",
   "mypy<1.0,>=0.910",
   "mypy-extensions<1.0.0,>=0.4.3",
-]
-dev = [
-    "black~=20.8b1",
-    "isort<6.0.0,>=5.7.0",
-    "flake8~=3.9",
-    "mypy<1.0,>=0.910",
 ]
 doc = [
   "Sphinx<4.0.0,>=3.5.3",
@@ -81,4 +78,8 @@ test = [
 
 [build-system]
 build-backend = "pdm.pep517.api"
-requires = ["pdm-pep517"]
+requires = [
+  "pdm-pep517",
+  "mypy<1.0,>=0.910",
+  "mypy-extensions<1.0.0,>=0.4.3",
+]
