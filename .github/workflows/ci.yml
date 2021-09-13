@@ -111,7 +111,7 @@ jobs:
       - name: Build
         run: |
           poetry2setup > setup.py
-          poetry build
+          python setup.py bdist_wheel sdist
           pip uninstall -y mypy
           python setup.py bdist_wheel
 
