@@ -16,7 +16,7 @@ jobs:
         with:
           python-version: 3.7
           architecture: x64
-          version: 1.8.3
+          version: 1.8.5
           enable-pep582: true # Enable PEP 582 package loading globally
 
       - name: Install dependencies

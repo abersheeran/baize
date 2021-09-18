@@ -36,7 +36,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           architecture: x64
-          version: 1.8.3
+          version: 1.8.5
           enable-pep582: true # Enable PEP 582 package loading globally
       - uses: actions/cache@v2.1.6
         id: cache-requirements
@@ -44,7 +44,7 @@ jobs:
           path: ${{ env.pythonLocation }}
           key: ${{ env.pythonLocation }}-${{ matrix.python-version }}-${{ hashFiles('pdm.lock', 'pyproject.toml') }}
       - name: Install dependencies
-        run: pdm install -v -dG dev -dG test
+        run: pdm install -v -dG dev -dG test --no-self
       - name: Static type and format checking
         run: python script/check.py
       - name: Tests
@@ -69,7 +69,7 @@ jobs:
 
       - name: Tests with mypyc
         run: |
-          pdm install -v -dG build
+          pdm install -v -dG build --no-isolation
           pdm run pytest tests -o log_cli=true -o log_cli_level=DEBUG
       - name: Test without mypy-extensions
         run: |
@@ -95,12 +95,12 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           architecture: x64
-          version: 1.8.3
+          version: 1.8.5
           enable-pep582: true # Enable PEP 582 package loading globally
 
       - name: Install dependencies
         run: |
-          pdm install -v -dG build
+          pdm install -v -dG build --no-self
           python -m pip install -U setuptools wheel twine auditwheel
 
       - name: Build
