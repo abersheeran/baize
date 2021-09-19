@@ -7,8 +7,8 @@ if os.environ.get("WITHOUT_MYPYC", "False") == "False":
         from mypyc.build import mypycify
     # Do nothing if mypyc is not available
     except ImportError:
-        pass
-    # Cython is installed. Compile
+        print("Error in import mypyc.build, skip build.", flush=True)
+    # mypyc is installed. Compile
     else:
         from distutils.command.build_ext import build_ext
         from pathlib import Path
@@ -36,12 +36,11 @@ if os.environ.get("WITHOUT_MYPYC", "False") == "False":
                     "ext_modules": mypycify(["--ignore-missing-imports", *modules]),
                 }
             )
-            setup_kwargs.update(dict(long_description_content_type="text/markdown"))
 
 
 try:
     build
 except NameError:
-    # Got to provide this function. Otherwise, poetry will fail
+    # Got to provide this function. Otherwise, pdm will fail
     def build(setup_kwargs):
-        setup_kwargs.update(dict(long_description_content_type="text/markdown"))
+        pass
