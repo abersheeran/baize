@@ -105,7 +105,7 @@ jobs:
 
           python setup.py bdist_wheel
 
-          pdm remove -dG build mypy
+          pdm run pip uninstall -y mypy
           python setup.py bdist_wheel sdist
 
       - name: Build
@@ -116,7 +116,7 @@ jobs:
           python setup.py bdist_wheel -d raw_dist
           auditwheel repair raw_dist/*-linux*.whl -w ./dist
 
-          pdm remove -dG build mypy
+          pdm run pip uninstall -y mypy
           python setup.py bdist_wheel sdist
 
       - name: Publish
