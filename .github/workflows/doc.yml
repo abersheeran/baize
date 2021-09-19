@@ -25,6 +25,7 @@ jobs:
 
       - name: Generate document
         run: |
+          export PATH=$PATH:$(pwd)/__pypackages__/3.7/bin
           cd docs && make html
 
       - name: Push document to branch `gh-pages`
