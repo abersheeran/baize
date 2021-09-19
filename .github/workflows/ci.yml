@@ -38,11 +38,6 @@ jobs:
           architecture: x64
           version: 1.8.5
           enable-pep582: true # Enable PEP 582 package loading globally
-      - uses: actions/cache@v2.1.6
-        id: cache-requirements
-        with:
-          path: ${{ env.pythonLocation }}
-          key: ${{ env.pythonLocation }}-${{ matrix.python-version }}-${{ hashFiles('pdm.lock', 'pyproject.toml') }}
       - name: Install dependencies
         run: pdm install -v -dG dev -dG test --no-self
       - name: Static type and format checking
