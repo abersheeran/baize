@@ -31,7 +31,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v1
-      - uses: pdm-project/setup-pdm@v2.4
+      - uses: pdm-project/setup-pdm@v2.5
         name: Setup Python and PDM
         with:
           python-version: ${{ matrix.python-version }}
