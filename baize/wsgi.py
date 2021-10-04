@@ -243,10 +243,10 @@ class Request(HTTPConnection):
 
             return FormData(items)
         if self.content_type == "application/x-www-form-urlencoded":
-            data = self.body.decode(
+            body = self.body.decode(
                 encoding=self.content_type.options.get("charset", "latin-1")
             )
-            return FormData(parse_qsl(data, keep_blank_values=True))
+            return FormData(parse_qsl(body, keep_blank_values=True))
 
         raise HTTPException(
             415, {"Accpet": "multipart/form-data, application/x-www-form-urlencoded"}
