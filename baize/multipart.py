@@ -17,6 +17,7 @@ __all__ = [
     "safe_decode",
 ]
 
+
 class Event:
     def __eq__(self, obj: object) -> bool:
         return isinstance(obj, self.__class__) and self.__dict__ == obj.__dict__
