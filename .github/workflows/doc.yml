@@ -28,25 +28,25 @@ jobs:
           export PATH=$PATH:$(pdm info --packages)/bin
           cd docs && make html
 
-      - name: Push document to branch `gh-pages`
-        run: |
-          cd docs/build/html
+      # - name: Push document to branch `gh-pages`
+      #   run: |
+      #     cd docs/build/html
 
-          git init
-          remote_repo="https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          git config http.sslVerify false
-          git config user.name "Automated Publisher"
-          git config user.email "actions@users.noreply.github.com"
-          git remote add publisher "${remote_repo}"
+      #     git init
+      #     remote_repo="https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+      #     git config http.sslVerify false
+      #     git config user.name "Automated Publisher"
+      #     git config user.email "actions@users.noreply.github.com"
+      #     git remote add publisher "${remote_repo}"
 
-          # install lfs hooks
-          git lfs install
+      #     # install lfs hooks
+      #     git lfs install
 
-          # publish any new files
-          git checkout -b gh-pages
-          git add -A
-          timestamp=$(date -u)
-          git commit -m "Automated publish: ${timestamp} ${GITHUB_SHA}" || exit 0
-          git push --force publisher gh-pages
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #     # publish any new files
+      #     git checkout -b gh-pages
+      #     git add -A
+      #     timestamp=$(date -u)
+      #     git commit -m "Automated publish: ${timestamp} ${GITHUB_SHA}" || exit 0
+      #     git push --force publisher gh-pages
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
