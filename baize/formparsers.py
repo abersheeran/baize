@@ -2,7 +2,6 @@ import enum
 import re
 import typing
 from cgi import parse_header
-from dataclasses import dataclass
 from typing import List, Optional, Tuple, cast
 
 from .datastructures import ContentType, FormData, Headers, UploadFile
@@ -109,36 +108,37 @@ class AsyncMultiPartParser(BaseMultiPartParser[typing.AsyncIterable[bytes]]):
 
 
 class Event:
-    pass
+    def __eq__(self, obj: object) -> bool:
+        return isinstance(obj, self.__class__) and self.__dict__ == obj.__dict__
 
 
-@dataclass(frozen=True)
 class Preamble(Event):
-    data: bytes
+    def __init__(self, data: bytes) -> None:
+        self.data = data
 
 
-@dataclass(frozen=True)
 class Field(Event):
-    name: str
-    headers: Headers
+    def __init__(self, name: str, headers: Headers) -> None:
+        self.name = name
+        self.headers = headers
 
 
-@dataclass(frozen=True)
 class File(Event):
-    name: str
-    filename: str
-    headers: Headers
+    def __init__(self, name: str, filename: str, headers: Headers) -> None:
+        self.name = name
+        self.filename = filename
+        self.headers = headers
 
 
-@dataclass(frozen=True)
 class Data(Event):
-    data: bytes
-    more_data: bool
+    def __init__(self, data: bytes, more_data: bool) -> None:
+        self.data = data
+        self.more_data = more_data
 
 
-@dataclass(frozen=True)
 class Epilogue(Event):
-    data: bytes
+    def __init__(self, data: bytes) -> None:
+        self.data = data
 
 
 class NeedData(Event):
