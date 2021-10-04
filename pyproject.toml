@@ -28,8 +28,6 @@ homepage = "https://github.com/abersheeran/baize"
 repository = "https://github.com/abersheeran/baize"
 
 [project.optional-dependencies]
-multipart = ["python-multipart<1.0.0,>=0.0.5"]
-
 [tool.isort]
 profile = "black"
 
@@ -60,10 +58,10 @@ build = [
   "mypy-extensions<1.0.0,>=0.4.3",
 ]
 dev = [
-    "black~=20.8b1",
-    "isort<6.0.0,>=5.7.0",
-    "flake8~=3.9",
-    "mypy<1.0,>=0.910",
+  "black~=20.8b1",
+  "isort<6.0.0,>=5.7.0",
+  "flake8~=3.9",
+  "mypy<1.0,>=0.910",
 ]
 doc = [
   "Sphinx<4.0.0,>=3.5.3",
@@ -73,7 +71,7 @@ doc = [
 test = [
   "httpx<1.0.0,>=0.19.0",
   "pytest<7.0.0,>=6.2.5",
-  "pytest-cov<3.0.0,>=2.12.1",
+  "pytest-cov~=3.0",
   "pytest-asyncio<1.0.0,>=0.15.1",
   "requests<3.0.0,>=2.25.1",
   "starlette<1.0.0,>=0.14.2",

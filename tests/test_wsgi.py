@@ -1,4 +1,3 @@
-import sys
 import tempfile
 import time
 from inspect import cleandoc
@@ -162,7 +161,6 @@ def test_request_form_urlencoded():
             )
 
 
-@pytest.mark.skipif("multipart" not in sys.modules, reason="Missing python-multipart")
 def test_request_multipart_form():
     def app(environ, start_response):
         request = Request(environ)
