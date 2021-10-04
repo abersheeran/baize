@@ -3,8 +3,8 @@ from typing import Iterator
 
 import httpx
 
-from baize.datastructures import Headers
-from baize.formparsers import (
+from baize.datastructures import Headers, UploadFile
+from baize.multipart import (
     Data,
     Epilogue,
     Field,
@@ -12,8 +12,7 @@ from baize.formparsers import (
     MultipartDecoder,
     NeedData,
     Preamble,
-    UploadFile,
-    _user_safe_decode,
+    safe_decode,
 )
 from baize.wsgi import JSONResponse, Request
 
@@ -410,11 +409,11 @@ def test_multipart_multi_field_app_reads_body(tmpdir):
         assert response.json() == {"some": "data", "second": "key pair"}
 
 
-def test_user_safe_decode_helper():
-    result = _user_safe_decode(b"\xc4\x99\xc5\xbc\xc4\x87", "utf-8")
+def test_safe_decode_helper():
+    result = safe_decode(b"\xc4\x99\xc5\xbc\xc4\x87", "utf-8")
     assert result == "ężć"
 
 
-def test_user_safe_decode_ignores_wrong_charset():
-    result = _user_safe_decode(b"abc", "latin-8")
+def test_safe_decode_ignores_wrong_charset():
+    result = safe_decode(b"abc", "latin-8")
     assert result == "abc"

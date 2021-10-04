@@ -1,110 +1,9 @@
 import enum
 import re
-import typing
 from cgi import parse_header
-from typing import List, Optional, Tuple, cast
+from typing import List, Optional, Tuple, Union, cast
 
-from .datastructures import ContentType, FormData, Headers, UploadFile
-
-Stream = typing.TypeVar("Stream", typing.Iterable[bytes], typing.AsyncIterable[bytes])
-
-
-def _user_safe_decode(src: typing.Union[bytes, bytearray], charset: str) -> str:
-    try:
-        return src.decode(charset)
-    except (UnicodeDecodeError, LookupError):
-        return src.decode("latin-1")
-
-
-class BaseMultiPartParser(typing.Generic[Stream]):
-    def __init__(self, content_type: ContentType, stream: Stream) -> None:
-        self.charset = content_type.options.get("charset", "utf8")
-        self.parser = MultipartDecoder(
-            content_type.options["boundary"].encode("latin-1"), self.charset
-        )
-        self.stream: Stream = stream
-
-
-class MultiPartParser(BaseMultiPartParser[typing.Iterable[bytes]]):
-    def parse(self) -> FormData:
-        field_name = ""
-        data = bytearray()
-        file: typing.Optional[UploadFile] = None
-
-        items: typing.List[typing.Tuple[str, typing.Union[str, UploadFile]]] = []
-
-        for chunk in self.stream:
-            self.parser.receive_data(chunk)
-            while True:
-                event = self.parser.next_event()
-                if isinstance(event, (Epilogue, NeedData)):
-                    break
-                elif isinstance(event, Field):
-                    field_name = event.name
-                elif isinstance(event, File):
-                    field_name = event.name
-                    file = UploadFile(
-                        event.filename, event.headers.get("content-type", "")
-                    )
-                elif isinstance(event, Data):
-                    if file is None:
-                        data.extend(event.data)
-                    else:
-                        file.write(event.data)
-
-                    if not event.more_data:
-                        if file is None:
-                            items.append(
-                                (field_name, _user_safe_decode(data, self.charset))
-                            )
-                            data.clear()
-                        else:
-                            file.seek(0)
-                            items.append((field_name, file))
-                            file = None
-
-        return FormData(items)
-
-
-class AsyncMultiPartParser(BaseMultiPartParser[typing.AsyncIterable[bytes]]):
-    async def parse(self) -> FormData:
-        field_name = ""
-        data = bytearray()
-        file: typing.Optional[UploadFile] = None
-
-        items: typing.List[typing.Tuple[str, typing.Union[str, UploadFile]]] = []
-
-        async for chunk in self.stream:
-            self.parser.receive_data(chunk)
-            while True:
-                event = self.parser.next_event()
-                if isinstance(event, (Epilogue, NeedData)):
-                    break
-                elif isinstance(event, Field):
-                    field_name = event.name
-                elif isinstance(event, File):
-                    field_name = event.name
-                    file = UploadFile(
-                        event.filename, event.headers.get("content-type", "")
-                    )
-                elif isinstance(event, Data):
-                    if file is None:
-                        data.extend(event.data)
-                    else:
-                        await file.awrite(event.data)
-
-                    if not event.more_data:
-                        if file is None:
-                            items.append(
-                                (field_name, _user_safe_decode(data, self.charset))
-                            )
-                            data.clear()
-                        else:
-                            await file.aseek(0)
-                            items.append((field_name, file))
-                            file = None
-
-        return FormData(items)
+from .datastructures import Headers
 
 
 class Event:
@@ -297,6 +196,13 @@ class MultipartDecoder:
         for line in data.splitlines():
             line = line.strip()
             if line != b"":
-                name, value = _user_safe_decode(line, self.charset).split(":", 1)
+                name, value = safe_decode(line, self.charset).split(":", 1)
                 headers.append((name.strip(), value.strip()))
         return Headers(headers)
+
+
+def safe_decode(src: Union[bytes, bytearray], charset: str) -> str:
+    try:
+        return src.decode(charset)
+    except (UnicodeDecodeError, LookupError):
+        return src.decode("latin-1")
