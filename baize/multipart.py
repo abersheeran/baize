@@ -1,10 +1,21 @@
-import enum
 import re
 from cgi import parse_header
 from typing import List, Optional, Tuple, Union, cast
 
 from .datastructures import Headers
 
+__all__ = [
+    "Event",
+    "Preamble",
+    "Field",
+    "File",
+    "Data",
+    "Epilogue",
+    "NeedData",
+    "NEED_DATA",
+    "MultipartDecoder",
+    "safe_decode",
+]
 
 class Event:
     def __eq__(self, obj: object) -> bool:
@@ -47,12 +58,12 @@ class NeedData(Event):
 NEED_DATA = NeedData()
 
 
-class State(enum.Enum):
-    PREAMBLE = enum.auto()
-    PART = enum.auto()
-    DATA = enum.auto()
-    EPILOGUE = enum.auto()
-    COMPLETE = enum.auto()
+class State:
+    PREAMBLE = object()
+    PART = object()
+    DATA = object()
+    EPILOGUE = object()
+    COMPLETE = object()
 
 
 # Multipart line breaks MUST be CRLF (\r\n) by RFC-7578, except that
