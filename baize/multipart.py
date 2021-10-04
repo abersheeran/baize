@@ -19,19 +19,28 @@ __all__ = [
 
 
 class Event:
-    def __eq__(self, obj: object) -> bool:
-        return isinstance(obj, self.__class__) and self.__dict__ == obj.__dict__
+    pass
 
 
 class Preamble(Event):
     def __init__(self, data: bytes) -> None:
         self.data = data
 
+    def __eq__(self, obj: object) -> bool:
+        return isinstance(obj, self.__class__) and self.data == obj.data
+
 
 class Field(Event):
     def __init__(self, name: str, headers: Headers) -> None:
         self.name = name
         self.headers = headers
+
+    def __eq__(self, obj: object) -> bool:
+        return (
+            isinstance(obj, self.__class__)
+            and self.name == obj.name
+            and self.headers == obj.headers
+        )
 
 
 class File(Event):
@@ -40,16 +49,34 @@ class File(Event):
         self.filename = filename
         self.headers = headers
 
+    def __eq__(self, obj: object) -> bool:
+        return (
+            isinstance(obj, self.__class__)
+            and self.name == obj.name
+            and self.filename == obj.filename
+            and self.headers == obj.headers
+        )
+
 
 class Data(Event):
     def __init__(self, data: bytes, more_data: bool) -> None:
         self.data = data
         self.more_data = more_data
 
+    def __eq__(self, obj: object) -> bool:
+        return (
+            isinstance(obj, self.__class__)
+            and self.data == obj.data
+            and self.more_data == obj.more_data
+        )
+
 
 class Epilogue(Event):
     def __init__(self, data: bytes) -> None:
         self.data = data
+
+    def __eq__(self, obj: object) -> bool:
+        return isinstance(obj, self.__class__) and self.data == obj.data
 
 
 class NeedData(Event):
