@@ -51,17 +51,6 @@ jobs:
           directory: ./coverage/reports/
           verbose: true
 
-      - name: Tests with multipart
-        run: |
-          pdm install -v -G multipart --no-self
-          pdm run pytest tests --cov=./baize --cov-report=xml -o log_cli=true -o log_cli_level=DEBUG
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v1
-        with:
-          files: ./coverage.xml
-          directory: ./coverage/reports/
-          verbose: true
-
       - name: Tests with mypyc
         run: |
           pdm install -v -dG build --no-isolation

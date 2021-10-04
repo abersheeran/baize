@@ -1,5 +1,4 @@
 import asyncio
-import sys
 import tempfile
 from functools import partial
 from inspect import cleandoc
@@ -181,7 +180,6 @@ async def test_request_form_urlencoded():
             )
 
 
-@pytest.mark.skipif("multipart" not in sys.modules, reason="Missing python-multipart")
 @pytest.mark.asyncio
 async def test_request_multipart_form():
     async def app(scope, receive, send):
