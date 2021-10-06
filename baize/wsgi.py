@@ -5,7 +5,7 @@ import os
 import stat
 import time
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor
-from concurrent.futures import wait as wait
+from concurrent.futures import wait as wait_futures
 from http import HTTPStatus
 from itertools import chain
 from mimetypes import guess_type
@@ -542,7 +542,7 @@ class SendEventResponse(Response):
     :param ping_interval: This determines the time interval (in seconds) between sending ping messages.
     """
 
-    thread_pool = ThreadPoolExecutor(max_workers=10)
+    thread_pool = ThreadPoolExecutor(max_workers=10, thread_name_prefix="SendEvent_")
 
     required_headers = {
         "Cache-Control": "no-cache",
@@ -579,7 +579,7 @@ class SendEventResponse(Response):
         )
 
         future = self.thread_pool.submit(
-            wait,
+            wait_futures,
             (
                 self.thread_pool.submit(self.send_event),
                 self.thread_pool.submit(self.keep_alive),
