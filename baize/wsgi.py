@@ -646,16 +646,15 @@ class Router(BaseRouter[WSGIApp]):
     def __call__(
         self, environ: Environ, start_response: StartResponse
     ) -> Iterable[bytes]:
-        path = environ.get("PATH_INFO", "")
-        for route in self._route_array:
-            match_up, path_params = route.matches(path)
-            if not match_up:
-                continue
+        result = self.search(environ.get("PATH_INFO", ""))
+        if result is None:
+            response: WSGIApp = PlainTextResponse(b"", 404)
+        else:
+            route, path_params = result
             environ["PATH_PARAMS"] = path_params
             environ["router"] = self
-            return route.endpoint(environ, start_response)
-
-        return PlainTextResponse(b"", 404)(environ, start_response)
+            response = route.endpoint
+        return response(environ, start_response)
 
 
 class Subpaths(BaseSubpaths[WSGIApp]):
@@ -677,14 +676,14 @@ class Subpaths(BaseSubpaths[WSGIApp]):
         self, environ: Environ, start_response: StartResponse
     ) -> Iterable[bytes]:
         path = environ.get("PATH_INFO", "")
-        for prefix, endpoint in self._route_array:
-            if not path.startswith(prefix):
-                continue
+        result = self.search(path)
+        if result is None:
+            response: WSGIApp = PlainTextResponse(b"", 404)
+        else:
+            prefix, response = result
             environ["SCRIPT_NAME"] = environ.get("SCRIPT_NAME", "") + prefix
             environ["PATH_INFO"] = path[len(prefix) :]
-            return endpoint(environ, start_response)
-
-        return PlainTextResponse(b"", 404)(environ, start_response)
+        return response(environ, start_response)
 
 
 class Hosts(BaseHosts[WSGIApp]):
@@ -703,10 +702,9 @@ class Hosts(BaseHosts[WSGIApp]):
     def __call__(
         self, environ: Environ, start_response: StartResponse
     ) -> Iterable[bytes]:
-        host = environ.get("HTTP_HOST", "")
-        for host_pattern, endpoint in self._host_array:
-            if host_pattern.fullmatch(host) is None:
-                continue
-            return endpoint(environ, start_response)
-
-        return PlainTextResponse(b"Invalid host", 404)(environ, start_response)
+        endpoint = self.search(environ.get("HTTP_HOST", ""))
+        if endpoint is None:
+            response: WSGIApp = PlainTextResponse(b"Invalid host", 404)
+        else:
+            response = endpoint
+        return response(environ, start_response)
