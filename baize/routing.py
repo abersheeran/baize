@@ -249,7 +249,7 @@ class BaseSubpaths(Generic[Interface]):
 
     def search(self, path: str) -> Optional[Tuple[str, Interface]]:
         for prefix, endpoint in self._route_array:
-            if path.startswith(prefix):
+            if path.startswith(prefix + "/") or path == prefix:
                 return prefix, endpoint
         return None
 
