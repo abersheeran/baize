@@ -20,14 +20,13 @@ dynamic = ["classifiers"]
 license = {text = "Apache-2.0"}
 name = "baize"
 readme = "README.md"
-requires-python = ">=3.6"
+requires-python = ">=3.6.2"
 version = "0.11.0"
 
 [project.urls]
 homepage = "https://github.com/abersheeran/baize"
 repository = "https://github.com/abersheeran/baize"
 
-[project.optional-dependencies]
 [tool.isort]
 profile = "black"
 
@@ -58,7 +57,7 @@ build = [
   "mypy-extensions<1.0.0,>=0.4.3",
 ]
 dev = [
-  "black~=20.8b1",
+  "black<22,>=21.9b0",
   "isort<6.0.0,>=5.7.0",
   "flake8~=3.9",
   "mypy<1.0,>=0.910",
@@ -74,7 +73,7 @@ test = [
   "pytest-cov~=3.0",
   "pytest-asyncio<1.0.0,>=0.15.1",
   "requests<3.0.0,>=2.25.1",
-  "starlette<1.0.0,>=0.14.2",
+  "starlette<0.15.0,>=0.14.2",
 ]
 
 [build-system]
