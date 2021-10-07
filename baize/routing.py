@@ -15,22 +15,24 @@ except ImportError:  # pragma: no cover
 
 from .typing import ASGIApp, WSGIApp
 
+T = TypeVar("T")
+
 
 @mypyc_attr(allow_interpreted_subclasses=True)
-class Convertor:
+class Convertor(Generic[T]):
     regex: str
 
     @abc.abstractmethod
-    def to_python(self, value: str) -> Any:
+    def to_python(self, value: str) -> T:
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def to_string(self, value: Any) -> str:
+    def to_string(self, value: T) -> str:
         raise NotImplementedError()
 
 
 @mypyc_attr(allow_interpreted_subclasses=True)
-class StringConvertor(Convertor):
+class StringConvertor(Convertor[str]):
     regex = "[^/]+"
 
     def to_python(self, value: str) -> str:
@@ -46,7 +48,7 @@ class StringConvertor(Convertor):
 
 
 @mypyc_attr(allow_interpreted_subclasses=True)
-class IntegerConvertor(Convertor):
+class IntegerConvertor(Convertor[int]):
     regex = "[0-9]+"
 
     def to_python(self, value: str) -> int:
@@ -59,7 +61,7 @@ class IntegerConvertor(Convertor):
 
 
 @mypyc_attr(allow_interpreted_subclasses=True)
-class DecimalConvertor(Convertor):
+class DecimalConvertor(Convertor[Decimal]):
     regex = "[0-9]+(.[0-9]+)?"
 
     def to_python(self, value: str) -> Decimal:
@@ -76,7 +78,7 @@ class DecimalConvertor(Convertor):
 
 
 @mypyc_attr(allow_interpreted_subclasses=True)
-class UUIDConvertor(Convertor):
+class UUIDConvertor(Convertor[uuid.UUID]):
     regex = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
 
     def to_python(self, value: str) -> uuid.UUID:
@@ -87,7 +89,7 @@ class UUIDConvertor(Convertor):
 
 
 @mypyc_attr(allow_interpreted_subclasses=True)
-class DateConvertor(Convertor):
+class DateConvertor(Convertor[date]):
     regex = "[0-9]{4}-[0-9]{2}-[0-9]{2}"
 
     def to_python(self, value: str) -> date:
@@ -98,7 +100,7 @@ class DateConvertor(Convertor):
 
 
 @mypyc_attr(allow_interpreted_subclasses=True)
-class AnyConvertor(Convertor):
+class AnyConvertor(Convertor[str]):
     regex = ".*"
 
     def to_python(self, value: str) -> str:
@@ -108,7 +110,7 @@ class AnyConvertor(Convertor):
         return value
 
 
-CONVERTOR_TYPES = {
+CONVERTOR_TYPES: Dict[str, Convertor] = {
     "str": StringConvertor(),
     "int": IntegerConvertor(),
     "decimal": DecimalConvertor(),
@@ -184,7 +186,12 @@ class Route(Generic[Interface]):
         }
 
     def build_url(self, params: Dict[str, Any]) -> str:
-        return self.path_format.format_map(params)
+        return self.path_format.format_map(
+            {
+                name: self.path_convertors[name].to_string(value)
+                for name, value in params.items()
+            }
+        )
 
 
 @mypyc_attr(allow_interpreted_subclasses=True)

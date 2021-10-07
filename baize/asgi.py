@@ -17,7 +17,9 @@ from typing import (
     Generic,
     Iterable,
     Iterator,
+    List,
     Mapping,
+    Optional,
     Sequence,
     Tuple,
     TypeVar,
@@ -25,10 +27,10 @@ from typing import (
 )
 from urllib.parse import parse_qsl, quote
 
+from . import multipart
 from .concurrency import run_in_threadpool
-from .datastructures import URL, Address, FormData, Headers, QueryParams
+from .datastructures import URL, Address, FormData, Headers, QueryParams, UploadFile
 from .exceptions import HTTPException
-from .formparsers import AsyncMultiPartParser
 from .requests import MoreInfoFromHeaderMixin
 from .responses import BaseResponse, FileResponseMixin, build_bytes_from_sse
 from .routing import BaseHosts, BaseRouter, BaseSubpaths
@@ -235,12 +237,52 @@ class Request(HTTPConnection):
         `application/x-www-form-urlencoded`, an HTTPExcption exception will be thrown.
         """
         if self.content_type == "multipart/form-data":
-            return await AsyncMultiPartParser(self.content_type, self.stream()).parse()
+            charset = self.content_type.options.get("charset", "utf8")
+            parser = multipart.MultipartDecoder(
+                self.content_type.options["boundary"].encode("latin-1"), charset
+            )
+            field_name = ""
+            data = bytearray()
+            file: Optional[UploadFile] = None
+
+            items: List[Tuple[str, Union[str, UploadFile]]] = []
+
+            async for chunk in self.stream():
+                parser.receive_data(chunk)
+                while True:
+                    event = parser.next_event()
+                    if isinstance(event, (multipart.Epilogue, multipart.NeedData)):
+                        break
+                    elif isinstance(event, multipart.Field):
+                        field_name = event.name
+                    elif isinstance(event, multipart.File):
+                        field_name = event.name
+                        file = UploadFile(
+                            event.filename, event.headers.get("content-type", "")
+                        )
+                    elif isinstance(event, multipart.Data):
+                        if file is None:
+                            data.extend(event.data)
+                        else:
+                            await file.awrite(event.data)
+
+                        if not event.more_data:
+                            if file is None:
+                                items.append(
+                                    (field_name, multipart.safe_decode(data, charset))
+                                )
+                                data.clear()
+                            else:
+                                await file.aseek(0)
+                                items.append((field_name, file))
+                                file = None
+
+            return FormData(items)
         if self.content_type == "application/x-www-form-urlencoded":
-            data = (await self.body).decode(
+            body = (await self.body).decode(
                 encoding=self.content_type.options.get("charset", "latin-1")
             )
-            return FormData(parse_qsl(data, keep_blank_values=True))
+            return FormData(parse_qsl(body, keep_blank_values=True))
 
         raise HTTPException(
             415, {"Accpet": "multipart/form-data, application/x-www-form-urlencoded"}

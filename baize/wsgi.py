@@ -5,7 +5,7 @@ import os
 import stat
 import time
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor
-from concurrent.futures import wait as wait
+from concurrent.futures import wait as wait_futures
 from http import HTTPStatus
 from itertools import chain
 from mimetypes import guess_type
@@ -19,7 +19,9 @@ from typing import (
     Generic,
     Iterable,
     Iterator,
+    List,
     Mapping,
+    Optional,
     Sequence,
     Tuple,
     TypeVar,
@@ -27,9 +29,17 @@ from typing import (
 )
 from urllib.parse import parse_qsl, quote
 
-from .datastructures import URL, Address, FormData, Headers, QueryParams, defaultdict
+from . import multipart
+from .datastructures import (
+    URL,
+    Address,
+    FormData,
+    Headers,
+    QueryParams,
+    UploadFile,
+    defaultdict,
+)
 from .exceptions import HTTPException
-from .formparsers import MultiPartParser
 from .requests import MoreInfoFromHeaderMixin
 from .responses import BaseResponse, FileResponseMixin, build_bytes_from_sse
 from .routing import BaseHosts, BaseRouter, BaseSubpaths
@@ -191,12 +201,52 @@ class Request(HTTPConnection):
         `application/x-www-form-urlencoded`, an HTTPExcption exception will be thrown.
         """
         if self.content_type == "multipart/form-data":
-            return MultiPartParser(self.content_type, self.stream()).parse()
+            charset = self.content_type.options.get("charset", "utf8")
+            parser = multipart.MultipartDecoder(
+                self.content_type.options["boundary"].encode("latin-1"), charset
+            )
+            field_name = ""
+            data = bytearray()
+            file: Optional[UploadFile] = None
+
+            items: List[Tuple[str, Union[str, UploadFile]]] = []
+
+            for chunk in self.stream():
+                parser.receive_data(chunk)
+                while True:
+                    event = parser.next_event()
+                    if isinstance(event, (multipart.Epilogue, multipart.NeedData)):
+                        break
+                    elif isinstance(event, multipart.Field):
+                        field_name = event.name
+                    elif isinstance(event, multipart.File):
+                        field_name = event.name
+                        file = UploadFile(
+                            event.filename, event.headers.get("content-type", "")
+                        )
+                    elif isinstance(event, multipart.Data):
+                        if file is None:
+                            data.extend(event.data)
+                        else:
+                            file.write(event.data)
+
+                        if not event.more_data:
+                            if file is None:
+                                items.append(
+                                    (field_name, multipart.safe_decode(data, charset))
+                                )
+                                data.clear()
+                            else:
+                                file.seek(0)
+                                items.append((field_name, file))
+                                file = None
+
+            return FormData(items)
         if self.content_type == "application/x-www-form-urlencoded":
-            data = self.body.decode(
+            body = self.body.decode(
                 encoding=self.content_type.options.get("charset", "latin-1")
             )
-            return FormData(parse_qsl(data, keep_blank_values=True))
+            return FormData(parse_qsl(body, keep_blank_values=True))
 
         raise HTTPException(
             415, {"Accpet": "multipart/form-data, application/x-www-form-urlencoded"}
@@ -492,7 +542,7 @@ class SendEventResponse(Response):
     :param ping_interval: This determines the time interval (in seconds) between sending ping messages.
     """
 
-    thread_pool = ThreadPoolExecutor(max_workers=10)
+    thread_pool = ThreadPoolExecutor(max_workers=10, thread_name_prefix="SendEvent_")
 
     required_headers = {
         "Cache-Control": "no-cache",
@@ -529,7 +579,7 @@ class SendEventResponse(Response):
         )
 
         future = self.thread_pool.submit(
-            wait,
+            wait_futures,
             (
                 self.thread_pool.submit(self.send_event),
                 self.thread_pool.submit(self.keep_alive),
