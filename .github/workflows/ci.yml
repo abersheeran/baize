@@ -26,12 +26,12 @@ jobs:
     runs-on: "${{ matrix.os }}"
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8, 3.9]
+        python-version: [3.6, 3.7, 3.8, 3.9, "3.10"]
         os: [windows-latest, ubuntu-latest, macos-latest]
 
     steps:
       - uses: actions/checkout@v1
-      - uses: pdm-project/setup-pdm@v2.1
+      - uses: pdm-project/setup-pdm@v2.5
         name: Setup Python and PDM
         with:
           python-version: ${{ matrix.python-version }}
@@ -68,7 +68,7 @@ jobs:
     runs-on: "${{ matrix.os }}"
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8, 3.9]
+        python-version: [3.6, 3.7, 3.8, 3.9, "3.10"]
         os: [windows-latest, ubuntu-latest, macos-latest]
 
     steps:
