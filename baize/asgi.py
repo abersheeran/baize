@@ -898,8 +898,8 @@ class Router(BaseRouter[ASGIApp]):
     applications = Router(
         ("/static/{filepath:any}", static_files),
         ("/api/{_:any}", api_app),
-        ("/about/{name}", about_page, "about"),
-        ("/", homepage, "homepage"),
+        ("/about/{name}", about_page),
+        ("/", homepage),
     )
     """
 
@@ -910,7 +910,6 @@ class Router(BaseRouter[ASGIApp]):
         else:
             route, path_params = result
             scope["path_params"] = path_params
-            scope["router"] = self
             response = route.endpoint
         return await response(scope, receive, send)
 

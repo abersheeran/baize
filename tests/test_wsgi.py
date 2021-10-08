@@ -461,12 +461,12 @@ def test_router():
 
     @request_response
     def redirect(request: Request) -> Response:
-        return RedirectResponse(request["router"].build_url("path", {"path": "cat"}))
+        return RedirectResponse("/cat")
 
     router = Router(
         ("/", PlainTextResponse("homepage")),
         ("/redirect", redirect),
-        ("/{path}", path, "path"),
+        ("/{path}", path),
     )
     with httpx.Client(app=router, base_url="http://testServer/") as client:
         assert client.get("/").text == "homepage"
@@ -475,9 +475,6 @@ def test_router():
         assert (
             client.get("/redirect", allow_redirects=False).headers["location"] == "/cat"
         )
-
-        with pytest.raises(KeyError, match="The route named 'redirect' was not found."):
-            router.build_url("redirect", {})
 
 
 def test_subpaths():

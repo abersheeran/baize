@@ -637,8 +637,8 @@ class Router(BaseRouter[WSGIApp]):
     applications = Router(
         ("/static/{filepath:any}", static_files),
         ("/api/{_:any}", api_app),
-        ("/about/{name}", about_page, "about"),
-        ("/", homepage, "homepage"),
+        ("/about/{name}", about_page),
+        ("/", homepage),
     )
     ```
     """
@@ -652,7 +652,6 @@ class Router(BaseRouter[WSGIApp]):
         else:
             route, path_params = result
             environ["PATH_PARAMS"] = path_params
-            environ["router"] = self
             response = route.endpoint
         return response(environ, start_response)
 
