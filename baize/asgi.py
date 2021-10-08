@@ -898,22 +898,20 @@ class Router(BaseRouter[ASGIApp]):
     applications = Router(
         ("/static/{filepath:any}", static_files),
         ("/api/{_:any}", api_app),
-        ("/about/{name}", about_page, "about"),
-        ("/", homepage, "homepage"),
+        ("/about/{name}", about_page),
+        ("/", homepage),
     )
     """
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        path = scope["path"]
-        for route in self._route_array:
-            match_up, path_params = route.matches(path)
-            if not match_up:
-                continue
+        result = self.search(scope["path"])
+        if result is None:
+            response: ASGIApp = PlainTextResponse(b"", 404)
+        else:
+            route, path_params = result
             scope["path_params"] = path_params
-            scope["router"] = self
-            return await route.endpoint(scope, receive, send)
-
-        return await PlainTextResponse(b"", 404)(scope, receive, send)
+            response = route.endpoint
+        return await response(scope, receive, send)
 
 
 class Subpaths(BaseSubpaths[ASGIApp]):
@@ -933,14 +931,14 @@ class Subpaths(BaseSubpaths[ASGIApp]):
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         path = scope["path"]
-        for prefix, endpoint in self._route_array:
-            if not path.startswith(prefix):
-                continue
+        result = self.search(path)
+        if result is None:
+            response: ASGIApp = PlainTextResponse(b"", 404)
+        else:
+            prefix, response = result
             scope["root_path"] = scope.get("root_path", "") + prefix
             scope["path"] = path[len(prefix) :]
-            return await endpoint(scope, receive, send)
-
-        return await PlainTextResponse(b"", 404)(scope, receive, send)
+        return await response(scope, receive, send)
 
 
 class Hosts(BaseHosts[ASGIApp]):
@@ -961,9 +959,9 @@ class Hosts(BaseHosts[ASGIApp]):
         for k, v in scope["headers"]:
             if k == b"host":
                 host = v.decode("latin-1")
-        for host_pattern, endpoint in self._host_array:
-            if host_pattern.fullmatch(host) is None:
-                continue
-            return await endpoint(scope, receive, send)
-
-        return await PlainTextResponse(b"Invalid host", 404)(scope, receive, send)
+        endpoint = self.search(host)
+        if endpoint is None:
+            response: ASGIApp = PlainTextResponse(b"Invalid host", 404)
+        else:
+            response = endpoint
+        return await response(scope, receive, send)

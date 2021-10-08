@@ -3,7 +3,7 @@ import re
 import uuid
 from datetime import date
 from decimal import Decimal
-from typing import Any, Dict, Generic, Pattern, Sequence, Tuple, TypeVar, Union
+from typing import Any, Dict, Generic, List, Optional, Pattern, Sequence, Tuple, TypeVar
 
 try:
     from mypy_extensions import mypyc_attr
@@ -158,12 +158,9 @@ Interface = TypeVar("Interface", ASGIApp, WSGIApp)
 
 @mypyc_attr(allow_interpreted_subclasses=True)
 class Route(Generic[Interface]):
-    endpoint: Interface
-    name: str
-    path_format: str
-    path_convertors: Dict[str, Convertor]
-
-    def __init__(self, path: str, endpoint: Interface, route_name: str) -> None:
+    def __init__(self, path: str, endpoint: Interface) -> None:
+        self.path_format: str
+        self.path_convertors: Dict[str, Convertor]
         self.path_format, self.path_convertors = compile_path(path)
         self.re_pattern = re.compile(
             self.path_format.format_map(
@@ -173,8 +170,7 @@ class Route(Generic[Interface]):
                 }
             )
         )
-        self.endpoint = endpoint
-        self.name = route_name
+        self.endpoint: Interface = endpoint
 
     def matches(self, path: str) -> Tuple[bool, Dict[str, Any]]:
         match = self.re_pattern.fullmatch(path)
@@ -185,41 +181,20 @@ class Route(Generic[Interface]):
             for name, value in match.groupdict().items()
         }
 
-    def build_url(self, params: Dict[str, Any]) -> str:
-        return self.path_format.format_map(
-            {
-                name: self.path_convertors[name].to_string(value)
-                for name, value in params.items()
-            }
-        )
-
 
 @mypyc_attr(allow_interpreted_subclasses=True)
 class BaseRouter(Generic[Interface]):
-    def __init__(
-        self, *routes: Union[Tuple[str, Interface], Tuple[str, Interface, str]]
-    ) -> None:
-        self._route_array = [
-            Route(path, endpoint, name)
-            for path, endpoint, name in map(
-                lambda route: route if len(route) == 3 else (*route, ""), routes
-            )
+    def __init__(self, *routes: Tuple[str, Interface]) -> None:
+        self._route_array: List[Route[Interface]] = [
+            Route(path, endpoint) for path, endpoint in routes
         ]
-        self._named_routes = {
-            route.name: route for route in self._route_array if route.name
-        }
 
-    def build_url(self, name: str, params: Dict[str, Any]) -> str:
-        """
-        Find the corresponding route by the name of the route, and then construct
-        the URL path.
-        """
-        try:
-            route = self._named_routes[name]
-        except KeyError:
-            raise KeyError(f"The route named '{name}' was not found.")
-        else:
-            return route.build_url(params)
+    def search(self, path: str) -> Optional[Tuple[Route[Interface], Dict[str, Any]]]:
+        for route in self._route_array:
+            match_up, params = route.matches(path)
+            if match_up:
+                return route, params
+        return None
 
 
 @mypyc_attr(allow_interpreted_subclasses=True)
@@ -232,6 +207,12 @@ class BaseSubpaths(Generic[Interface]):
             assert not prefix.endswith("/"), "prefix cannot be ends with '/'"
         self._route_array = [*routes]
 
+    def search(self, path: str) -> Optional[Tuple[str, Interface]]:
+        for prefix, endpoint in self._route_array:
+            if path.startswith(prefix + "/") or path == prefix:
+                return prefix, endpoint
+        return None
+
 
 @mypyc_attr(allow_interpreted_subclasses=True)
 class BaseHosts(Generic[Interface]):
@@ -239,3 +220,9 @@ class BaseHosts(Generic[Interface]):
         self._host_array: Sequence[Tuple[Pattern, Interface]] = [
             (re.compile(host), endpoint) for host, endpoint in hosts
         ]
+
+    def search(self, host: str) -> Optional[Interface]:
+        for pattern, endpoint in self._host_array:
+            if pattern.fullmatch(host) is not None:
+                return endpoint
+        return None

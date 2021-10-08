@@ -277,7 +277,8 @@ async def test_request_without_setting_receive():
         assert response.json() == {"json": "Receive channel not available"}
 
 
-def test_request_disconnect():
+@pytest.mark.asyncio
+async def test_request_disconnect():
     """
     If a client disconnect occurs while reading request body
     then ClientDisconnect should be raised.
@@ -291,9 +292,8 @@ def test_request_disconnect():
         return {"type": "http.disconnect"}
 
     scope = {"type": "http", "method": "POST", "path": "/"}
-    loop = asyncio.get_event_loop()
     with pytest.raises(ClientDisconnect):
-        loop.run_until_complete(app(scope, receiver, None))
+        await app(scope, receiver, None)
 
 
 @pytest.mark.asyncio
@@ -1044,12 +1044,12 @@ async def test_router():
 
     @request_response
     async def redirect(request: Request) -> Response:
-        return RedirectResponse(request["router"].build_url("path", {"path": "cat"}))
+        return RedirectResponse("/cat")
 
     router = Router(
         ("/", PlainTextResponse("homepage")),
         ("/redirect", redirect),
-        ("/{path}", path, "path"),
+        ("/{path}", path),
     )
     async with httpx.AsyncClient(app=router, base_url="http://testServer/") as client:
         assert (await client.get("/")).text == "homepage"
@@ -1058,9 +1058,6 @@ async def test_router():
         assert (await (client.get("/redirect", allow_redirects=False))).headers[
             "location"
         ] == "/cat"
-
-        with pytest.raises(KeyError, match="The route named 'redirect' was not found."):
-            router.build_url("redirect", {})
 
 
 @pytest.mark.asyncio
