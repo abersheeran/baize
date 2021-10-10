@@ -27,6 +27,7 @@ from baize.asgi import (
     WebSocket,
     WebSocketDisconnect,
     request_response,
+    websocket_session,
 )
 from baize.datastructures import UploadFile
 from baize.exceptions import HTTPException
@@ -713,91 +714,13 @@ def test_responses_inherit(response_class):
 # ######################################################################################
 
 
-def test_websocket_url():
-    def app(scope):
-        async def asgi(receive, send):
-            websocket = WebSocket(scope, receive=receive, send=send)
-            await websocket.accept()
-            await websocket.send_text(str(websocket.url))
-            await websocket.close()
-
-        return asgi
-
-    client = TestClient(app)
-    with client.websocket_connect("/123?a=abc") as websocket:
-        data = websocket.receive_text()
-        assert data == "ws://testserver/123?a=abc"
-
-
-def test_websocket_query_params():
-    def app(scope):
-        async def asgi(receive, send):
-            websocket = WebSocket(scope, receive=receive, send=send)
-            query_params = dict(websocket.query_params)
-            await websocket.accept()
-            await websocket.send_text(str(query_params))
-            await websocket.close()
-
-        return asgi
-
-    client = TestClient(app)
-    with client.websocket_connect("/?a=abc&b=456") as websocket:
-        data = websocket.receive_text()
-        assert data == str({"a": "abc", "b": "456"})
-
-
-def test_websocket_headers():
-    def app(scope):
-        async def asgi(receive, send):
-            websocket = WebSocket(scope, receive=receive, send=send)
-            headers = dict(websocket.headers)
-            await websocket.accept()
-            await websocket.send_text(str(sorted(headers)))
-            await websocket.close()
-
-        return asgi
-
-    client = TestClient(app)
-    with client.websocket_connect("/") as websocket:
-        expected_headers = {
-            "accept": "*/*",
-            "accept-encoding": "gzip, deflate",
-            "connection": "upgrade",
-            "host": "testserver",
-            "user-agent": "testclient",
-            "sec-websocket-key": "testserver==",
-            "sec-websocket-version": "13",
-        }
-        data = websocket.receive_text()
-        assert data == str(sorted(expected_headers))
-
-
-def test_websocket_port():
-    def app(scope):
-        async def asgi(receive, send):
-            websocket = WebSocket(scope, receive=receive, send=send)
-            await websocket.accept()
-            await websocket.send_text(str(websocket.url.port))
-            await websocket.close()
-
-        return asgi
-
-    client = TestClient(app)
-    with client.websocket_connect("ws://example.com:123/123?a=abc") as websocket:
-        data = websocket.receive_text()
-        assert data == "123"
-
-
 def test_websocket_send_and_receive_text():
-    def app(scope):
-        async def asgi(receive, send):
-            websocket = WebSocket(scope, receive=receive, send=send)
-            await websocket.accept()
-            data = await websocket.receive_text()
-            await websocket.send_text("Message was: " + data)
-            await websocket.close()
-
-        return asgi
+    @websocket_session
+    async def app(websocket: WebSocket) -> None:
+        await websocket.accept()
+        data = await websocket.receive_text()
+        await websocket.send_text("Message was: " + data)
+        await websocket.close()
 
     client = TestClient(app)
     with client.websocket_connect("/") as websocket:
@@ -807,15 +730,12 @@ def test_websocket_send_and_receive_text():
 
 
 def test_websocket_send_and_receive_bytes():
-    def app(scope):
-        async def asgi(receive, send):
-            websocket = WebSocket(scope, receive=receive, send=send)
-            await websocket.accept()
-            data = await websocket.receive_bytes()
-            await websocket.send_bytes(b"Message was: " + data)
-            await websocket.close()
-
-        return asgi
+    @websocket_session
+    async def app(websocket: WebSocket) -> None:
+        await websocket.accept()
+        data = await websocket.receive_bytes()
+        await websocket.send_bytes(b"Message was: " + data)
+        await websocket.close()
 
     client = TestClient(app)
     with client.websocket_connect("/") as websocket:
@@ -825,14 +745,11 @@ def test_websocket_send_and_receive_bytes():
 
 
 def test_websocket_iter_text():
-    def app(scope):
-        async def asgi(receive, send):
-            websocket = WebSocket(scope, receive=receive, send=send)
-            await websocket.accept()
-            async for data in websocket.iter_text():
-                await websocket.send_text("Message was: " + data)
-
-        return asgi
+    @websocket_session
+    async def app(websocket: WebSocket) -> None:
+        await websocket.accept()
+        async for data in websocket.iter_text():
+            await websocket.send_text("Message was: " + data)
 
     client = TestClient(app)
     with client.websocket_connect("/") as websocket:
@@ -842,14 +759,11 @@ def test_websocket_iter_text():
 
 
 def test_websocket_iter_bytes():
-    def app(scope):
-        async def asgi(receive, send):
-            websocket = WebSocket(scope, receive=receive, send=send)
-            await websocket.accept()
-            async for data in websocket.iter_bytes():
-                await websocket.send_bytes(b"Message was: " + data)
-
-        return asgi
+    @websocket_session
+    async def app(websocket: WebSocket) -> None:
+        await websocket.accept()
+        async for data in websocket.iter_bytes():
+            await websocket.send_bytes(b"Message was: " + data)
 
     client = TestClient(app)
     with client.websocket_connect("/") as websocket:
@@ -859,32 +773,29 @@ def test_websocket_iter_bytes():
 
 
 def test_websocket_concurrency_pattern():
-    def app(scope):
-        async def reader(websocket, queue):
+    @websocket_session
+    async def app(websocket: WebSocket) -> None:
+        async def reader(websocket: WebSocket, queue: "asyncio.Queue[str]") -> None:
             async for data in websocket.iter_text():
                 await queue.put(data)
 
-        async def writer(websocket, queue):
+        async def writer(websocket: WebSocket, queue: "asyncio.Queue[str]") -> None:
             while True:
                 message = await queue.get()
                 await websocket.send_text(message)
 
-        async def asgi(receive, send):
-            websocket = WebSocket(scope, receive=receive, send=send)
-            queue = asyncio.Queue()
-            await websocket.accept()
-            done, pending = await asyncio.wait(
-                (
-                    asyncio.ensure_future(reader(websocket=websocket, queue=queue)),
-                    asyncio.ensure_future(writer(websocket=websocket, queue=queue)),
-                ),
-                return_when=asyncio.FIRST_COMPLETED,
-            )
-            [task.cancel() for task in pending]
-            [task.result() for task in done]
-            await websocket.close()
-
-        return asgi
+        queue: "asyncio.Queue[str]" = asyncio.Queue()
+        await websocket.accept()
+        done, pending = await asyncio.wait(
+            (
+                asyncio.ensure_future(reader(websocket=websocket, queue=queue)),
+                asyncio.ensure_future(writer(websocket=websocket, queue=queue)),
+            ),
+            return_when=asyncio.FIRST_COMPLETED,
+        )
+        [task.cancel() for task in pending]
+        [task.result() for task in done]
+        await websocket.close()
 
     client = TestClient(app)
     with client.websocket_connect("/") as websocket:
@@ -894,24 +805,17 @@ def test_websocket_concurrency_pattern():
 
 
 def test_client_close():
-    close_code = None
-
-    def app(scope):
-        async def asgi(receive, send):
-            nonlocal close_code
-            websocket = WebSocket(scope, receive=receive, send=send)
-            await websocket.accept()
-            try:
-                await websocket.receive_text()
-            except WebSocketDisconnect as exc:
-                close_code = exc.code
-
-        return asgi
+    @websocket_session
+    async def app(websocket: WebSocket) -> None:
+        await websocket.accept()
+        try:
+            await websocket.receive_text()
+        except WebSocketDisconnect as exc:
+            assert exc.code == 1001
 
     client = TestClient(app)
     with client.websocket_connect("/") as websocket:
         websocket.close(code=1001)
-    assert close_code == 1001
 
 
 def test_application_close():
@@ -941,12 +845,9 @@ def test_application_close():
 
 
 def test_rejected_connection():
-    def app(scope):
-        async def asgi(receive, send):
-            websocket = WebSocket(scope, receive=receive, send=send)
-            await websocket.close(1001)
-
-        return asgi
+    @websocket_session
+    async def app(websocket: WebSocket) -> None:
+        await websocket.close(1001)
 
     client = TestClient(app)
     with pytest.raises(WebSocketDisconnect) as exc:
@@ -955,42 +856,24 @@ def test_rejected_connection():
 
 
 def test_subprotocol():
-    def app(scope):
-        async def asgi(receive, send):
-            websocket = WebSocket(scope, receive=receive, send=send)
-            assert websocket["subprotocols"] == ["soap", "wamp"]
-            await websocket.accept(subprotocol="wamp")
-            await websocket.close()
-
-        return asgi
+    @websocket_session
+    async def app(websocket: WebSocket) -> None:
+        assert websocket["subprotocols"] == ["soap", "wamp"]
+        await websocket.accept(subprotocol="wamp")
+        await websocket.close()
 
     client = TestClient(app)
     with client.websocket_connect("/", subprotocols=["soap", "wamp"]) as websocket:
         assert websocket.accepted_subprotocol == "wamp"
 
 
-def test_websocket_exception():
-    def app(scope):
-        async def asgi(receive, send):
-            assert False
-
-        return asgi
-
-    client = TestClient(app)
-    with pytest.raises(AssertionError):
-        client.websocket_connect("/123?a=abc")
-
-
 def test_duplicate_disconnect():
-    def app(scope):
-        async def asgi(receive, send):
-            websocket = WebSocket(scope, receive=receive, send=send)
-            await websocket.accept()
-            message = await websocket.receive()
-            assert message["type"] == "websocket.disconnect"
-            message = await websocket.receive()
-
-        return asgi
+    @websocket_session
+    async def app(websocket: WebSocket) -> None:
+        await websocket.accept()
+        message = await websocket.receive()
+        assert message["type"] == "websocket.disconnect"
+        message = await websocket.receive()
 
     client = TestClient(app)
     with pytest.raises(RuntimeError):
@@ -1034,6 +917,23 @@ async def test_request_response():
     async with httpx.AsyncClient(app=view, base_url="http://testServer/") as client:
         assert (await client.get("/")).text == ""
         assert (await client.post("/", content="hello")).text == "hello"
+
+    client = TestClient(view)
+    with pytest.raises(WebSocketDisconnect) as exc:
+        with client.websocket_connect("/"):
+            pass
+    assert exc.value.code == 1001
+
+
+@pytest.mark.asyncio
+async def test_websocket_session():
+    @websocket_session
+    async def view(websocket: WebSocket) -> None:
+        await websocket.accept()
+        await websocket.close()
+
+    async with httpx.AsyncClient(app=view, base_url="http://testServer/") as client:
+        assert (await client.get("/")).status_code == 404
 
 
 @pytest.mark.asyncio

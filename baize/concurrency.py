@@ -2,6 +2,10 @@ import asyncio
 import functools
 from typing import Any, Callable, TypeVar
 
+__all__ = [
+    "run_in_threadpool",
+]
+
 T = TypeVar("T")
 
 

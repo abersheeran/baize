@@ -17,16 +17,10 @@ if os.environ.get("WITHOUT_MYPYC", "False") == "False":
             modules = list(
                 filter(
                     lambda path: path.replace("\\", "/")
-                    in (
-                        "baize/datastructures.py",
-                        "baize/utils.py",
-                        "baize/status.py",
-                        "baize/routing.py",
-                        "baize/requests.py",
-                        "baize/multipart.py",
-                        # because compile delete_cookies is not supported in python 3.6-3.8
-                        # and I don't know how to fix it
-                        "baize/responses.py" if sys.version_info > (3, 9) else "",
+                    not in (
+                        "baize/asgi.py",
+                        "baize/wsgi.py",
+                        "baize/responses.py" if sys.version_info[:2] < (3, 9) else "",
                     ),
                     map(str, Path("baize").glob("**/*.py")),
                 )

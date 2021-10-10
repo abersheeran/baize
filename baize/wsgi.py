@@ -648,7 +648,7 @@ class Router(BaseRouter[WSGIApp]):
     ) -> Iterable[bytes]:
         result = self.search(environ.get("PATH_INFO", ""))
         if result is None:
-            response: WSGIApp = PlainTextResponse(b"", 404)
+            response: WSGIApp = Response(404)
         else:
             route, path_params = result
             environ["PATH_PARAMS"] = path_params
@@ -677,7 +677,7 @@ class Subpaths(BaseSubpaths[WSGIApp]):
         path = environ.get("PATH_INFO", "")
         result = self.search(path)
         if result is None:
-            response: WSGIApp = PlainTextResponse(b"", 404)
+            response: WSGIApp = Response(404)
         else:
             prefix, response = result
             environ["SCRIPT_NAME"] = environ.get("SCRIPT_NAME", "") + prefix

@@ -445,6 +445,16 @@ class Sendfile(Protocol):
         pass
 
 
+async def open_for_sendfile(
+    path: Union[str, bytes, "os.PathLike[str]", "os.PathLike[bytes]"]
+) -> int:
+    if os.name == "nt":
+        open_mode = os.O_RDONLY | os.O_BINARY
+    else:
+        open_mode = os.O_RDONLY
+    return await run_in_threadpool(os.open, path, open_mode)
+
+
 class FileResponse(Response, FileResponseMixin):
     """
     File response.
@@ -552,11 +562,7 @@ class FileResponse(Response, FileResponseMixin):
             return await send_http_body(send)
 
         sendfile = self.create_send_or_zerocopy(scope, send)
-        if os.name == "nt":
-            open_mode = os.O_RDONLY | os.O_BINARY
-        else:
-            open_mode = os.O_RDONLY
-        file_descriptor = await run_in_threadpool(os.open, self.filepath, open_mode)
+        file_descriptor = await open_for_sendfile(self.filepath)
         try:
             await sendfile(file_descriptor)
         finally:
@@ -579,11 +585,7 @@ class FileResponse(Response, FileResponseMixin):
             return await send_http_body(send)
 
         sendfile = self.create_send_or_zerocopy(scope, send)
-        if os.name == "nt":
-            open_mode = os.O_RDONLY | os.O_BINARY
-        else:
-            open_mode = os.O_RDONLY
-        file_descriptor = await run_in_threadpool(os.open, self.filepath, open_mode)
+        file_descriptor = await open_for_sendfile(self.filepath)
         try:
             await sendfile(file_descriptor, start, end - start)
         finally:
@@ -607,11 +609,7 @@ class FileResponse(Response, FileResponseMixin):
         if send_header_only:
             return await send_http_body(send)
         sendfile = self.create_send_or_zerocopy(scope, send)
-        if os.name == "nt":
-            open_mode = os.O_RDONLY | os.O_BINARY
-        else:
-            open_mode = os.O_RDONLY
-        file_descriptor = await run_in_threadpool(os.open, self.filepath, open_mode)
+        file_descriptor = await open_for_sendfile(self.filepath)
         try:
             for start, end in ranges:
                 await send_http_body(send, generate_headers(start, end), more_body=True)
@@ -879,9 +877,34 @@ def request_response(view: Callable[[Request], Awaitable[Response]]) -> ASGIApp:
 
     @functools.wraps(view)
     async def asgi(scope: Scope, receive: Receive, send: Send) -> None:
-        request = Request(scope, receive, send)
-        resposne = await view(request)
-        return await resposne(scope, receive, send)
+        if scope["type"] == "websocket":
+            return await send({"type": "websocket.close", "code": 1001})
+        else:
+            request = Request(scope, receive, send)
+            resposne = await view(request)
+            return await resposne(scope, receive, send)
+
+    return asgi
+
+
+def websocket_session(view: Callable[[WebSocket], Awaitable[None]]) -> ASGIApp:
+    """
+    This can turn a callable object into a ASGI application.
+
+    ```python
+    @websocket_session
+    async def f(websocket: WebSocket) -> None:
+        ...
+    ```
+    """
+
+    @functools.wraps(view)
+    async def asgi(scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "http":
+            await Response(404)(scope, receive, send)
+        else:
+            websocket = WebSocket(scope, receive, send)
+            await view(websocket)
 
     return asgi
 
@@ -906,7 +929,7 @@ class Router(BaseRouter[ASGIApp]):
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         result = self.search(scope["path"])
         if result is None:
-            response: ASGIApp = PlainTextResponse(b"", 404)
+            response: ASGIApp = Response(404)
         else:
             route, path_params = result
             scope["path_params"] = path_params
@@ -933,7 +956,7 @@ class Subpaths(BaseSubpaths[ASGIApp]):
         path = scope["path"]
         result = self.search(path)
         if result is None:
-            response: ASGIApp = PlainTextResponse(b"", 404)
+            response: ASGIApp = Response(404)
         else:
             prefix, response = result
             scope["root_path"] = scope.get("root_path", "") + prefix
