@@ -54,11 +54,7 @@ jobs:
       - name: Tests with mypyc
         run: |
           pdm install -v -dG build --no-isolation
-          pdm run pytest tests -o log_cli=true -o log_cli_level=DEBUG
-      - name: Test without mypy-extensions
-        run: |
-          pdm run pip uninstall -y mypy-extensions
-          pdm run pytest tests -o log_cli=true -o log_cli_level=DEBUG
+          pdm run pytest tests --cov=./baize -o log_cli=true -o log_cli_level=DEBUG
 
   publish:
     needs: tests
