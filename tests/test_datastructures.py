@@ -1,4 +1,6 @@
 import io
+import os
+import tempfile
 
 import pytest
 
@@ -239,11 +241,19 @@ async def test_async_upload_file():
     await file.awrite(b"data")
     await file.aseek(0)
     assert await file.aread(4 * 128) == b"data" * 128
+
+    with tempfile.TemporaryDirectory() as directory:
+        filepath = os.path.join(directory, "filename")
+        await file.asave(filepath)
+        with open(filepath, "rb") as f:
+            assert f.read() == b"data" * 513
+
     await file.aclose()
 
 
 @pytest.mark.asyncio
 async def test_async_big_upload_file():
+    _copy_spool_max_size = UploadFile.spool_max_size
     UploadFile.spool_max_size = 1024
     try:
         big_file = UploadFile("big-file")
@@ -251,9 +261,16 @@ async def test_async_big_upload_file():
         await big_file.awrite(b"big-data")
         await big_file.aseek(0)
         assert await big_file.aread(8 * 128) == b"big-data" * 128
+
+        with tempfile.TemporaryDirectory() as directory:
+            filepath = os.path.join(directory, "filename")
+            await big_file.asave(filepath)
+            with open(filepath, "rb") as f:
+                assert f.read() == b"big-data" * 513
+
         await big_file.aclose()
     finally:
-        UploadFile.spool_max_size = 1024 * 1024
+        UploadFile.spool_max_size = _copy_spool_max_size
 
 
 def test_formdata():

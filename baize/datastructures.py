@@ -1,4 +1,5 @@
 import asyncio
+import os
 import typing
 from cgi import parse_header
 from collections import namedtuple
@@ -423,6 +424,32 @@ class UploadFile:
             self.close()
         else:
             await asyncio.get_event_loop().run_in_executor(None, self.close)
+
+    def save(self, filepath: str) -> None:
+        """
+        Save file to disk.
+        """
+        # from shutil.COPY_BUFSIZE
+        copy_bufsize = 1024 * 1024 if os.name == "nt" else 64 * 1024
+        file_position = self.file.tell()
+        self.file.seek(0, 0)
+        try:
+            with open(filepath, "wb+") as target_file:
+                source_read = self.file.read
+                target_write = target_file.write
+                while True:
+                    buf = source_read(copy_bufsize)
+                    if not buf:
+                        break
+                    target_write(buf)
+        finally:
+            self.file.seek(file_position)
+
+    async def asave(self, filepath: str) -> None:
+        """
+        Save file to disk, work in threading pool.
+        """
+        await asyncio.get_event_loop().run_in_executor(None, self.save, filepath)
 
 
 class FormData(MultiMapping[str, typing.Union[str, UploadFile]]):
