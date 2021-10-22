@@ -99,50 +99,60 @@ class URL:
         environ: Environ = None,
         **components: typing.Any,
     ) -> None:
-        if scope is not None or environ is not None:
-            assert not (url or components)
-            if scope is not None:
-                scheme = scope.get("scheme", "http")
-                server = scope.get("server", None)
-                path = scope.get("root_path", "") + scope["path"]
-                query_string = scope.get("query_string", b"")
-
-                host_header = None
-                for key, value in scope["headers"]:
-                    if key == b"host":
-                        host_header = value.decode("latin-1")
-                        break
-            elif environ is not None:
-                scheme = environ["wsgi.url_scheme"]
-                server = (environ["SERVER_NAME"], environ["SERVER_PORT"])
-                path = (
-                    (environ.get("SCRIPT_NAME", "") + environ.get("PATH_INFO", ""))
-                    .encode("latin1")
-                    .decode("utf8")
-                )
-                query_string = environ.get("QUERY_STRING", "").encode("latin-1")
-                host_header = environ.get("HTTP_HOST", None)
-
-            if host_header is not None:
-                url = f"{scheme}://{host_header}{path}"
-            elif server is None:
-                url = path
-            else:
-                host, port = server
-                default_port = {"http": 80, "https": 443, "ws": 80, "wss": 443}[scheme]
-                if port == default_port:
-                    url = f"{scheme}://{host}{path}"
-                else:
-                    url = f"{scheme}://{host}:{port}{path}"
-
-            if query_string:
-                url += "?" + query_string.decode()
-        elif components:
+        if components:
             assert not url, 'Cannot set both "url" and "**components".'
             url = URL("").replace(**components).components.geturl()
+        elif scope is not None:
+            scheme = scope.get("scheme", "http")
+            server = scope.get("server", None)
+            path = scope.get("root_path", "") + scope["path"]
+            query_string = scope.get("query_string", b"")
+
+            host_header = None
+            for key, value in scope["headers"]:
+                if key == b"host":
+                    host_header = value.decode("latin-1")
+                    break
+            url = self._build_url(scheme, path, query_string, server, host_header)
+        elif environ is not None:
+            scheme = environ["wsgi.url_scheme"]
+            server = (environ["SERVER_NAME"], int(environ["SERVER_PORT"]))
+            path = (
+                (environ.get("SCRIPT_NAME", "") + environ.get("PATH_INFO", ""))
+                .encode("latin1")
+                .decode("utf8")
+            )
+            query_string = environ.get("QUERY_STRING", "").encode("latin-1")
+            host_header = environ.get("HTTP_HOST", None)
+            url = self._build_url(scheme, path, query_string, server, host_header)
 
         self._url = url
         self._components = urlsplit(url)
+
+    def _build_url(
+        self,
+        scheme: str,
+        path: str,
+        query_string: bytes = b"",
+        server: typing.Tuple[str, int] = None,
+        host_header: str = None,
+    ) -> str:
+        if host_header is not None:
+            url = f"{scheme}://{host_header}{path}"
+        elif server is None:
+            url = path
+        else:
+            host, port = server
+            default_port = {"http": 80, "https": 443, "ws": 80, "wss": 443}[scheme]
+            if port == default_port:
+                url = f"{scheme}://{host}{path}"
+            else:
+                url = f"{scheme}://{host}:{port}{path}"
+
+        if query_string:
+            url = f"{url}?{query_string.decode()}"
+
+        return url
 
     @property
     def components(self) -> SplitResult:
@@ -253,6 +263,7 @@ class MultiMapping(typing.Generic[KT, VT], typing.Mapping[KT, VT]):
             typing.Iterable[typing.Tuple[KT, VT]],
         ] = None,
     ) -> None:
+        _items: typing.List[typing.Tuple[KT, VT]]
         if raw is None:
             _items = []
         elif isinstance(raw, MultiMapping):
@@ -274,10 +285,10 @@ class MultiMapping(typing.Generic[KT, VT], typing.Mapping[KT, VT]):
     def __len__(self) -> int:
         return len(self._dict)
 
-    def getlist(self, key: KT) -> typing.Sequence[VT]:
+    def getlist(self, key: KT) -> typing.List[VT]:
         return [item_value for item_key, item_value in self._list if item_key == key]
 
-    def multi_items(self) -> typing.Sequence[typing.Tuple[KT, VT]]:
+    def multi_items(self) -> typing.List[typing.Tuple[KT, VT]]:
         return list(self._list)
 
     def __eq__(self, other: typing.Any) -> bool:
@@ -325,7 +336,7 @@ class MutableMultiMapping(
         elif key in self:
             del self[key]
 
-    def poplist(self, key: KT) -> typing.Sequence[VT]:
+    def poplist(self, key: KT) -> typing.List[VT]:
         values = [v for k, v in self._list if k == key]
         try:
             del self[key]

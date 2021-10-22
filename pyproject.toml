@@ -38,6 +38,7 @@ exclude_lines = [
   "if typing.TYPE_CHECKING:",
   "if TYPE_CHECKING:",
   "@typing.overload",
+  "@overload",
   "pass",
 ]
 show_missing = true

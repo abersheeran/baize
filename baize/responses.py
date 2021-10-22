@@ -78,11 +78,11 @@ class BaseResponse:
 
     @overload
     def list_headers(self, *, as_bytes: Literal[True]) -> List[Tuple[bytes, bytes]]:
-        raise NotImplementedError
+        ...
 
     @overload
     def list_headers(self, *, as_bytes: Literal[False]) -> List[Tuple[str, str]]:
-        raise NotImplementedError
+        ...
 
     def list_headers(self, *, as_bytes):
         """

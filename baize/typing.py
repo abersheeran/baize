@@ -27,12 +27,12 @@ __all__ = [
     "Environ",
     "StartResponse",
     "WSGIApp",
-] + [
     # built-in types
     "TypedDict",
     "Literal",
     "Final",
     "final",
+    "Protocol",
 ]
 
 # ASGI
@@ -53,15 +53,13 @@ ExcInfo = Tuple[Type[BaseException], BaseException, Optional[TracebackType]]
 
 
 class StartResponse(Protocol):
-    __slots__ = ()
-
     def __call__(
         self,
         status: str,
         response_headers: List[Tuple[str, str]],
         exc_info: ExcInfo = None,
     ) -> None:
-        raise NotImplementedError
+        ...  # pragma: no cover
 
 
 WSGIApp = Callable[[Environ, StartResponse], Iterable[bytes]]

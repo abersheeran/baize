@@ -123,8 +123,8 @@ def test_url_from_environ():
             "QUERY_STRING": "abc=123",
         }
     )
-    assert u == "http://127.0.0.1:80/path/to/somewhere?abc=123"
-    assert repr(u) == "URL('http://127.0.0.1:80/path/to/somewhere?abc=123')"
+    assert u == "http://127.0.0.1/path/to/somewhere?abc=123"
+    assert repr(u) == "URL('http://127.0.0.1/path/to/somewhere?abc=123')"
 
 
 def test_content_type():
