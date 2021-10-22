@@ -19,10 +19,12 @@ __all__ = [
 
 
 class Event:
-    pass
+    __slots__ = ()
 
 
 class Preamble(Event):
+    __slots__ = ("data",)
+
     def __init__(self, data: bytes) -> None:
         self.data = data
 
@@ -31,6 +33,8 @@ class Preamble(Event):
 
 
 class Field(Event):
+    __slots__ = ("name", "headers")
+
     def __init__(self, name: str, headers: Headers) -> None:
         self.name = name
         self.headers = headers
@@ -44,6 +48,8 @@ class Field(Event):
 
 
 class File(Event):
+    __slots__ = ("name", "filename", "headers")
+
     def __init__(self, name: str, filename: str, headers: Headers) -> None:
         self.name = name
         self.filename = filename
@@ -59,6 +65,8 @@ class File(Event):
 
 
 class Data(Event):
+    __slots__ = ("data", "more_data")
+
     def __init__(self, data: bytes, more_data: bool) -> None:
         self.data = data
         self.more_data = more_data
@@ -72,6 +80,8 @@ class Data(Event):
 
 
 class Epilogue(Event):
+    __slots__ = ("data",)
+
     def __init__(self, data: bytes) -> None:
         self.data = data
 
@@ -80,7 +90,7 @@ class Epilogue(Event):
 
 
 class NeedData(Event):
-    pass
+    __slots__ = ()
 
 
 NEED_DATA = NeedData()
