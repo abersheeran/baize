@@ -134,7 +134,7 @@ class URL:
         scheme: str,
         path: str,
         query_string: bytes = b"",
-        server: typing.Tuple[str, int] = None,
+        server: typing.Tuple[str, typing.Optional[int]] = None,
         host_header: str = None,
     ) -> str:
         if host_header is not None:
@@ -144,7 +144,7 @@ class URL:
         else:
             host, port = server
             default_port = {"http": 80, "https": 443, "ws": 80, "wss": 443}[scheme]
-            if port == default_port:
+            if port == default_port or port is None:
                 url = f"{scheme}://{host}{path}"
             else:
                 url = f"{scheme}://{host}:{port}{path}"
