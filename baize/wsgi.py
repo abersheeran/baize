@@ -44,7 +44,6 @@ from .requests import MoreInfoFromHeaderMixin
 from .responses import BaseResponse, FileResponseMixin, build_bytes_from_sse
 from .routing import BaseHosts, BaseRouter, BaseSubpaths
 from .typing import Environ, Final, ServerSentEvent, StartResponse, WSGIApp
-from .utils import cached_property
 
 StatusStringMapping: Final[defaultdict] = defaultdict(
     lambda status: f"{status} Unknown Status Code",
@@ -78,7 +77,7 @@ class HTTPConnection(Mapping[str, Any], MoreInfoFromHeaderMixin):
             return NotImplemented
         return self._environ == other._environ
 
-    @cached_property
+    @property
     def client(self) -> Address:
         """
         Client's IP and Port.
@@ -86,57 +85,66 @@ class HTTPConnection(Mapping[str, Any], MoreInfoFromHeaderMixin):
         Note that this depends on the `REMOTE_ADDR` and `REMOTE_PORT` values
         given by the WSGI Server, and is not necessarily accurate.
         """
-        if self.get("REMOTE_ADDR") and self.get("REMOTE_PORT"):
-            return Address(self["REMOTE_ADDR"], int(self["REMOTE_PORT"]))
-        return Address(host=None, port=None)
+        if not hasattr(self, "_client"):
+            if self.get("REMOTE_ADDR") and self.get("REMOTE_PORT"):
+                self._client = Address(self["REMOTE_ADDR"], int(self["REMOTE_PORT"]))
+            else:
+                self._client = Address(host=None, port=None)
+        return self._client
 
-    @cached_property
+    @property
     def url(self) -> URL:
         """
         The full URL of this request.
         """
-        return URL(environ=self._environ)
+        if not hasattr(self, "_url"):
+            self._url = URL(environ=self._environ)
+        return self._url
 
-    @cached_property
+    @property
     def path_params(self) -> Dict[str, Any]:
         """
         The path parameters parsed by the framework.
         """
         return self.get("PATH_PARAMS", {})
 
-    @cached_property
+    @property
     def query_params(self) -> QueryParams:
         """
         Query parameter. It is a multi-value mapping.
         """
-        return QueryParams(self["QUERY_STRING"])
+        if not hasattr(self, "_query_params"):
+            self._query_params = QueryParams(self["QUERY_STRING"])
+        return self._query_params
 
-    @cached_property
+    @property
     def headers(self) -> Headers:
         """
         A read-only case-independent mapping.
 
         Note that in its internal storage, all keys are in lower case.
         """
-        return Headers(
-            (key.lower().replace("_", "-"), value)
-            for key, value in chain(
-                (
-                    (key[5:], value)
-                    for key, value in self._environ.items()
-                    if key.startswith("HTTP_")
-                ),
-                (
-                    (key, value)
-                    for key, value in self._environ.items()
-                    if key in ("CONTENT_TYPE", "CONTENT_LENGTH")
-                ),
+        if not hasattr(self, "_headers"):
+            self._headers = Headers(
+                (key.lower().replace("_", "-"), value)
+                for key, value in chain(
+                    (
+                        (key[5:], value)
+                        for key, value in self._environ.items()
+                        if key.startswith("HTTP_")
+                    ),
+                    (
+                        (key, value)
+                        for key, value in self._environ.items()
+                        if key in ("CONTENT_TYPE", "CONTENT_LENGTH")
+                    ),
+                )
             )
-        )
+        return self._headers
 
 
 class Request(HTTPConnection):
-    @cached_property
+    @property
     def method(self) -> str:
         """
         HTTP method. Uppercase string.
@@ -151,7 +159,7 @@ class Request(HTTPConnection):
         without storing the entire body to memory. Any subsequent
         calls to `.body`, `.form`, or `.json` will raise an error.
         """
-        if "body" in self.__dict__:
+        if hasattr(self, "_body"):
             yield self.body
             return
 
@@ -166,14 +174,16 @@ class Request(HTTPConnection):
                 return
             yield chunk
 
-    @cached_property
+    @property
     def body(self) -> bytes:
         """
         Read all the contents of the request body into the memory and return it.
         """
-        return b"".join([chunk for chunk in self.stream()])
+        if not hasattr(self, "_body"):
+            self._body = b"".join(chunk for chunk in self.stream())
+        return self._body
 
-    @cached_property
+    @property
     def json(self) -> Any:
         """
         Call `self.body` and use `json.loads` parse it.
@@ -182,13 +192,15 @@ class Request(HTTPConnection):
         an HTTPExcption exception will be thrown.
         """
         if self.content_type == "application/json":
-            return json.loads(
-                self.body.decode(self.content_type.options.get("charset", "utf8"))
-            )
+            if not hasattr(self, "_json"):
+                self._json = json.loads(
+                    self.body.decode(self.content_type.options.get("charset", "utf8"))
+                )
+            return self._json
 
         raise HTTPException(415, {"Accpet": "application/json"})
 
-    @cached_property
+    @property
     def form(self) -> FormData:
         """
         Parse the data in the form format and return it as a multi-value mapping.
@@ -201,52 +213,60 @@ class Request(HTTPConnection):
         `application/x-www-form-urlencoded`, an HTTPExcption exception will be thrown.
         """
         if self.content_type == "multipart/form-data":
-            charset = self.content_type.options.get("charset", "utf8")
-            parser = multipart.MultipartDecoder(
-                self.content_type.options["boundary"].encode("latin-1"), charset
-            )
-            field_name = ""
-            data = bytearray()
-            file: Optional[UploadFile] = None
+            if not hasattr(self, "_form"):
+                charset = self.content_type.options.get("charset", "utf8")
+                parser = multipart.MultipartDecoder(
+                    self.content_type.options["boundary"].encode("latin-1"), charset
+                )
+                field_name = ""
+                data = bytearray()
+                file: Optional[UploadFile] = None
 
-            items: List[Tuple[str, Union[str, UploadFile]]] = []
+                items: List[Tuple[str, Union[str, UploadFile]]] = []
 
-            for chunk in self.stream():
-                parser.receive_data(chunk)
-                while True:
-                    event = parser.next_event()
-                    if isinstance(event, (multipart.Epilogue, multipart.NeedData)):
-                        break
-                    elif isinstance(event, multipart.Field):
-                        field_name = event.name
-                    elif isinstance(event, multipart.File):
-                        field_name = event.name
-                        file = UploadFile(
-                            event.filename, event.headers.get("content-type", "")
-                        )
-                    elif isinstance(event, multipart.Data):
-                        if file is None:
-                            data.extend(event.data)
-                        else:
-                            file.write(event.data)
-
-                        if not event.more_data:
+                for chunk in self.stream():
+                    parser.receive_data(chunk)
+                    while True:
+                        event = parser.next_event()
+                        if isinstance(event, (multipart.Epilogue, multipart.NeedData)):
+                            break
+                        elif isinstance(event, multipart.Field):
+                            field_name = event.name
+                        elif isinstance(event, multipart.File):
+                            field_name = event.name
+                            file = UploadFile(
+                                event.filename, event.headers.get("content-type", "")
+                            )
+                        elif isinstance(event, multipart.Data):
                             if file is None:
-                                items.append(
-                                    (field_name, multipart.safe_decode(data, charset))
-                                )
-                                data.clear()
+                                data.extend(event.data)
                             else:
-                                file.seek(0)
-                                items.append((field_name, file))
-                                file = None
+                                file.write(event.data)
 
-            return FormData(items)
+                            if not event.more_data:
+                                if file is None:
+                                    items.append(
+                                        (
+                                            field_name,
+                                            multipart.safe_decode(data, charset),
+                                        )
+                                    )
+                                    data.clear()
+                                else:
+                                    file.seek(0)
+                                    items.append((field_name, file))
+                                    file = None
+
+                self._form = FormData(items)
+            return self._form
+
         if self.content_type == "application/x-www-form-urlencoded":
-            body = self.body.decode(
-                encoding=self.content_type.options.get("charset", "latin-1")
-            )
-            return FormData(parse_qsl(body, keep_blank_values=True))
+            if not hasattr(self, "_form"):
+                body = self.body.decode(
+                    encoding=self.content_type.options.get("charset", "latin-1")
+                )
+                self._form = FormData(parse_qsl(body, keep_blank_values=True))
+            return self._form
 
         raise HTTPException(
             415, {"Accpet": "multipart/form-data, application/x-www-form-urlencoded"}
@@ -258,7 +278,7 @@ class Request(HTTPConnection):
 
         This can always be called, regardless of whether you use form or not.
         """
-        if "form" in self.__dict__:
+        if hasattr(self, "_form"):
             self.form.close()
 
 

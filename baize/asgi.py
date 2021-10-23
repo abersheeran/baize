@@ -142,17 +142,19 @@ class HTTPConnection(Mapping[str, Any], MoreInfoFromHeaderMixin):
         """
         return QueryParams(self["query_string"])
 
-    @cached_property
+    @property
     def headers(self) -> Headers:
         """
         A read-only case-independent mapping.
 
         Note that in its internal storage, all keys are in lower case.
         """
-        return Headers(
-            (key.decode("latin-1"), value.decode("latin-1"))
-            for key, value in self._scope["headers"]
-        )
+        if not hasattr(self, "_headers"):
+            self._headers = Headers(
+                (key.decode("latin-1"), value.decode("latin-1"))
+                for key, value in self._scope["headers"]
+            )
+        return self._headers
 
 
 class Request(HTTPConnection):
