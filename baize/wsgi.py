@@ -45,18 +45,18 @@ from .responses import BaseResponse, FileResponseMixin, build_bytes_from_sse
 from .routing import BaseHosts, BaseRouter, BaseSubpaths
 from .typing import Environ, Final, ServerSentEvent, StartResponse, WSGIApp
 
-StatusStringMapping: Final[defaultdict] = defaultdict(
-    lambda status: f"{status} Unknown Status Code",
-    {int(status): f"{status} {status.phrase}" for status in HTTPStatus},
-)
-
-
 try:
     from mypy_extensions import mypyc_attr
 except ImportError:  # pragma: no cover
 
     def mypyc_attr(*attrs, **kwattrs):  # type: ignore
         return lambda x: x
+
+
+StatusStringMapping: Final[defaultdict] = defaultdict(
+    lambda status: f"{status} Unknown Status Code",
+    {int(status): f"{status} {status.phrase}" for status in HTTPStatus},
+)
 
 
 @mypyc_attr(allow_interpreted_subclasses=True)
