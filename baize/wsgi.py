@@ -64,6 +64,8 @@ class HTTPConnection(Mapping[str, Any], MoreInfoFromHeaderMixin):
         self._environ = environ
         self._stream_consumed = False
 
+        self.__dict__: Dict[str, Any]
+
     def __getitem__(self, key: str) -> Any:
         return self._environ[key]
 
