@@ -31,8 +31,6 @@ class MoreInfoFromHeaderMixin:
     def headers(self) -> Headers:
         raise NotImplementedError
 
-    _accepted_types: List[MediaType]
-
     @property
     def accepted_types(self) -> List[MediaType]:
         """
@@ -54,8 +52,6 @@ class MoreInfoFromHeaderMixin:
             accepted_type.match(media_type) for accepted_type in self.accepted_types
         )
 
-    _content_type: ContentType
-
     @property
     def content_type(self) -> ContentType:
         """
@@ -64,8 +60,6 @@ class MoreInfoFromHeaderMixin:
         if not hasattr(self, "_content_type"):
             self._content_type = ContentType(self.headers.get("content-type", ""))
         return self._content_type
-
-    _content_length: Optional[int]
 
     @property
     def content_length(self) -> Optional[int]:
@@ -85,8 +79,6 @@ class MoreInfoFromHeaderMixin:
                     except (ValueError, TypeError):
                         self._content_length = None
         return self._content_length
-
-    _cookies: Dict[str, str]
 
     @property
     def cookies(self) -> Dict[str, str]:
@@ -118,8 +110,6 @@ class MoreInfoFromHeaderMixin:
             self._cookies = cookies
         return self._cookies
 
-    _date: Optional[datetime]
-
     @property
     def date(self) -> Optional[datetime]:
         """
@@ -142,8 +132,6 @@ class MoreInfoFromHeaderMixin:
                     else:
                         self._date = date
         return self._date
-
-    _referrer: Optional[URL]
 
     @property
     def referrer(self) -> Optional[URL]:
