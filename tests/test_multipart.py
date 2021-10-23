@@ -93,11 +93,7 @@ FORCE_MULTIPART = ForceMultipartDict()
 
 
 def app(environ, start_response):
-    class NewRequest(Request):
-        def stream(self, chunk_size: int = 1) -> Iterator[bytes]:
-            return super().stream(chunk_size=chunk_size)
-
-    request = NewRequest(environ)
+    request = Request(environ)
     data = request.form
     output = {}
     for key, value in data.items():

@@ -173,7 +173,7 @@ class Request(HTTPConnection):
         """
         return self["REQUEST_METHOD"]
 
-    def stream(self, chunk_size: int = 4096) -> Iterator[bytes]:
+    def stream(self) -> Iterator[bytes]:
         """
         Streaming read request body. e.g. `for chunk in request.stream(): ...`
 
@@ -191,7 +191,7 @@ class Request(HTTPConnection):
         self._stream_consumed = True
         body = self._environ["wsgi.input"]
         while True:
-            chunk = body.read(chunk_size)
+            chunk = body.read(4096)
             if not chunk:
                 return
             yield chunk
