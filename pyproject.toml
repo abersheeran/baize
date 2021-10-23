@@ -50,7 +50,7 @@ includes = ["baize"]
 
 [tool.pdm.dev-dependencies]
 build = [
-  "mypy<1.0,>=0.910",
+  "git+https://github.com/python/mypy",
   "mypy-extensions<1.0.0,>=0.4.3",
 ]
 dev = [
