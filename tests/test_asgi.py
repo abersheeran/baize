@@ -31,6 +31,7 @@ from baize.asgi import (
 )
 from baize.datastructures import UploadFile
 from baize.exceptions import HTTPException
+from baize.typing import Message, ServerSentEvent
 
 starlette.testclient.WebSocketDisconnect = WebSocketDisconnect  # type: ignore
 
@@ -49,8 +50,12 @@ def test_request_scope_interface():
     assert request != Request(
         {"type": "http", "method": "GET", "path": "/abc/", "query_params": {}}
     )
+
+    async def mock_receive() -> Message:
+        ...  # pragma: no cover
+
     assert request != Request(
-        {"type": "http", "method": "GET", "path": "/abc/"}, test_request_url
+        {"type": "http", "method": "GET", "path": "/abc/"}, mock_receive
     )
     assert request != dict({"type": "http", "method": "GET", "path": "/abc/"})
 
@@ -186,9 +191,10 @@ async def test_request_multipart_form():
     async def app(scope, receive, send):
         request = Request(scope, receive)
         form = await request.form
-        assert isinstance(form["file-key"], UploadFile)
-        assert await form["file-key"].aread() == b"temporary file"
-        response = JSONResponse({"file": form["file-key"].filename})
+        file = form["file-key"]
+        assert isinstance(file, UploadFile)
+        assert await file.aread() == b"temporary file"
+        response = JSONResponse({"file": file.filename})
         await response(scope, receive, send)
         await request.close()
 
@@ -644,11 +650,11 @@ async def test_file_response_with_download_name(tmp_path: Path):
 
 @pytest.mark.asyncio
 async def test_send_event_response():
-    async def send_events():
-        yield {"data": "hello\nworld"}
+    async def send_events() -> AsyncGenerator[ServerSentEvent, None]:
+        yield ServerSentEvent(data="hello\nworld")
         await asyncio.sleep(0.2)
-        yield {"data": "nothing", "event": "nothing"}
-        yield {"event": "only-event"}
+        yield ServerSentEvent(data="nothing", event="nothing")
+        yield ServerSentEvent(event="only-event")
 
     expected_events = (
         cleandoc(
@@ -819,25 +825,25 @@ def test_client_close():
 
 
 def test_application_close():
-    async def app(scope, receive, send):
+    async def app_close(scope, receive, send):
         websocket = WebSocket(scope, receive=receive, send=send)
         await websocket.accept()
         await websocket.close(1001)
 
-    client = TestClient(app)
+    client = TestClient(app_close)
     with client.websocket_connect("/") as websocket:
         with pytest.raises(WebSocketDisconnect) as exc:
             websocket.receive_text()
         assert exc.value.code == 1001
 
-    async def app(scope, receive, send):
+    async def app_after_close(scope, receive, send):
         websocket = WebSocket(scope, receive=receive, send=send)
         await websocket.accept()
         await websocket.close()
         with pytest.raises(RuntimeError):
             await websocket.send_text("after close")
 
-    client = TestClient(app)
+    client = TestClient(app_after_close)
     with client.websocket_connect("/") as websocket:
         with pytest.raises(WebSocketDisconnect) as exc:
             websocket.receive_text()
@@ -887,11 +893,11 @@ def test_websocket_scope_interface():
     interface.
     """
 
-    async def mock_receive():
-        pass  # pragma: no cover
+    async def mock_receive() -> Message:
+        ...  # pragma: no cover
 
-    async def mock_send(message):
-        pass  # pragma: no cover
+    async def mock_send(message: Message) -> None:
+        ...  # pragma: no cover
 
     websocket = WebSocket(
         {"type": "websocket", "path": "/abc/", "headers": []},

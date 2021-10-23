@@ -576,7 +576,7 @@ class SendEventResponse(Response):
         status_code: int = 200,
         headers: Mapping[str, str] = None,
         *,
-        ping_interval: int = 3,
+        ping_interval: float = 3,
         charset: str = "utf-8",
     ) -> None:
         if headers:
