@@ -20,6 +20,10 @@ if os.environ.get("WITHOUT_MYPYC", "False") == "False":
                     not in (
                         "baize/asgi.py",
                         "baize/wsgi.py" if os.name == "nt" else "",
+                        # Build with mypyc would fail on these files
+                        # ------------------------------------------
+                        # Fatal Python error: Segmentation fault
+                        "baize/requests.py",
                         # because compile delete_cookies is not supported in python 3.6-3.8
                         # and I don't know how to fix it
                         "baize/responses.py" if sys.version_info[:2] < (3, 9) else "",
