@@ -62,6 +62,11 @@ class HTTPConnection(Mapping[str, Any], MoreInfoFromHeaderMixin):
     def __init__(self, environ: Environ) -> None:
         self._environ = environ
         self._stream_consumed = False
+        # Type hint for MyPyC
+        self._client: Address
+        self._url: URL
+        self._query_params: QueryParams
+        self._headers: Headers
 
     def __getitem__(self, key: str) -> Any:
         return self._environ[key]
@@ -144,6 +149,13 @@ class HTTPConnection(Mapping[str, Any], MoreInfoFromHeaderMixin):
 
 
 class Request(HTTPConnection):
+    def __init__(self, environ: Environ) -> None:
+        super().__init__(environ)
+        # Type hint for MyPyC
+        self._body: bytes
+        self._form: FormData
+        self._json: Any
+
     @property
     def method(self) -> str:
         """
