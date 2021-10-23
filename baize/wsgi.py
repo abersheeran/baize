@@ -202,7 +202,7 @@ class Request(HTTPConnection):
         Read all the contents of the request body into the memory and return it.
         """
         if not hasattr(self, "_body"):
-            self._body = b"".join(chunk for chunk in self.stream())
+            self._body = b"".join([chunk for chunk in self.stream()])
         return self._body
 
     @property
