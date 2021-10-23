@@ -106,6 +106,7 @@ class BaseResponse:
             ]
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 @trait
 class FileResponseMixin:
     def generate_common_headers(

@@ -569,7 +569,7 @@ class FileResponse(Response, FileResponseMixin):
         except HTTPException as exception:
             start_response(
                 StatusStringMapping[exception.status_code],
-                [*(exception.headers or {}).items()],
+                [(k, v) for k, v in (exception.headers or {}).items()],
             )
             yield b""
             return
