@@ -525,7 +525,7 @@ async def test_redirect_response():
         await response(scope, receive, send)
 
     async with httpx.AsyncClient(app=app, base_url="http://testServer/") as client:
-        response = await client.get("/redirect")
+        response = await client.get("/redirect", follow_redirects=True)
         assert response.text == "hello, world"
         assert response.url == "http://testserver/"
 
@@ -961,9 +961,7 @@ async def test_router():
         assert (await client.get("/")).text == "homepage"
         assert (await client.get("/baize")).json() == {"path": "baize"}
         assert (await client.get("/baize/")).status_code == 404
-        assert (await (client.get("/redirect", allow_redirects=False))).headers[
-            "location"
-        ] == "/cat"
+        assert (await (client.get("/redirect"))).headers["location"] == "/cat"
 
 
 @pytest.mark.asyncio

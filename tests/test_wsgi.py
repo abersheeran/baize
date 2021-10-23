@@ -269,7 +269,7 @@ def test_redirect_response():
         return response(environ, start_response)
 
     with httpx.Client(app=app, base_url="http://testServer/") as client:
-        response = client.get("/redirect")
+        response = client.get("/redirect", follow_redirects=True)
         assert response.text == "hello, world"
         assert response.url == "http://testserver/"
 
@@ -474,9 +474,7 @@ def test_router():
         assert client.get("/").text == "homepage"
         assert client.get("/baize").json() == {"path": "baize"}
         assert client.get("/baize/").status_code == 404
-        assert (
-            client.get("/redirect", allow_redirects=False).headers["location"] == "/cat"
-        )
+        assert client.get("/redirect").headers["location"] == "/cat"
 
 
 def test_subpaths():
