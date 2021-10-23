@@ -51,6 +51,15 @@ StatusStringMapping: Final[defaultdict] = defaultdict(
 )
 
 
+try:
+    from mypy_extensions import mypyc_attr
+except ImportError:  # pragma: no cover
+
+    def mypyc_attr(*attrs, **kwattrs):  # type: ignore
+        return lambda x: x
+
+
+@mypyc_attr(allow_interpreted_subclasses=True)
 class HTTPConnection(Mapping[str, Any], MoreInfoFromHeaderMixin):
     """
     A base class for incoming HTTP connections.
@@ -148,6 +157,7 @@ class HTTPConnection(Mapping[str, Any], MoreInfoFromHeaderMixin):
         return self._headers
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class Request(HTTPConnection):
     def __init__(self, environ: Environ) -> None:
         super().__init__(environ)
@@ -294,6 +304,7 @@ class Request(HTTPConnection):
             self.form.close()
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class Response(BaseResponse):
     """
     The parent class of all responses, whose objects can be used directly as WSGI
@@ -313,6 +324,7 @@ class Response(BaseResponse):
 _ContentType = TypeVar("_ContentType")
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class SmallResponse(Response, abc.ABC, Generic[_ContentType]):
     """
     Abstract base class for small response objects.
@@ -356,6 +368,7 @@ class SmallResponse(Response, abc.ABC, Generic[_ContentType]):
         yield body
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class PlainTextResponse(SmallResponse[Union[bytes, str]]):
     media_type = "text/plain"
 
@@ -363,10 +376,12 @@ class PlainTextResponse(SmallResponse[Union[bytes, str]]):
         return content if isinstance(content, bytes) else content.encode(self.charset)
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class HTMLResponse(PlainTextResponse):
     media_type = "text/html"
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class JSONResponse(SmallResponse[Any]):
     """
     `**kwargs` is used to accept all the parameters that `json.loads` can accept.
@@ -395,6 +410,7 @@ class JSONResponse(SmallResponse[Any]):
         return json.dumps(content, **self.json_kwargs).encode(self.charset)
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class RedirectResponse(Response):
     def __init__(
         self,
@@ -406,6 +422,7 @@ class RedirectResponse(Response):
         self.headers["location"] = quote(str(url), safe="/#%[]=:;$&()+,!?*@'~")
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class StreamResponse(Response):
     def __init__(
         self,
@@ -429,6 +446,7 @@ class StreamResponse(Response):
             yield chunk
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class FileResponse(Response, FileResponseMixin):
     """
     File response.
@@ -567,6 +585,7 @@ class FileResponse(Response, FileResponseMixin):
             )
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class SendEventResponse(Response):
     """
     Server-sent events response.
@@ -657,6 +676,7 @@ def request_response(view: Callable[[Request], Response]) -> WSGIApp:
     return wsgi
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class Router(BaseRouter[WSGIApp]):
     """
     A router to assign different paths to different WSGI applications.
@@ -688,6 +708,7 @@ class Router(BaseRouter[WSGIApp]):
         return response(environ, start_response)
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class Subpaths(BaseSubpaths[WSGIApp]):
     """
     A router allocates different prefix requests to different WSGI applications.
@@ -717,6 +738,7 @@ class Subpaths(BaseSubpaths[WSGIApp]):
         return response(environ, start_response)
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class Hosts(BaseHosts[WSGIApp]):
     r"""
     A router that distributes requests to different WSGI applications based on Host.

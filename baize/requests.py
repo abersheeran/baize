@@ -4,14 +4,11 @@ from http import cookies as http_cookies
 from typing import Dict, List, Optional
 
 try:
-    from mypy_extensions import mypyc_attr, trait
+    from mypy_extensions import trait
 except ImportError:  # pragma: no cover
 
     def trait(cls):  # type: ignore
         return cls
-
-    def mypyc_attr(*attrs, **kwattrs):  # type: ignore
-        return lambda x: x
 
 
 from .datastructures import URL, ContentType, Headers, MediaType
@@ -20,7 +17,7 @@ from .datastructures import URL, ContentType, Headers, MediaType
 http_cookies.Morsel._reserved["samesite"] = "SameSite"  # type: ignore
 
 
-@mypyc_attr(allow_interpreted_subclasses=True)
+@trait
 class MoreInfoFromHeaderMixin:
     """
     Parse more information from the header for quick use
