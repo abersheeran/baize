@@ -99,11 +99,11 @@ NEED_DATA = NeedData()
 
 @final
 class State:
-    PREAMBLE: Final = object()
-    PART: Final = object()
-    DATA: Final = object()
-    EPILOGUE: Final = object()
-    COMPLETE: Final = object()
+    PREAMBLE = object()
+    PART = object()
+    DATA = object()
+    EPILOGUE = object()
+    COMPLETE = object()
 
 
 # Multipart line breaks MUST be CRLF (\r\n) by RFC-7578, except that
