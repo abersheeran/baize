@@ -1,5 +1,4 @@
 import os
-from typing import Iterator
 
 import httpx
 
@@ -75,7 +74,10 @@ def test_chunked_boundaries() -> None:
     decoder.receive_data(b"also longer, but includes a linebreak\r\n--")
     assert isinstance(decoder.next_event(), Data)
     assert isinstance(decoder.next_event(), NeedData)
-    decoder.receive_data(b"boundary--\r\n")
+    decoder.receive_data(b"boundary-")
+    event = decoder.next_event()
+    assert isinstance(event, NeedData)
+    decoder.receive_data(b"-\r\n")
     event = decoder.next_event()
     assert isinstance(event, Data)
     assert not event.more_data
@@ -93,11 +95,7 @@ FORCE_MULTIPART = ForceMultipartDict()
 
 
 def app(environ, start_response):
-    class NewRequest(Request):
-        def stream(self, chunk_size: int = 1) -> Iterator[bytes]:
-            return super().stream(chunk_size=chunk_size)
-
-    request = NewRequest(environ)
+    request = Request(environ)
     data = request.form
     output = {}
     for key, value in data.items():

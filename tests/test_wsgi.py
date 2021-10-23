@@ -9,6 +9,7 @@ import pytest
 
 from baize.datastructures import Address, UploadFile
 from baize.exceptions import HTTPException
+from baize.typing import ServerSentEvent
 from baize.wsgi import (
     FileResponse,
     Hosts,
@@ -165,9 +166,10 @@ def test_request_multipart_form():
     def app(environ, start_response):
         request = Request(environ)
         form = request.form
-        assert isinstance(form["file-key"], UploadFile)
-        assert form["file-key"].read() == b"temporary file"
-        response = JSONResponse({"file": form["file-key"].filename})
+        file = form["file-key"]
+        assert isinstance(file, UploadFile)
+        assert file.read() == b"temporary file"
+        response = JSONResponse({"file": file.filename})
         request.close()
         return response(environ, start_response)
 
@@ -267,7 +269,7 @@ def test_redirect_response():
         return response(environ, start_response)
 
     with httpx.Client(app=app, base_url="http://testServer/") as client:
-        response = client.get("/redirect")
+        response = client.get("/redirect", follow_redirects=True)
         assert response.text == "hello, world"
         assert response.url == "http://testserver/"
 
@@ -374,11 +376,11 @@ def test_file_response_with_download_name(tmp_path: Path):
 
 
 def test_send_event_response():
-    def send_events():
-        yield {"data": "hello\nworld"}
+    def send_events() -> Generator[ServerSentEvent, None, None]:
+        yield ServerSentEvent(data="hello\nworld")
         time.sleep(0.2)
-        yield {"data": "nothing", "event": "nothing"}
-        yield {"event": "only-event"}
+        yield ServerSentEvent(data="nothing", event="nothing")
+        yield ServerSentEvent(event="only-event")
 
     expected_events = (
         cleandoc(
@@ -472,9 +474,7 @@ def test_router():
         assert client.get("/").text == "homepage"
         assert client.get("/baize").json() == {"path": "baize"}
         assert client.get("/baize/").status_code == 404
-        assert (
-            client.get("/redirect", allow_redirects=False).headers["location"] == "/cat"
-        )
+        assert client.get("/redirect").headers["location"] == "/cat"
 
 
 def test_subpaths():
