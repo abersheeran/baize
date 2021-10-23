@@ -74,7 +74,10 @@ def test_chunked_boundaries() -> None:
     decoder.receive_data(b"also longer, but includes a linebreak\r\n--")
     assert isinstance(decoder.next_event(), Data)
     assert isinstance(decoder.next_event(), NeedData)
-    decoder.receive_data(b"boundary--\r\n")
+    decoder.receive_data(b"boundary-")
+    event = decoder.next_event()
+    assert isinstance(event, NeedData)
+    decoder.receive_data(b"-\r\n")
     event = decoder.next_event()
     assert isinstance(event, Data)
     assert not event.more_data

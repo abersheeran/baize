@@ -3,7 +3,7 @@ from cgi import parse_header
 from typing import List, Optional, Tuple, Union, cast
 
 from .datastructures import Headers
-from .typing import Final
+from .typing import Final, final
 
 __all__ = [
     "Event",
@@ -97,12 +97,13 @@ class NeedData(Event):
 NEED_DATA = NeedData()
 
 
+@final
 class State:
-    PREAMBLE: Final = 0
-    PART: Final = 1
-    DATA: Final = 2
-    EPILOGUE: Final = 3
-    COMPLETE: Final = 4
+    PREAMBLE: Final = object()
+    PART: Final = object()
+    DATA: Final = object()
+    EPILOGUE: Final = object()
+    COMPLETE: Final = object()
 
 
 # Multipart line breaks MUST be CRLF (\r\n) by RFC-7578, except that
@@ -124,7 +125,7 @@ class MultipartDecoder:
     def __init__(self, boundary: bytes, charset: str) -> None:
         self.buffer = bytearray()
         self.complete: bool = False
-        self.state: int = State.PREAMBLE
+        self.state = State.PREAMBLE
         self.boundary = boundary
         self.charset = charset
 
