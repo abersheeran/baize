@@ -3,6 +3,7 @@ from cgi import parse_header
 from typing import List, Optional, Tuple, Union, cast
 
 from .datastructures import Headers
+from .typing import Final
 
 __all__ = [
     "Event",
@@ -97,11 +98,11 @@ NEED_DATA = NeedData()
 
 
 class State:
-    PREAMBLE = 0
-    PART = 1
-    DATA = 2
-    EPILOGUE = 3
-    COMPLETE = 4
+    PREAMBLE: Final = 0
+    PART: Final = 1
+    DATA: Final = 2
+    EPILOGUE: Final = 3
+    COMPLETE: Final = 4
 
 
 # Multipart line breaks MUST be CRLF (\r\n) by RFC-7578, except that
