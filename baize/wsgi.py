@@ -27,7 +27,7 @@ from typing import (
     TypeVar,
     Union,
 )
-from urllib.parse import parse_qsl, quote
+from urllib.parse import parse_qsl
 
 from . import multipart
 from .datastructures import (
@@ -41,7 +41,7 @@ from .datastructures import (
 )
 from .exceptions import HTTPException
 from .requests import MoreInfoFromHeaderMixin
-from .responses import BaseResponse, FileResponseMixin, build_bytes_from_sse
+from .responses import BaseResponse, FileResponseMixin, build_bytes_from_sse, iri_to_uri
 from .routing import BaseHosts, BaseRouter, BaseSubpaths
 from .typing import Environ, Final, ServerSentEvent, StartResponse, WSGIApp
 from .utils import cached_property
@@ -371,7 +371,7 @@ class RedirectResponse(Response):
         headers: Mapping[str, str] = None,
     ) -> None:
         super().__init__(status_code=status_code, headers=headers)
-        self.headers["location"] = quote(str(url), safe="/#%[]=:;$&()+,!?*@'~")
+        self.headers["location"] = iri_to_uri(str(url))
 
 
 class StreamResponse(Response):

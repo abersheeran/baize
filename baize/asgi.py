@@ -25,14 +25,14 @@ from typing import (
     TypeVar,
     Union,
 )
-from urllib.parse import parse_qsl, quote
+from urllib.parse import parse_qsl
 
 from . import multipart
 from .concurrency import run_in_threadpool
 from .datastructures import URL, Address, FormData, Headers, QueryParams, UploadFile
 from .exceptions import HTTPException
 from .requests import MoreInfoFromHeaderMixin
-from .responses import BaseResponse, FileResponseMixin, build_bytes_from_sse
+from .responses import BaseResponse, FileResponseMixin, build_bytes_from_sse, iri_to_uri
 from .routing import BaseHosts, BaseRouter, BaseSubpaths
 from .typing import ASGIApp, Message, Protocol, Receive, Scope, Send, ServerSentEvent
 from .utils import cached_property
@@ -411,7 +411,7 @@ class RedirectResponse(Response):
         headers: Mapping[str, str] = None,
     ) -> None:
         super().__init__(status_code=status_code, headers=headers)
-        self.headers["location"] = quote(str(url), safe="/#%[]=:;$&()+,!?*@'~")
+        self.headers["location"] = iri_to_uri(str(url))
 
 
 class StreamResponse(Response):
@@ -516,9 +516,10 @@ class FileResponse(Response, FileResponseMixin):
                     message["count"] = count
                 await send(message)
 
+            return sendfile
         else:
 
-            async def sendfile(
+            async def fake_sendfile(
                 file_descriptor: int,
                 offset: int = None,
                 count: int = None,
@@ -550,7 +551,7 @@ class FileResponse(Response, FileResponseMixin):
                             send, data, more_body=more_body if should_stop else True
                         )
 
-        return sendfile
+            return fake_sendfile
 
     async def handle_all(
         self, send_header_only: bool, file_size: int, scope: Scope, send: Send

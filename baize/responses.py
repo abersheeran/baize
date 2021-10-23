@@ -236,3 +236,13 @@ def build_bytes_from_sse(event: ServerSentEvent, charset: str) -> bytes:
             (b"", b""),  # for generate b"\n\n"
         )
     )
+
+
+def iri_to_uri(iri: str) -> str:
+    """
+    Convert an Internationalized Resource Identifier (IRI) portion to a URI portion
+    that is suitable for inclusion in a URL.
+    """
+    # Copy from django
+    # https://github.com/django/django/blob/main/django/utils/encoding.py#L100
+    return quote(iri, safe="/#%[]=:;$&()+,!?*@'~")
