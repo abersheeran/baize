@@ -97,11 +97,11 @@ NEED_DATA = NeedData()
 
 
 class State:
-    PREAMBLE = object()
-    PART = object()
-    DATA = object()
-    EPILOGUE = object()
-    COMPLETE = object()
+    PREAMBLE = 0
+    PART = 1
+    DATA = 2
+    EPILOGUE = 3
+    COMPLETE = 4
 
 
 # Multipart line breaks MUST be CRLF (\r\n) by RFC-7578, except that
@@ -122,8 +122,8 @@ class MultipartDecoder:
 
     def __init__(self, boundary: bytes, charset: str) -> None:
         self.buffer = bytearray()
-        self.complete = False
-        self.state = State.PREAMBLE
+        self.complete: bool = False
+        self.state: int = State.PREAMBLE
         self.boundary = boundary
         self.charset = charset
 
