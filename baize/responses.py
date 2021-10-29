@@ -73,8 +73,26 @@ class BaseResponse:
         if samesite is not None:
             cookies[key]["samesite"] = samesite
 
-    def delete_cookie(self, key: str, path: str = "/", domain: str = None) -> None:
-        self.set_cookie(key, expires=0, max_age=0, path=path, domain=domain)
+    def delete_cookie(
+        self,
+        key: str,
+        value: str = "",
+        path: str = "/",
+        domain: str = None,
+        secure: bool = False,
+        httponly: bool = False,
+        samesite: Literal["strict", "lax", "none"] = "lax",
+    ) -> None:
+        self.set_cookie(
+            key,
+            expires=0,
+            max_age=0,
+            path=path,
+            domain=domain,
+            secure=secure,
+            httponly=httponly,
+            samesite=samesite,
+        )
 
     @overload
     def list_headers(self, *, as_bytes: Literal[True]) -> List[Tuple[bytes, bytes]]:
