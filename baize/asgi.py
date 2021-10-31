@@ -27,7 +27,7 @@ from typing import (
 )
 from urllib.parse import parse_qsl
 
-from . import multipart
+from . import multipart, staticfiles
 from .concurrency import run_in_threadpool
 from .datastructures import URL, Address, FormData, Headers, QueryParams, UploadFile
 from .exceptions import HTTPException
@@ -989,3 +989,38 @@ class Hosts(BaseHosts[ASGIApp]):
         else:
             response = endpoint
         return await response(scope, receive, send)
+
+
+class StaticFiles(staticfiles.BaseFiles):
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if_none_match: str = ""
+        if_modified_since: str = ""
+        for k, v in scope["headers"]:
+            if k == b"if-none-match":
+                if_none_match = v.decode("latin-1")
+            elif k == b"if-modified-since":
+                if_modified_since = v.decode("latin-1")
+        filepath = self.ensure_absolute_path(scope["path"])
+
+        if filepath is None:
+            return await Response(404)(scope, receive, send)
+
+        try:
+            stat_result = await run_in_threadpool(os.stat, filepath)
+        except FileNotFoundError:
+            return await Response(404)(scope, receive, send)
+
+        if stat.S_ISDIR(stat_result.st_mode):  # Directory
+            return await Response(404)(scope, receive, send)
+
+        if stat.S_ISREG(stat_result.st_mode):  # File
+            if self.if_none_match(
+                FileResponse.generate_etag(stat_result), if_none_match
+            ) or self.if_modified_since(stat_result.st_ctime, if_modified_since):
+                response = Response(304)
+            else:
+                response = FileResponse(filepath, stat_result=stat_result)
+            self.set_response_headers(response)
+            return await response(scope, receive, send)
+
+        return await Response(404)(scope, receive, send)

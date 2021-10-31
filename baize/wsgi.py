@@ -29,7 +29,7 @@ from typing import (
 )
 from urllib.parse import parse_qsl
 
-from . import multipart
+from . import multipart, staticfiles
 from .datastructures import (
     URL,
     Address,
@@ -707,3 +707,35 @@ class Hosts(BaseHosts[WSGIApp]):
         else:
             response = endpoint
         return response(environ, start_response)
+
+
+class StaticFiles(staticfiles.BaseFiles):
+    def __call__(
+        self, environ: Environ, start_response: StartResponse
+    ) -> Iterable[bytes]:
+        if_none_match: str = environ.get("HTTP_IF_NONE_MATCH", "")
+        if_modified_since: str = environ.get("HTTP_IF_MODIFIED_SINCE", "")
+        filepath = self.ensure_absolute_path(environ.get("PATH_INFO", ""))
+
+        if filepath is None:
+            return Response(404)(environ, start_response)
+
+        try:
+            stat_result = os.stat(filepath)
+        except FileNotFoundError:
+            return Response(404)(environ, start_response)
+
+        if stat.S_ISDIR(stat_result.st_mode):  # Directory
+            return Response(404)(environ, start_response)
+
+        if stat.S_ISREG(stat_result.st_mode):  # File
+            if self.if_none_match(
+                FileResponse.generate_etag(stat_result), if_none_match
+            ) or self.if_modified_since(stat_result.st_ctime, if_modified_since):
+                response = Response(304)
+            else:
+                response = FileResponse(filepath, stat_result=stat_result)
+            self.set_response_headers(response)
+            return response(environ, start_response)
+
+        return Response(404)(environ, start_response)
