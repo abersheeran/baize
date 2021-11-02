@@ -1,7 +1,9 @@
-import os
 import importlib.util
+import os
+import stat
 from email.utils import parsedate_to_datetime
-from typing import Literal, Optional
+from pathlib import Path
+from typing import Literal, Optional, Tuple
 
 from .responses import BaseResponse
 
@@ -56,6 +58,17 @@ class BaseFiles:
 
         return abspath
 
+    def check_path_is_file(
+        self, path: Optional[str]
+    ) -> Tuple[Optional[os.stat_result], bool]:
+        if path is None:
+            return None, False
+        try:
+            stat_result = os.stat(path)
+            return stat_result, stat.S_ISREG(stat_result.st_mode)
+        except FileNotFoundError:
+            return None, False
+
     def if_none_match(self, etag: str, if_none_match: str) -> bool:
         if not if_none_match:
             return False
@@ -84,3 +97,13 @@ class BaseFiles:
             "Cache-Control", f"{self.cacheability}, max-age={self.max_age}"
         )
         response.headers.append("Vary", "Accept-Encoding, User-Agent, Cookie, Referer")
+
+
+@mypyc_attr(allow_interpreted_subclasses=True)
+class BasePages(BaseFiles):
+    def ensure_absolute_path(self, path: str) -> Optional[str]:
+        abspath = super().ensure_absolute_path(path)
+        if abspath is not None:
+            if abspath.endswith("/"):
+                abspath += "index.html"
+        return abspath
