@@ -605,7 +605,11 @@ class SendEventResponse(Response):
             self.queue.put(b": ping\n\n")
 
 
-def request_response(view: Callable[[Request], Response]) -> WSGIApp:
+ViewType = Callable[[Request], Response]
+MiddlewareType = Callable[[Request, ViewType], Response]
+
+
+def request_response(view: ViewType) -> WSGIApp:
     """
     This can turn a callable object into a WSGI application.
 
@@ -623,6 +627,40 @@ def request_response(view: Callable[[Request], Response]) -> WSGIApp:
         return response(environ, start_response)
 
     return wsgi
+
+
+def middleware(handler: MiddlewareType) -> Callable[[ViewType], ViewType]:
+    """
+    This can turn a callable object into a middleware for view.
+
+    ```python
+    @middleware
+    def m(request: Request, next_call: Callable[[Request], Response]) -> Response:
+        ...
+        response = next_call(request)
+        ...
+        return response
+
+    @request_response
+    @m
+    def v(request: Request) -> Response:
+        ...
+    ```
+    """
+
+    @functools.wraps(handler)
+    def decorator(next_call: ViewType) -> ViewType:
+        """
+        This is the actual decorator.
+        """
+
+        @functools.wraps(next_call)
+        def view(request: Request) -> Response:
+            return handler(request, next_call)
+
+        return view
+
+    return decorator
 
 
 class Router(BaseRouter[WSGIApp]):

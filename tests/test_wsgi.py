@@ -2,7 +2,7 @@ import tempfile
 import time
 from inspect import cleandoc
 from pathlib import Path
-from typing import Generator
+from typing import Callable, Generator
 
 import httpx
 import pytest
@@ -23,6 +23,7 @@ from baize.wsgi import (
     SendEventResponse,
     StreamResponse,
     Subpaths,
+    middleware,
     request_response,
 )
 
@@ -454,6 +455,24 @@ def test_request_response():
     with httpx.Client(app=view, base_url="http://testServer/") as client:
         assert client.get("/").text == ""
         assert client.post("/", content="hello").text == "hello"
+
+
+def test_middleware():
+    @middleware
+    def middleware_func(
+        request: Request, handler: Callable[[Request], Response]
+    ) -> Response:
+        response = handler(request)
+        response.headers["X-Middleware"] = "1"
+        return response
+
+    @request_response
+    @middleware_func
+    def view(request: Request) -> Response:
+        return PlainTextResponse(request.body)
+
+    with httpx.Client(app=view, base_url="http://testServer/") as client:
+        assert client.get("/").headers["X-Middleware"] == "1"
 
 
 def test_router():
