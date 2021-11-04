@@ -3,7 +3,7 @@ import tempfile
 from functools import partial
 from inspect import cleandoc
 from pathlib import Path
-from typing import AsyncGenerator, Type
+from typing import AsyncGenerator, Awaitable, Callable, Type
 
 import httpx
 import pytest
@@ -26,6 +26,7 @@ from baize.asgi import (
     Subpaths,
     WebSocket,
     WebSocketDisconnect,
+    middleware,
     request_response,
     websocket_session,
 )
@@ -940,6 +941,25 @@ async def test_websocket_session():
 
     async with httpx.AsyncClient(app=view, base_url="http://testServer/") as client:
         assert (await client.get("/")).status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_middleware():
+    @middleware
+    async def middleware_func(
+        request: Request, handler: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
+        response = await handler(request)
+        response.headers["X-Middleware"] = "1"
+        return response
+
+    @request_response
+    @middleware_func
+    async def view(request: Request) -> Response:
+        return PlainTextResponse(await request.body)
+
+    async with httpx.AsyncClient(app=view, base_url="http://testServer/") as client:
+        assert (await client.get("/")).headers["X-Middleware"] == "1"
 
 
 @pytest.mark.asyncio
