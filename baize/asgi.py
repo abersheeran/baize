@@ -865,7 +865,11 @@ class WebSocket(HTTPConnection):
             await self.send({"type": "websocket.close", "code": code})
 
 
-def request_response(view: Callable[[Request], Awaitable[Response]]) -> ASGIApp:
+ViewType = Callable[[Request], Awaitable[Response]]
+MiddlewareType = Callable[[Request, ViewType], Awaitable[Response]]
+
+
+def request_response(view: ViewType) -> ASGIApp:
     """
     This can turn a callable object into a ASGI application.
 
@@ -908,6 +912,41 @@ def websocket_session(view: Callable[[WebSocket], Awaitable[None]]) -> ASGIApp:
             await view(websocket)
 
     return asgi
+
+
+def middleware(handler: MiddlewareType) -> Callable[[ViewType], ViewType]:
+    """
+    This can turn a callable object into a middleware for view.
+
+    ```python
+    @middleware
+    async def m(request: Request, next_call: Callable[[Request], Awaitable[Response]]) -> Response:
+        ...
+        response = await next_call(request)
+        ...
+        return response
+
+
+    @request_response
+    @m
+    async def v(request: Request) -> Response:
+        ...
+    ```
+    """
+
+    @functools.wraps(handler)
+    def decorator(next_call: ViewType) -> ViewType:
+        """
+        This is the actual decorator.
+        """
+
+        @functools.wraps(next_call)
+        async def view(request: Request) -> Response:
+            return await handler(request, next_call)
+
+        return view
+
+    return decorator
 
 
 class Router(BaseRouter[ASGIApp]):
