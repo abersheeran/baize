@@ -113,3 +113,23 @@ If the built-in types are not enough, then you only need to write a class that i
 ```eval_rst
 .. autoclass:: baize.asgi.Hosts
 ```
+
+## Shortcut functions
+
+### request_response
+
+```eval_rst
+.. autofunction:: baize.asgi.request_response
+```
+
+### middleware
+
+```eval_rst
+.. autofunction:: baize.asgi.middleware
+```
+
+### websocket_session
+
+```eval_rst
+.. autofunction:: baize.asgi.websocket_session
+```
