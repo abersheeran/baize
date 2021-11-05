@@ -2,8 +2,7 @@ import importlib.util
 import os
 import stat
 from email.utils import parsedate_to_datetime
-from pathlib import Path
-from typing import Literal, Optional, Tuple
+from typing import Literal, Optional, Tuple, Union
 
 from .responses import BaseResponse
 
@@ -19,17 +18,17 @@ except ImportError:  # pragma: no cover
 class BaseFiles:
     def __init__(
         self,
-        directory: str,
+        directory: Union[str, "os.PathLike[str]"],
         package: str = None,
         *,
         cacheability: Literal["public", "private", "no-cache", "no-store"] = "public",
         max_age: int = 60 * 10,  # 10 minutes
     ) -> None:
-        if os.path.isabs(directory) and package is None:
+        if os.path.isabs(directory) and package is not None:
             raise ValueError(
                 "directory must be a relative path, with package is not None"
             )
-        self.directory = self.normalize_dir_path(directory, package)
+        self.directory = self.normalize_dir_path(str(directory), package)
         self.cacheability = cacheability
         self.max_age = max_age
 
@@ -41,13 +40,13 @@ class BaseFiles:
             assert spec is not None, f"Package {package!r} could not be found."
             assert (
                 spec.origin is not None
-            ), f"Directory 'statics' in package {package!r} could not be found."
+            ), f"Directory '{directory}' in package {package!r} could not be found."
             package_directory = os.path.normpath(
-                os.path.join(spec.origin, "..", "statics")
+                os.path.join(spec.origin, "..", directory)
             )
             assert os.path.isdir(
                 package_directory
-            ), f"Directory 'statics' in package {package!r} could not be found."
+            ), f"Directory '{directory}' in package {package!r} could not be found."
             return package_directory
 
     def ensure_absolute_path(self, path: str) -> Optional[str]:

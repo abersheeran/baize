@@ -13,6 +13,7 @@ from starlette.testclient import TestClient
 from baize.asgi import (
     ClientDisconnect,
     FileResponse,
+    Files,
     Hosts,
     HTMLResponse,
     JSONResponse,
@@ -1034,3 +1035,19 @@ async def test_hosts():
         assert (
             await client.get("/", headers={"host": "qwe\ndsf"})
         ).text == "Invalid host"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "app",
+    [
+        Files(Path(__file__).absolute().parent.parent / "baize"),
+        Files(".", "baize"),
+    ],
+)
+async def test_files(app):
+    async with httpx.AsyncClient(app=app, base_url="http://testServer/") as client:
+        assert (await client.get("/py.typed")).text == ""
+        assert (await client.get("/staticfiles.py")).text.splitlines() == (
+            Path(__file__).absolute().parent.parent / "baize" / "staticfiles.py"
+        ).read_text().splitlines()
