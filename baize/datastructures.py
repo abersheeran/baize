@@ -1,17 +1,21 @@
 import asyncio
+import datetime
 import os
+import re
+import string
 import typing
 from cgi import parse_header
 from collections import namedtuple
 from tempfile import SpooledTemporaryFile
 from urllib.parse import SplitResult, parse_qsl, urlencode, urlsplit
 
-from .typing import Environ, Scope
+from .typing import Environ, Literal, Scope
 
 __all__ = [
     "Address",
     "MediaType",
     "ContentType",
+    "Cookie",
     "URL",
     "MultiMapping",
     "MutableMultiMapping",
@@ -86,6 +90,100 @@ class ContentType:
         if not isinstance(other, str):
             return NotImplemented
         return self.type == other
+
+
+_cookie_legal_chars: typing.Final[str] = (
+    string.ascii_letters + string.digits + "!#$%&'*+-.^_`|~:"
+)
+_cookie_is_legal_key = re.compile("[%s]+" % re.escape(_cookie_legal_chars)).fullmatch
+_cookie_translator: typing.Final[typing.Dict[int, str]] = {
+    **{
+        n: "\\%03o" % n
+        for n in set(range(256)) - set(map(ord, _cookie_legal_chars + " ()/<=>?@[]{}"))
+    },
+    ord('"'): '\\"',
+    ord("\\"): "\\\\",
+}
+
+
+class Cookie:
+    def __init__(
+        self,
+        name: str,
+        value: str,
+        expires: typing.Optional[datetime.datetime] = None,
+        domain: typing.Optional[str] = None,
+        path: typing.Optional[str] = None,
+        httponly: bool = False,
+        secure: bool = False,
+        max_age: int = -1,
+        samesite: Literal["strict", "lax", "none"] = "lax",
+    ):
+        self.name = name
+        self.value = value
+        self.expires = expires
+        self.domain = domain
+        self.path = path
+        self.httponly = httponly
+        self.secure = secure
+        self.max_age = max_age
+        self.samesite = samesite
+
+    def _quote(self, value: str) -> str:
+        r"""
+        Quote a string for use in a cookie header.
+
+        If the string does not need to be double-quoted, then just return the
+        string.  Otherwise, surround the string in doublequotes and quote
+        (with a \) special characters.
+        """
+        if _cookie_is_legal_key(value):
+            return value
+        else:
+            return '"' + value.translate(_cookie_translator) + '"'
+
+    def __str__(self) -> str:
+        parts: typing.List[str] = []
+        parts.append(f"{self._quote(self.name)}={self._quote(self.value)}")
+
+        if self.expires:
+            parts.append(
+                "expires=" + self.expires.strftime("%a, %d %b %Y %H:%M:%S GMT")
+            )
+
+        if self.max_age > -1:
+            parts.append(f"max-age={self.max_age}")
+
+        if self.domain:
+            parts.append(f"domain={self.domain}")
+
+        if self.path:
+            parts.append(f"path={self.path}")
+
+        if self.httponly:
+            parts.append("httponly")
+
+        if self.secure or self.samesite in ("strict", "none"):
+            parts.append("secure")
+
+        parts.append(f"samesite={self.samesite}")
+
+        return "; ".join(parts)
+
+    def __bytes__(self) -> bytes:
+        return str(self).encode("ascii")
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, str):
+            return str(self) == other
+        if isinstance(other, bytes):
+            return bytes(self) == other
+        if isinstance(other, Cookie):
+            return str(self) == str(other)
+        return NotImplemented
+
+    def __repr__(self) -> str:
+        return f"<Cookie {self.name}: {self.value}>"
 
 
 class URL:
@@ -267,9 +365,11 @@ class MultiMapping(typing.Generic[KT, VT], typing.Mapping[KT, VT]):
         if raw is None:
             _items = []
         elif isinstance(raw, MultiMapping):
-            _items = list(raw.multi_items())
+            _items = typing.cast(
+                typing.List[typing.Tuple[KT, VT]], list(raw.multi_items())
+            )
         elif isinstance(raw, typing.Mapping):
-            _items = list(raw.items())
+            _items = typing.cast(typing.List[typing.Tuple[KT, VT]], list(raw.items()))
         else:
             _items = list(raw)
 
@@ -494,7 +594,9 @@ class Headers(typing.Mapping[str, str]):
         store: typing.Dict[str, str] = {}
         items: typing.Iterable[typing.Tuple[str, str]]
         if isinstance(headers, typing.Mapping):
-            items = headers.items()
+            items = typing.cast(
+                typing.Iterable[typing.Tuple[str, str]], headers.items()
+            )
         elif headers is None:
             items = ()
         else:

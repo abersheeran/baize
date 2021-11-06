@@ -1,8 +1,9 @@
+import datetime
 import os
 import re
+import time
 from email.utils import formatdate
 from hashlib import sha1
-from http import cookies as http_cookies
 from itertools import chain
 from typing import (
     Callable,
@@ -30,7 +31,7 @@ except ImportError:  # pragma: no cover
 
 
 from . import status
-from .datastructures import MutableHeaders
+from .datastructures import Cookie, MutableHeaders
 from .exceptions import HTTPException
 from .typing import Literal, ServerSentEvent
 
@@ -42,13 +43,13 @@ class BaseResponse:
     ) -> None:
         self.status_code = status_code
         self.headers = MutableHeaders(headers)
-        self.cookies: http_cookies.SimpleCookie = http_cookies.SimpleCookie()
+        self.cookies: List[Cookie] = []
 
     def set_cookie(
         self,
         key: str,
         value: str = "",
-        max_age: int = None,
+        max_age: int = -1,
         expires: int = None,
         path: str = "/",
         domain: str = None,
@@ -56,22 +57,23 @@ class BaseResponse:
         httponly: bool = False,
         samesite: Literal["strict", "lax", "none"] = "lax",
     ) -> None:
-        cookies = self.cookies
-        cookies[key] = value
-        if max_age is not None:
-            cookies[key]["max-age"] = max_age
+        expires_datetime: Optional[datetime.datetime] = None
         if expires is not None:
-            cookies[key]["expires"] = expires
-        if path is not None:
-            cookies[key]["path"] = path
-        if domain is not None:
-            cookies[key]["domain"] = domain
-        if secure:
-            cookies[key]["secure"] = True
-        if httponly:
-            cookies[key]["httponly"] = True
-        if samesite is not None:
-            cookies[key]["samesite"] = samesite
+            expires_datetime = datetime.datetime.fromtimestamp(time.time() + expires)
+
+        self.cookies.append(
+            Cookie(
+                key,
+                value,
+                expires=expires_datetime,
+                max_age=max_age,
+                path=path,
+                domain=domain,
+                secure=secure,
+                httponly=httponly,
+                samesite=samesite,
+            )
+        )
 
     def delete_cookie(
         self,
@@ -112,15 +114,12 @@ class BaseResponse:
                     (key.encode("latin-1"), value.encode("latin-1"))
                     for key, value in self.headers.items()
                 ),
-                *(
-                    (b"set-cookie", c.output(header="").encode("latin-1"))
-                    for c in self.cookies.values()
-                ),
+                *((b"set-cookie", bytes(cookie)) for cookie in self.cookies),
             ]
         else:
             return [
                 *self.headers.items(),
-                *(("set-cookie", c.output(header="")) for c in self.cookies.values()),
+                *(("set-cookie", str(cookie)) for cookie in self.cookies),
             ]
 
 

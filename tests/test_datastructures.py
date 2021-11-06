@@ -1,3 +1,4 @@
+from abc import abstractclassmethod
 import io
 import os
 import tempfile
@@ -7,6 +8,7 @@ import pytest
 from baize.datastructures import (
     URL,
     ContentType,
+    Cookie,
     FormData,
     Headers,
     MediaType,
@@ -135,6 +137,15 @@ def test_content_type():
     assert content_type.options == {"charset": "utf-8"}
     assert str(content_type) == "application/json; charset=utf-8"
     assert repr(content_type) == "<ContentType: application/json; charset=utf-8>"
+
+
+def test_cookie():
+    cookie = Cookie("session", "1234567890", path="/", httponly=True)
+    assert cookie == "session=1234567890; path=/; httponly; samesite=lax"
+    assert cookie == b"session=1234567890; path=/; httponly; samesite=lax"
+    assert cookie == Cookie("session", "1234567890", path="/", httponly=True)
+    assert cookie != 1234567890
+    assert repr(cookie) == "<Cookie session: 1234567890>"
 
 
 def test_media_type():
