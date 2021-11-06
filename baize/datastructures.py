@@ -9,7 +9,7 @@ from collections import namedtuple
 from tempfile import SpooledTemporaryFile
 from urllib.parse import SplitResult, parse_qsl, urlencode, urlsplit
 
-from .typing import Environ, Literal, Scope
+from .typing import Environ, Final, Literal, Scope
 
 __all__ = [
     "Address",
@@ -92,11 +92,11 @@ class ContentType:
         return self.type == other
 
 
-_cookie_legal_chars: typing.Final[str] = (
+_cookie_legal_chars: Final[str] = (
     string.ascii_letters + string.digits + "!#$%&'*+-.^_`|~:"
 )
 _cookie_is_legal_key = re.compile("[%s]+" % re.escape(_cookie_legal_chars)).fullmatch
-_cookie_translator: typing.Final[typing.Dict[int, str]] = {
+_cookie_translator: Final[typing.Dict[int, str]] = {
     **{
         n: "\\%03o" % n
         for n in set(range(256)) - set(map(ord, _cookie_legal_chars + " ()/<=>?@[]{}"))
