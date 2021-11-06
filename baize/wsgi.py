@@ -546,7 +546,9 @@ class SendEventResponse(Response):
 
     required_headers = {
         "Cache-Control": "no-cache",
-        "Connection": "keep-alive",
+        # https://www.python.org/dev/peps/pep-3333/#other-http-features
+        # WSGI application must not send connection header
+        # "Connection": "keep-alive",
         "Content-Type": "text/event-stream",
     }
 
