@@ -2,9 +2,10 @@ import importlib.util
 import os
 import stat
 from email.utils import parsedate_to_datetime
-from typing import Literal, Optional, Tuple, Union
+from typing import Optional, Tuple, Union
 
 from .responses import BaseResponse
+from .typing import Literal
 
 try:
     from mypy_extensions import mypyc_attr
