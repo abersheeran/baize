@@ -87,6 +87,8 @@ class BaseFiles:
 
     def if_modified_since(self, last_modified: float, if_modified_since: str) -> bool:
         try:
+            if not if_modified_since:
+                raise ValueError("Empty date value")
             modified_time = parsedate_to_datetime(if_modified_since).timestamp()
         except ValueError:
             return False
