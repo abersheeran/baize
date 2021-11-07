@@ -17,6 +17,7 @@ from baize.asgi import (
     Hosts,
     HTMLResponse,
     JSONResponse,
+    Pages,
     PlainTextResponse,
     RedirectResponse,
     Request,
@@ -1047,7 +1048,88 @@ async def test_hosts():
 )
 async def test_files(app):
     async with httpx.AsyncClient(app=app, base_url="http://testServer/") as client:
-        assert (await client.get("/py.typed")).text == ""
-        assert (await client.get("/staticfiles.py")).text.splitlines() == (
-            Path(__file__).absolute().parent.parent / "baize" / "staticfiles.py"
-        ).read_text().splitlines()
+        resp = await client.get("/py.typed")
+        assert resp.text == ""
+
+        assert (
+            await client.get(
+                "/py.typed", headers={"if-none-match": resp.headers["etag"]}
+            )
+        ).status_code == 304
+
+        assert (
+            await client.get(
+                "/py.typed", headers={"if-none-match": "W/" + resp.headers["etag"]}
+            )
+        ).status_code == 304
+
+        assert (
+            await client.get("/py.typed", headers={"if-none-match": "*"})
+        ).status_code == 304
+
+        assert (
+            await client.get(
+                "/py.typed",
+                headers={"if-modified-since": resp.headers["last-modified"]},
+            )
+        ).status_code == 304
+
+        assert (
+            await client.get(
+                "/py.typed",
+                headers={
+                    "if-modified-since": resp.headers["last-modified"],
+                    "if-none-match": resp.headers["etag"],
+                },
+            )
+        ).status_code == 304
+
+        with pytest.raises(HTTPException):
+            await client.get("/")
+
+        with pytest.raises(HTTPException):
+            await client.get("/%2E%2E/baize/%2E%2E/%2E%2E/README.md")
+
+
+@pytest.mark.asyncio
+async def test_pages(tmpdir):
+    (tmpdir / "index.html").write_text(
+        "<html><body>index</body></html>", encoding="utf8"
+    )
+    (tmpdir / "dir").mkdir()
+    (tmpdir / "dir" / "index.html").write_text(
+        "<html><body>dir index</body></html>", encoding="utf8"
+    )
+
+    app = Pages(tmpdir)
+    async with httpx.AsyncClient(app=app, base_url="http://testServer/") as client:
+        resp = await client.get("/")
+        assert resp.status_code == 200
+        assert resp.text == "<html><body>index</body></html>"
+
+        assert (
+            await client.get(
+                "/", headers={"if-modified-since": resp.headers["last-modified"]}
+            )
+        ).status_code == 304
+
+        assert (
+            await client.get("/", headers={"if-none-match": resp.headers["etag"]})
+        ).status_code == 304
+
+        assert (
+            await client.get(
+                "/",
+                headers={
+                    "if-modified-since": resp.headers["last-modified"],
+                    "if-none-match": resp.headers["etag"],
+                },
+            )
+        ).status_code == 304
+
+        resp = await client.get("/dir")
+        assert resp.status_code == 307
+        assert resp.headers["location"] == "//testserver/dir/"
+
+        with pytest.raises(HTTPException):
+            await client.get("/d")

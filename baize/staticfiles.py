@@ -24,10 +24,9 @@ class BaseFiles:
         cacheability: Literal["public", "private", "no-cache", "no-store"] = "public",
         max_age: int = 60 * 10,  # 10 minutes
     ) -> None:
-        if os.path.isabs(directory) and package is not None:
-            raise ValueError(
-                "directory must be a relative path, with package is not None"
-            )
+        assert not (
+            os.path.isabs(directory) and package is not None
+        ), "directory must be a relative path, with package is not None"
         self.directory = self.normalize_dir_path(str(directory), package)
         self.cacheability = cacheability
         self.max_age = max_age
@@ -50,7 +49,12 @@ class BaseFiles:
             return package_directory
 
     def ensure_absolute_path(self, path: str) -> Optional[str]:
-        abspath = os.path.abspath(os.path.join(self.directory, path.lstrip("/")))
+        abspath = os.path.abspath(
+            os.path.join(self.directory, os.path.join(*path.split("/")))
+        )
+
+        if path == "/":
+            abspath += "/"
 
         if os.path.relpath(abspath, self.directory).startswith(".."):
             return None
@@ -81,15 +85,12 @@ class BaseFiles:
         return any(etag == i.strip() for i in if_none_match.split(","))
 
     def if_modified_since(self, last_modified: float, if_modified_since: str) -> bool:
-        if not if_modified_since:
-            return False
-
         try:
             modified_time = parsedate_to_datetime(if_modified_since).timestamp()
         except ValueError:
             return False
 
-        return last_modified <= modified_time
+        return int(last_modified) <= int(modified_time)
 
     def set_response_headers(self, response: BaseResponse) -> None:
         response.headers.append(

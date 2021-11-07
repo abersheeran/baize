@@ -789,8 +789,8 @@ class Pages(staticfiles.BasePages):
                 self.set_response_headers(response)
                 return response(environ, start_response)
             if stat.S_ISDIR(stat_result.st_mode):
-                return RedirectResponse(str(URL(environ=environ)) + "/")(
-                    environ, start_response
-                )
+                url = URL(environ=environ)
+                url = url.replace(scheme="", path=url.path + "/")
+                return RedirectResponse(url)(environ, start_response)
 
         raise HTTPException(404)

@@ -1078,8 +1078,8 @@ class Pages(staticfiles.BasePages):
                 self.set_response_headers(response)
                 return await response(scope, receive, send)
             if stat.S_ISDIR(stat_result.st_mode):
-                return await RedirectResponse(str(URL(scope=scope)) + "/")(
-                    scope, receive, send
-                )
+                url = URL(scope=scope)
+                url = url.replace(scheme="", path=url.path + "/")
+                return await RedirectResponse(url)(scope, receive, send)
 
         raise HTTPException(404)
