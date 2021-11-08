@@ -133,3 +133,15 @@ If the built-in types are not enough, then you only need to write a class that i
 ```eval_rst
 .. autofunction:: baize.asgi.websocket_session
 ```
+
+## Files
+
+```eval_rst
+.. autoclass:: baize.asgi.Files
+```
+
+## Pages
+
+```eval_rst
+.. autoclass:: baize.asgi.Pages
+```

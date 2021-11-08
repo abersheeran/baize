@@ -120,3 +120,15 @@ If the built-in types are not enough, then you only need to write a class that i
 ```eval_rst
 .. autofunction:: baize.wsgi.middleware
 ```
+
+## Files
+
+```eval_rst
+.. autoclass:: baize.wsgi.Files
+```
+
+## Pages
+
+```eval_rst
+.. autoclass:: baize.wsgi.Pages
+```
