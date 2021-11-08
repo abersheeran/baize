@@ -751,7 +751,7 @@ class Hosts(BaseHosts[WSGIApp]):
 
 class Files(staticfiles.BaseFiles):
     """
-    Provide the ASGI application to download files in the specified path or
+    Provide the WSGI application to download files in the specified path or
     the specified directory under the specified package.
 
     Support request range and cache (304 status code).
