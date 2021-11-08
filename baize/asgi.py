@@ -1031,6 +1031,15 @@ class Hosts(BaseHosts[ASGIApp]):
 
 
 class Files(staticfiles.BaseFiles):
+    """
+    Provide the ASGI application to download files in the specified path or
+    the specified directory under the specified package.
+
+    Support request range and cache (304 status code).
+
+    NOTE: Need users handle HTTPException(404).
+    """
+
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if_none_match: str = ""
         if_modified_since: str = ""
@@ -1056,6 +1065,17 @@ class Files(staticfiles.BaseFiles):
 
 
 class Pages(staticfiles.BasePages):
+    """
+    Provide the ASGI application to download files in the specified path or
+    the specified directory under the specified package.
+    Unlike `Files`, when you visit a directory, it will try to return the content
+    of the file named `index.html` in that directory.
+
+    Support request range and cache (304 status code).
+
+    NOTE: Need users handle HTTPException(404).
+    """
+
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if_none_match: str = ""
         if_modified_since: str = ""

@@ -748,6 +748,15 @@ class Hosts(BaseHosts[WSGIApp]):
 
 
 class Files(staticfiles.BaseFiles):
+    """
+    Provide the ASGI application to download files in the specified path or
+    the specified directory under the specified package.
+
+    Support request range and cache (304 status code).
+
+    NOTE: Need users handle HTTPException(404).
+    """
+
     def __call__(
         self, environ: Environ, start_response: StartResponse
     ) -> Iterable[bytes]:
@@ -770,6 +779,17 @@ class Files(staticfiles.BaseFiles):
 
 
 class Pages(staticfiles.BasePages):
+    """
+    Provide the WSGI application to download files in the specified path or
+    the specified directory under the specified package.
+    Unlike `Files`, when you visit a directory, it will try to return the content
+    of the file named `index.html` in that directory.
+
+    Support request range and cache (304 status code).
+
+    NOTE: Need users handle HTTPException(404).
+    """
+
     def __call__(
         self, environ: Environ, start_response: StartResponse
     ) -> Iterable[bytes]:
