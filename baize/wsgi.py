@@ -2,10 +2,9 @@ import abc
 import functools
 import json
 import os
+import queue
 import stat
-import time
-from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor
-from concurrent.futures import wait as wait_futures
+from concurrent.futures import ThreadPoolExecutor
 from http import HTTPStatus
 from itertools import chain
 from mimetypes import guess_type
@@ -579,19 +578,14 @@ class SendEventResponse(Response):
         start_response(
             StatusStringMapping[self.status_code], self.list_headers(as_bytes=False)
         )
-
-        future = self.thread_pool.submit(
-            wait_futures,
-            (
-                self.thread_pool.submit(self.send_event),
-                self.thread_pool.submit(self.keep_alive),
-            ),
-            return_when=FIRST_COMPLETED,
-        )
+        future = self.thread_pool.submit(self.send_event)
 
         try:
             while self.has_more_data or not self.queue.empty():
-                yield self.queue.get()
+                try:
+                    yield self.queue.get(timeout=self.ping_interval)
+                except queue.Empty:
+                    yield b": ping\n\n"
         finally:
             self.has_more_data = False
             future.cancel()
@@ -600,11 +594,6 @@ class SendEventResponse(Response):
         for chunk in self.iterable:
             self.queue.put(build_bytes_from_sse(chunk, self.charset))
         self.has_more_data = False
-
-    def keep_alive(self) -> None:
-        while self.has_more_data:
-            time.sleep(self.ping_interval)
-            self.queue.put(b": ping\n\n")
 
 
 ViewType = Callable[[Request], Response]
