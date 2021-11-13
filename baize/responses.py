@@ -30,7 +30,6 @@ except ImportError:  # pragma: no cover
         return lambda x: x
 
 
-from . import status
 from .datastructures import Cookie, MutableHeaders
 from .exceptions import HTTPException
 from .typing import Literal, ServerSentEvent
@@ -39,7 +38,7 @@ from .typing import Literal, ServerSentEvent
 @mypyc_attr(allow_interpreted_subclasses=True)
 class BaseResponse:
     def __init__(
-        self, status_code: int = status.HTTP_200_OK, headers: Mapping[str, str] = None
+        self, status_code: int = 200, headers: Mapping[str, str] = None
     ) -> None:
         self.status_code = status_code
         self.headers = MutableHeaders(headers)
@@ -172,9 +171,9 @@ class FileResponseMixin:
         try:
             unit, ranges_str = range_raw_line.split("=", maxsplit=1)
         except ValueError:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
+            raise HTTPException(status_code=400)
         if unit != "bytes":
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
+            raise HTTPException(status_code=400)
 
         ranges = [
             (int(_[0]), int(_[1]) + 1 if _[1] else max_size)
@@ -182,11 +181,11 @@ class FileResponseMixin:
         ]
 
         if any(start > end for start, end in ranges):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
+            raise HTTPException(status_code=400)
 
         if any(end > max_size for _, end in ranges):
             raise HTTPException(
-                status_code=status.HTTP_416_REQUESTED_RANGE_NOT_SATISFIABLE,
+                status_code=416,
                 headers={"Content-Range": f"*/{max_size}"},
             )
 
