@@ -37,15 +37,35 @@ If you have questions or idea, you can send it to [Discussions](https://github.c
 A short example for WSGI application, if you don't know what is WSGI, please read [PEP3333](https://www.python.org/dev/peps/pep-3333/).
 
 ```python
-from baize.wsgi import request_response, Router, Request, Response, PlainTextResponse
+import time
+from typing import Callable
+from baize.wsgi import (
+    middleware,
+    request_response,
+    Router,
+    Request,
+    Response,
+    PlainTextResponse,
+)
+
+
+@middleware
+def timer(request: Request, next_call: Callable[[Request], Response]) -> Response:
+    start_time = time.time()
+    response = next_call(request)
+    end_time = time.time()
+    response.headers["x-time"] = str(round((end_time - start_time) * 1000))
+    return response
 
 
 @request_response
+@timer
 def sayhi(request: Request) -> Response:
     return PlainTextResponse("hi, " + request.path_params["name"])
 
 
 @request_response
+@timer
 def echo(request: Request) -> Response:
     return PlainTextResponse(request.body)
 
@@ -66,15 +86,37 @@ if __name__ == "__main__":
 A short example for ASGI application, if you don't know what is ASGI, please read [ASGI Documention](https://asgi.readthedocs.io/en/latest/).
 
 ```python
-from baize.asgi import request_response, Router, Request, Response, PlainTextResponse
+import time
+from typing import Awaitable, Callable
+from baize.asgi import (
+    middleware,
+    request_response,
+    Router,
+    Request,
+    Response,
+    PlainTextResponse,
+)
+
+
+@middleware
+async def timer(
+    request: Request, next_call: Callable[[Request], Awaitable[Response]]
+) -> Response:
+    start_time = time.time()
+    response = await next_call(request)
+    end_time = time.time()
+    response.headers["x-time"] = str(round((end_time - start_time) * 1000))
+    return response
 
 
 @request_response
+@timer
 async def sayhi(request: Request) -> Response:
     return PlainTextResponse("hi, " + request.path_params["name"])
 
 
 @request_response
+@timer
 async def echo(request: Request) -> Response:
     return PlainTextResponse(await request.body)
 

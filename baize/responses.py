@@ -1,8 +1,9 @@
+import datetime
 import os
 import re
+import time
 from email.utils import formatdate
 from hashlib import sha1
-from http import cookies as http_cookies
 from itertools import chain
 from typing import (
     Callable,
@@ -29,8 +30,7 @@ except ImportError:  # pragma: no cover
         return lambda x: x
 
 
-from . import status
-from .datastructures import MutableHeaders
+from .datastructures import Cookie, MutableHeaders
 from .exceptions import HTTPException
 from .typing import Literal, ServerSentEvent
 
@@ -38,17 +38,17 @@ from .typing import Literal, ServerSentEvent
 @mypyc_attr(allow_interpreted_subclasses=True)
 class BaseResponse:
     def __init__(
-        self, status_code: int = status.HTTP_200_OK, headers: Mapping[str, str] = None
+        self, status_code: int = 200, headers: Mapping[str, str] = None
     ) -> None:
         self.status_code = status_code
         self.headers = MutableHeaders(headers)
-        self.cookies: http_cookies.SimpleCookie = http_cookies.SimpleCookie()
+        self.cookies: List[Cookie] = []
 
     def set_cookie(
         self,
         key: str,
         value: str = "",
-        max_age: int = None,
+        max_age: int = -1,
         expires: int = None,
         path: str = "/",
         domain: str = None,
@@ -56,25 +56,44 @@ class BaseResponse:
         httponly: bool = False,
         samesite: Literal["strict", "lax", "none"] = "lax",
     ) -> None:
-        cookies = self.cookies
-        cookies[key] = value
-        if max_age is not None:
-            cookies[key]["max-age"] = max_age
+        expires_datetime: Optional[datetime.datetime] = None
         if expires is not None:
-            cookies[key]["expires"] = expires
-        if path is not None:
-            cookies[key]["path"] = path
-        if domain is not None:
-            cookies[key]["domain"] = domain
-        if secure:
-            cookies[key]["secure"] = True
-        if httponly:
-            cookies[key]["httponly"] = True
-        if samesite is not None:
-            cookies[key]["samesite"] = samesite
+            expires_datetime = datetime.datetime.fromtimestamp(time.time() + expires)
 
-    def delete_cookie(self, key: str, path: str = "/", domain: str = None) -> None:
-        self.set_cookie(key, expires=0, max_age=0, path=path, domain=domain)
+        self.cookies.append(
+            Cookie(
+                key,
+                value,
+                expires=expires_datetime,
+                max_age=max_age,
+                path=path,
+                domain=domain,
+                secure=secure,
+                httponly=httponly,
+                samesite=samesite,
+            )
+        )
+
+    def delete_cookie(
+        self,
+        key: str,
+        value: str = "",
+        path: str = "/",
+        domain: str = None,
+        secure: bool = False,
+        httponly: bool = False,
+        samesite: Literal["strict", "lax", "none"] = "lax",
+    ) -> None:
+        self.set_cookie(
+            key,
+            expires=0,
+            max_age=0,
+            path=path,
+            domain=domain,
+            secure=secure,
+            httponly=httponly,
+            samesite=samesite,
+        )
 
     @overload
     def list_headers(self, *, as_bytes: Literal[True]) -> List[Tuple[bytes, bytes]]:
@@ -94,15 +113,12 @@ class BaseResponse:
                     (key.encode("latin-1"), value.encode("latin-1"))
                     for key, value in self.headers.items()
                 ),
-                *(
-                    (b"set-cookie", c.output(header="").encode("latin-1"))
-                    for c in self.cookies.values()
-                ),
+                *((b"set-cookie", bytes(cookie)) for cookie in self.cookies),
             ]
         else:
             return [
                 *self.headers.items(),
-                *(("set-cookie", c.output(header="")) for c in self.cookies.values()),
+                *(("set-cookie", str(cookie)) for cookie in self.cookies),
             ]
 
 
@@ -156,9 +172,9 @@ class FileResponseMixin:
         try:
             unit, ranges_str = range_raw_line.split("=", maxsplit=1)
         except ValueError:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
+            raise HTTPException(status_code=400)
         if unit != "bytes":
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
+            raise HTTPException(status_code=400)
 
         ranges = [
             (int(_[0]), int(_[1]) + 1 if _[1] else max_size)
@@ -166,11 +182,11 @@ class FileResponseMixin:
         ]
 
         if any(start > end for start, end in ranges):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
+            raise HTTPException(status_code=400)
 
         if any(end > max_size for _, end in ranges):
             raise HTTPException(
-                status_code=status.HTTP_416_REQUESTED_RANGE_NOT_SATISFIABLE,
+                status_code=416,
                 headers={"Content-Range": f"*/{max_size}"},
             )
 
@@ -237,3 +253,13 @@ def build_bytes_from_sse(event: ServerSentEvent, charset: str) -> bytes:
             (b"", b""),  # for generate b"\n\n"
         )
     )
+
+
+def iri_to_uri(iri: str) -> str:
+    """
+    Convert an Internationalized Resource Identifier (IRI) portion to a URI portion
+    that is suitable for inclusion in a URL.
+    """
+    # Copy from django
+    # https://github.com/django/django/blob/main/django/utils/encoding.py#L100
+    return quote(iri, safe="/#%[]=:;$&()+,!?*@'~")

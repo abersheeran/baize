@@ -2,10 +2,9 @@ import abc
 import functools
 import json
 import os
+import queue
 import stat
-import time
-from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor
-from concurrent.futures import wait as wait_futures
+from concurrent.futures import ThreadPoolExecutor
 from http import HTTPStatus
 from itertools import chain
 from mimetypes import guess_type
@@ -27,9 +26,9 @@ from typing import (
     TypeVar,
     Union,
 )
-from urllib.parse import parse_qsl, quote
+from urllib.parse import parse_qsl
 
-from . import multipart
+from . import multipart, staticfiles
 from .datastructures import (
     URL,
     Address,
@@ -41,7 +40,7 @@ from .datastructures import (
 )
 from .exceptions import HTTPException
 from .requests import MoreInfoFromHeaderMixin
-from .responses import BaseResponse, FileResponseMixin, build_bytes_from_sse
+from .responses import BaseResponse, FileResponseMixin, build_bytes_from_sse, iri_to_uri
 from .routing import BaseHosts, BaseRouter, BaseSubpaths
 from .typing import Environ, Final, ServerSentEvent, StartResponse, WSGIApp
 
@@ -419,7 +418,7 @@ class RedirectResponse(Response):
         headers: Mapping[str, str] = None,
     ) -> None:
         super().__init__(status_code=status_code, headers=headers)
-        self.headers["location"] = quote(str(url), safe="/#%[]=:;$&()+,!?*@'~")
+        self.headers["location"] = iri_to_uri(str(url))
 
 
 @mypyc_attr(allow_interpreted_subclasses=True)
@@ -597,7 +596,9 @@ class SendEventResponse(Response):
 
     required_headers = {
         "Cache-Control": "no-cache",
-        "Connection": "keep-alive",
+        # https://www.python.org/dev/peps/pep-3333/#other-http-features
+        # WSGI application must not send connection header
+        # "Connection": "keep-alive",
         "Content-Type": "text/event-stream",
     }
 
@@ -628,19 +629,14 @@ class SendEventResponse(Response):
         start_response(
             StatusStringMapping[self.status_code], self.list_headers(as_bytes=False)
         )
-
-        future = self.thread_pool.submit(
-            wait_futures,
-            (
-                self.thread_pool.submit(self.send_event),
-                self.thread_pool.submit(self.keep_alive),
-            ),
-            return_when=FIRST_COMPLETED,
-        )
+        future = self.thread_pool.submit(self.send_event)
 
         try:
             while self.has_more_data or not self.queue.empty():
-                yield self.queue.get()
+                try:
+                    yield self.queue.get(timeout=self.ping_interval)
+                except queue.Empty:
+                    yield b": ping\n\n"
         finally:
             self.has_more_data = False
             future.cancel()
@@ -650,13 +646,12 @@ class SendEventResponse(Response):
             self.queue.put(build_bytes_from_sse(chunk, self.charset))
         self.has_more_data = False
 
-    def keep_alive(self) -> None:
-        while self.has_more_data:
-            time.sleep(self.ping_interval)
-            self.queue.put(b": ping\n\n")
+
+ViewType = Callable[[Request], Response]
+MiddlewareType = Callable[[Request, ViewType], Response]
 
 
-def request_response(view: Callable[[Request], Response]) -> WSGIApp:
+def request_response(view: ViewType) -> WSGIApp:
     """
     This can turn a callable object into a WSGI application.
 
@@ -676,7 +671,40 @@ def request_response(view: Callable[[Request], Response]) -> WSGIApp:
     return wsgi
 
 
-@mypyc_attr(allow_interpreted_subclasses=True)
+def middleware(handler: MiddlewareType) -> Callable[[ViewType], ViewType]:
+    """
+    This can turn a callable object into a middleware for view.
+
+    ```python
+    @middleware
+    def m(request: Request, next_call: Callable[[Request], Response]) -> Response:
+        ...
+        response = next_call(request)
+        ...
+        return response
+
+    @request_response
+    @m
+    def v(request: Request) -> Response:
+        ...
+    ```
+    """
+
+    @functools.wraps(handler)
+    def decorator(next_call: ViewType) -> ViewType:
+        """
+        This is the actual decorator.
+        """
+
+        @functools.wraps(next_call)
+        def view(request: Request) -> Response:
+            return handler(request, next_call)
+
+        return view
+
+    return decorator
+
+
 class Router(BaseRouter[WSGIApp]):
     """
     A router to assign different paths to different WSGI applications.
@@ -761,3 +789,72 @@ class Hosts(BaseHosts[WSGIApp]):
         else:
             response = endpoint
         return response(environ, start_response)
+
+
+class Files(staticfiles.BaseFiles):
+    """
+    Provide the WSGI application to download files in the specified path or
+    the specified directory under the specified package.
+
+    Support request range and cache (304 status code).
+
+    NOTE: Need users handle HTTPException(404).
+    """
+
+    def __call__(
+        self, environ: Environ, start_response: StartResponse
+    ) -> Iterable[bytes]:
+        if_none_match: str = environ.get("HTTP_IF_NONE_MATCH", "")
+        if_modified_since: str = environ.get("HTTP_IF_MODIFIED_SINCE", "")
+        filepath = self.ensure_absolute_path(environ.get("PATH_INFO", ""))
+        stat_result, is_file = self.check_path_is_file(filepath)
+        if is_file and stat_result:
+            assert filepath is not None  # Just for type check
+            if self.if_none_match(
+                FileResponse.generate_etag(stat_result), if_none_match
+            ) or self.if_modified_since(stat_result.st_ctime, if_modified_since):
+                response = Response(304)
+            else:
+                response = FileResponse(filepath, stat_result=stat_result)
+            self.set_response_headers(response)
+            return response(environ, start_response)
+
+        raise HTTPException(404)
+
+
+class Pages(staticfiles.BasePages):
+    """
+    Provide the WSGI application to download files in the specified path or
+    the specified directory under the specified package.
+    Unlike `Files`, when you visit a directory, it will try to return the content
+    of the file named `index.html` in that directory.
+
+    Support request range and cache (304 status code).
+
+    NOTE: Need users handle HTTPException(404).
+    """
+
+    def __call__(
+        self, environ: Environ, start_response: StartResponse
+    ) -> Iterable[bytes]:
+        if_none_match: str = environ.get("HTTP_IF_NONE_MATCH", "")
+        if_modified_since: str = environ.get("HTTP_IF_MODIFIED_SINCE", "")
+        filepath = self.ensure_absolute_path(environ.get("PATH_INFO", ""))
+        stat_result, is_file = self.check_path_is_file(filepath)
+        if stat_result is not None:
+            assert filepath is not None  # Just for type check
+            if is_file:
+                if self.if_none_match(
+                    FileResponse.generate_etag(stat_result), if_none_match
+                ) or self.if_modified_since(stat_result.st_ctime, if_modified_since):
+                    response = Response(304)
+                else:
+                    response = FileResponse(filepath, stat_result=stat_result)
+                self.set_response_headers(response)
+                return response(environ, start_response)
+            if stat.S_ISDIR(stat_result.st_mode):
+                url = URL(environ=environ)
+                url = url.replace(scheme="", path=url.path + "/")
+                return RedirectResponse(url)(environ, start_response)
+
+        raise HTTPException(404)

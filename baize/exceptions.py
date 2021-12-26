@@ -12,7 +12,11 @@ class HTTPException(Exception):
         self.status_code = status_code
         self.headers = headers
         self.content = content
-        super().__init__(status_code, HTTPStatus(status_code).description)
+        try:
+            status_description = HTTPStatus(status_code).description
+        except ValueError:
+            status_description = "Maybe a custom HTTP status code"
+        super().__init__(status_code, status_description)
 
 
 def abort(

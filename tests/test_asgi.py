@@ -3,7 +3,7 @@ import tempfile
 from functools import partial
 from inspect import cleandoc
 from pathlib import Path
-from typing import AsyncGenerator, Type
+from typing import AsyncGenerator, Awaitable, Callable, Type
 
 import httpx
 import pytest
@@ -13,9 +13,11 @@ from starlette.testclient import TestClient
 from baize.asgi import (
     ClientDisconnect,
     FileResponse,
+    Files,
     Hosts,
     HTMLResponse,
     JSONResponse,
+    Pages,
     PlainTextResponse,
     RedirectResponse,
     Request,
@@ -26,6 +28,7 @@ from baize.asgi import (
     Subpaths,
     WebSocket,
     WebSocketDisconnect,
+    middleware,
     request_response,
     websocket_session,
 )
@@ -943,6 +946,25 @@ async def test_websocket_session():
 
 
 @pytest.mark.asyncio
+async def test_middleware():
+    @middleware
+    async def middleware_func(
+        request: Request, handler: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
+        response = await handler(request)
+        response.headers["X-Middleware"] = "1"
+        return response
+
+    @request_response
+    @middleware_func
+    async def view(request: Request) -> Response:
+        return PlainTextResponse(await request.body)
+
+    async with httpx.AsyncClient(app=view, base_url="http://testServer/") as client:
+        assert (await client.get("/")).headers["X-Middleware"] == "1"
+
+
+@pytest.mark.asyncio
 async def test_router():
     @request_response
     async def path(request: Request) -> Response:
@@ -1014,3 +1036,100 @@ async def test_hosts():
         assert (
             await client.get("/", headers={"host": "qwe\ndsf"})
         ).text == "Invalid host"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "app",
+    [
+        Files(Path(__file__).absolute().parent.parent / "baize"),
+        Files(".", "baize"),
+    ],
+)
+async def test_files(app):
+    async with httpx.AsyncClient(app=app, base_url="http://testServer/") as client:
+        resp = await client.get("/py.typed")
+        assert resp.text == ""
+
+        assert (
+            await client.get(
+                "/py.typed", headers={"if-none-match": resp.headers["etag"]}
+            )
+        ).status_code == 304
+
+        assert (
+            await client.get(
+                "/py.typed", headers={"if-none-match": "W/" + resp.headers["etag"]}
+            )
+        ).status_code == 304
+
+        assert (
+            await client.get("/py.typed", headers={"if-none-match": "*"})
+        ).status_code == 304
+
+        assert (
+            await client.get(
+                "/py.typed",
+                headers={"if-modified-since": resp.headers["last-modified"]},
+            )
+        ).status_code == 304
+
+        assert (
+            await client.get(
+                "/py.typed",
+                headers={
+                    "if-modified-since": resp.headers["last-modified"],
+                    "if-none-match": resp.headers["etag"],
+                },
+            )
+        ).status_code == 304
+
+        with pytest.raises(HTTPException):
+            await client.get("/")
+
+        with pytest.raises(HTTPException):
+            await client.get("/%2E%2E/baize/%2E%2E/%2E%2E/README.md")
+
+
+@pytest.mark.asyncio
+async def test_pages(tmpdir):
+    (tmpdir / "index.html").write_text(
+        "<html><body>index</body></html>", encoding="utf8"
+    )
+    (tmpdir / "dir").mkdir()
+    (tmpdir / "dir" / "index.html").write_text(
+        "<html><body>dir index</body></html>", encoding="utf8"
+    )
+
+    app = Pages(tmpdir)
+    async with httpx.AsyncClient(app=app, base_url="http://testServer/") as client:
+        resp = await client.get("/")
+        assert resp.status_code == 200
+        assert resp.text == "<html><body>index</body></html>"
+
+        assert (
+            await client.get(
+                "/", headers={"if-modified-since": resp.headers["last-modified"]}
+            )
+        ).status_code == 304
+
+        assert (
+            await client.get("/", headers={"if-none-match": resp.headers["etag"]})
+        ).status_code == 304
+
+        assert (
+            await client.get(
+                "/",
+                headers={
+                    "if-modified-since": resp.headers["last-modified"],
+                    "if-none-match": resp.headers["etag"],
+                },
+            )
+        ).status_code == 304
+
+        resp = await client.get("/dir")
+        assert resp.status_code == 307
+        assert resp.headers["location"] == "//testserver/dir/"
+
+        with pytest.raises(HTTPException):
+            await client.get("/d")

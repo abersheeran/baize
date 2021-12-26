@@ -106,3 +106,29 @@ If the built-in types are not enough, then you only need to write a class that i
 ```eval_rst
 .. autoclass:: baize.wsgi.Hosts
 ```
+
+## Shortcut functions
+
+### request_response
+
+```eval_rst
+.. autofunction:: baize.wsgi.request_response
+```
+
+### middleware
+
+```eval_rst
+.. autofunction:: baize.wsgi.middleware
+```
+
+## Files
+
+```eval_rst
+.. autoclass:: baize.wsgi.Files
+```
+
+## Pages
+
+```eval_rst
+.. autoclass:: baize.wsgi.Pages
+```

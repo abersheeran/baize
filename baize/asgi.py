@@ -25,14 +25,14 @@ from typing import (
     TypeVar,
     Union,
 )
-from urllib.parse import parse_qsl, quote
+from urllib.parse import parse_qsl
 
-from . import multipart
+from . import multipart, staticfiles
 from .concurrency import run_in_threadpool
 from .datastructures import URL, Address, FormData, Headers, QueryParams, UploadFile
 from .exceptions import HTTPException
 from .requests import MoreInfoFromHeaderMixin
-from .responses import BaseResponse, FileResponseMixin, build_bytes_from_sse
+from .responses import BaseResponse, FileResponseMixin, build_bytes_from_sse, iri_to_uri
 from .routing import BaseHosts, BaseRouter, BaseSubpaths
 from .typing import ASGIApp, Message, Protocol, Receive, Scope, Send, ServerSentEvent
 from .utils import cached_property
@@ -413,7 +413,7 @@ class RedirectResponse(Response):
         headers: Mapping[str, str] = None,
     ) -> None:
         super().__init__(status_code=status_code, headers=headers)
-        self.headers["location"] = quote(str(url), safe="/#%[]=:;$&()+,!?*@'~")
+        self.headers["location"] = iri_to_uri(str(url))
 
 
 class StreamResponse(Response):
@@ -518,9 +518,10 @@ class FileResponse(Response, FileResponseMixin):
                     message["count"] = count
                 await send(message)
 
+            return sendfile
         else:
 
-            async def sendfile(
+            async def fake_sendfile(
                 file_descriptor: int,
                 offset: int = None,
                 count: int = None,
@@ -552,7 +553,7 @@ class FileResponse(Response, FileResponseMixin):
                             send, data, more_body=more_body if should_stop else True
                         )
 
-        return sendfile
+            return fake_sendfile
 
     async def handle_all(
         self, send_header_only: bool, file_size: int, scope: Scope, send: Send
@@ -866,7 +867,11 @@ class WebSocket(HTTPConnection):
             await self.send({"type": "websocket.close", "code": code})
 
 
-def request_response(view: Callable[[Request], Awaitable[Response]]) -> ASGIApp:
+ViewType = Callable[[Request], Awaitable[Response]]
+MiddlewareType = Callable[[Request, ViewType], Awaitable[Response]]
+
+
+def request_response(view: ViewType) -> ASGIApp:
     """
     This can turn a callable object into a ASGI application.
 
@@ -909,6 +914,41 @@ def websocket_session(view: Callable[[WebSocket], Awaitable[None]]) -> ASGIApp:
             await view(websocket)
 
     return asgi
+
+
+def middleware(handler: MiddlewareType) -> Callable[[ViewType], ViewType]:
+    """
+    This can turn a callable object into a middleware for view.
+
+    ```python
+    @middleware
+    async def m(request: Request, next_call: Callable[[Request], Awaitable[Response]]) -> Response:
+        ...
+        response = await next_call(request)
+        ...
+        return response
+
+
+    @request_response
+    @m
+    async def v(request: Request) -> Response:
+        ...
+    ```
+    """
+
+    @functools.wraps(handler)
+    def decorator(next_call: ViewType) -> ViewType:
+        """
+        This is the actual decorator.
+        """
+
+        @functools.wraps(next_call)
+        async def view(request: Request) -> Response:
+            return await handler(request, next_call)
+
+        return view
+
+    return decorator
 
 
 class Router(BaseRouter[ASGIApp]):
@@ -990,3 +1030,78 @@ class Hosts(BaseHosts[ASGIApp]):
         else:
             response = endpoint
         return await response(scope, receive, send)
+
+
+class Files(staticfiles.BaseFiles):
+    """
+    Provide the ASGI application to download files in the specified path or
+    the specified directory under the specified package.
+
+    Support request range and cache (304 status code).
+
+    NOTE: Need users handle HTTPException(404).
+    """
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if_none_match: str = ""
+        if_modified_since: str = ""
+        for k, v in scope["headers"]:
+            if k == b"if-none-match":
+                if_none_match = v.decode("latin-1")
+            elif k == b"if-modified-since":
+                if_modified_since = v.decode("latin-1")
+        filepath = self.ensure_absolute_path(scope["path"])
+        stat_result, is_file = self.check_path_is_file(filepath)
+        if is_file and stat_result:
+            assert filepath is not None  # Just for type check
+            if self.if_none_match(
+                FileResponse.generate_etag(stat_result), if_none_match
+            ) or self.if_modified_since(stat_result.st_ctime, if_modified_since):
+                response = Response(304)
+            else:
+                response = FileResponse(filepath, stat_result=stat_result)
+            self.set_response_headers(response)
+            return await response(scope, receive, send)
+
+        raise HTTPException(404)
+
+
+class Pages(staticfiles.BasePages):
+    """
+    Provide the ASGI application to download files in the specified path or
+    the specified directory under the specified package.
+    Unlike `Files`, when you visit a directory, it will try to return the content
+    of the file named `index.html` in that directory.
+
+    Support request range and cache (304 status code).
+
+    NOTE: Need users handle HTTPException(404).
+    """
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if_none_match: str = ""
+        if_modified_since: str = ""
+        for k, v in scope["headers"]:
+            if k == b"if-none-match":
+                if_none_match = v.decode("latin-1")
+            elif k == b"if-modified-since":
+                if_modified_since = v.decode("latin-1")
+        filepath = self.ensure_absolute_path(scope["path"])
+        stat_result, is_file = self.check_path_is_file(filepath)
+        if stat_result is not None:
+            assert filepath is not None  # Just for type check
+            if is_file:
+                if self.if_none_match(
+                    FileResponse.generate_etag(stat_result), if_none_match
+                ) or self.if_modified_since(stat_result.st_ctime, if_modified_since):
+                    response = Response(304)
+                else:
+                    response = FileResponse(filepath, stat_result=stat_result)
+                self.set_response_headers(response)
+                return await response(scope, receive, send)
+            if stat.S_ISDIR(stat_result.st_mode):
+                url = URL(scope=scope)
+                url = url.replace(scheme="", path=url.path + "/")
+                return await RedirectResponse(url)(scope, receive, send)
+
+        raise HTTPException(404)
