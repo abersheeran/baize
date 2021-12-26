@@ -12,7 +12,6 @@ classifiers = [
 ]
 dependencies = ["typing-extensions<4.0.0,>=3.7.4; python_version < \"3.8\""]
 description = "Powerful and exquisite WSGI/ASGI framework/toolkit."
-dynamic = ["classifiers"]
 license = {text = "Apache-2.0"}
 name = "baize"
 readme = "README.md"
@@ -50,14 +49,14 @@ includes = ["baize"]
 
 [tool.pdm.dev-dependencies]
 build = [
-  "mypy<1.0,>=0.910",
+  "mypy<1.0,>=0.930",
   "mypy-extensions<1.0.0,>=0.4.3",
 ]
 dev = [
   "black<22,>=21.9b0",
   "isort<6.0.0,>=5.7.0",
   "flake8~=3.9",
-  "mypy<1.0,>=0.910",
+  "mypy<1.0,>=0.930",
 ]
 doc = [
   "Sphinx<4.0.0,>=3.5.3",
