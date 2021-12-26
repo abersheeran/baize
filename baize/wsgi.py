@@ -705,6 +705,7 @@ def middleware(handler: MiddlewareType) -> Callable[[ViewType], ViewType]:
     return decorator
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class Router(BaseRouter[WSGIApp]):
     """
     A router to assign different paths to different WSGI applications.
@@ -791,6 +792,7 @@ class Hosts(BaseHosts[WSGIApp]):
         return response(environ, start_response)
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class Files(staticfiles.BaseFiles):
     """
     Provide the WSGI application to download files in the specified path or
@@ -822,6 +824,7 @@ class Files(staticfiles.BaseFiles):
         raise HTTPException(404)
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class Pages(staticfiles.BasePages):
     """
     Provide the WSGI application to download files in the specified path or
