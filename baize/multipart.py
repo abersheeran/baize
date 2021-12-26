@@ -3,7 +3,7 @@ from cgi import parse_header
 from typing import List, Optional, Tuple, Union, cast
 
 from .datastructures import Headers
-from .typing import final
+from .typing import Final
 
 __all__ = [
     "Event",
@@ -94,16 +94,15 @@ class NeedData(Event):
     __slots__ = ()
 
 
-NEED_DATA = NeedData()
+NEED_DATA: Final = NeedData()
 
 
-@final
 class State:
-    PREAMBLE = object()
-    PART = object()
-    DATA = object()
-    EPILOGUE = object()
-    COMPLETE = object()
+    PREAMBLE: Final = object()
+    PART: Final = object()
+    DATA: Final = object()
+    EPILOGUE: Final = object()
+    COMPLETE: Final = object()
 
 
 # Multipart line breaks MUST be CRLF (\r\n) by RFC-7578, except that
