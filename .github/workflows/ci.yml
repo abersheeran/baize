@@ -36,7 +36,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           architecture: x64
-          version: 1.9.0
+          version: 1.12.2
           enable-pep582: true # Enable PEP 582 package loading globally
       - name: Install dependencies
         run: pdm install -v -dG dev -dG test --no-self
@@ -75,7 +75,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           architecture: x64
-          version: 1.9.0
+          version: 1.12.2
           enable-pep582: true # Enable PEP 582 package loading globally
 
       - name: Install dependencies
@@ -83,24 +83,22 @@ jobs:
           pdm install -v -dG build --no-self
           python -m pip install -U setuptools wheel twine auditwheel
 
-      - name: Build
+      - name: Export setup.py
+        run: pdm export -f setuppy -o setup.py
+
+      - name: Build binary wheel
         if: matrix.os != 'ubuntu-latest'
         run: |
-          pdm export -f setuppy -o setup.py
-
           python setup.py bdist_wheel
 
-          pdm run pip uninstall -y mypy
-          python setup.py bdist_wheel sdist
-
-      - name: Build
+      - name: Build binary wheel
         if: matrix.os == 'ubuntu-latest'
         run: |
-          pdm export -f setuppy -o setup.py
-
           python setup.py bdist_wheel -d raw_dist
           auditwheel repair raw_dist/*-linux*.whl -w ./dist
 
+      - name: Build pure python wheel
+        run: |
           pdm run pip uninstall -y mypy
           python setup.py bdist_wheel sdist
 
