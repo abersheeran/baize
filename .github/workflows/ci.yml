@@ -95,6 +95,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           python setup.py bdist_wheel -d raw_dist
+          auditwheel show raw_dist/*-linux*.whl
           auditwheel repair raw_dist/*-linux*.whl -w ./dist
 
       - name: Build pure python wheel
