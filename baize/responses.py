@@ -215,15 +215,33 @@ class FileResponseMixin:
         max_size: int,
         content_type: str,
     ) -> Tuple[int, Callable[[int, int], bytes]]:
+        r"""
+        Multipart response headers generator.
+
+        ```
+        --{boundary}\n
+        Content-Type: {content_type}\n
+        Content-Range: bytes {start}-{end-1}/{max_size}\n
+        \n
+        ..........content...........\n
+        --{boundary}\n
+        Content-Type: {content_type}\n
+        Content-Range: bytes {start}-{end-1}/{max_size}\n
+        \n
+        ..........content...........\n
+        --{boundary}--\n
+        ```
+        """
         boundary_len = len(boundary)
-        content_length = (
-            (
-                len(ranges)
-                * (44 + boundary_len + len(content_type) + len(str(max_size)))
-                + sum(len(str(start)) + len(str(end - 1)) for start, end in ranges)
-            )  # Headers
-            + sum(end - start for start, end in ranges)  # Content
-            + (5 + boundary_len)  # --boundary--\n
+        static_header_part_len = (
+            44 + boundary_len + len(content_type) + len(str(max_size))
+        )
+        content_length = sum(
+            (len(str(start)) + len(str(end - 1)) + static_header_part_len)  # Headers
+            + (end - start)  # Content
+            for start, end in ranges
+        ) + (
+            5 + boundary_len  # --boundary--\n
         )
         return (
             content_length,

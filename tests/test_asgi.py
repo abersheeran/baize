@@ -722,6 +722,9 @@ def test_responses_inherit(response_class):
 # ################################# WebSocket tests ####################################
 # ######################################################################################
 
+# Hook websocket TestClient
+starlette.testclient._is_asgi3 = lambda *args, **kwargs: True
+
 
 def test_websocket_send_and_receive_text():
     @websocket_session

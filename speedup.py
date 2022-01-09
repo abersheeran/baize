@@ -1,39 +1,42 @@
 import os
-import sys
+from pathlib import Path
 
-if os.environ.get("WITHOUT_MYPYC", "False") == "False":
-    # See if mypyc is installed
-    try:
-        from mypyc.build import mypycify
-    # Do nothing if mypyc is not available
-    except ImportError:
-        print("Error in import mypyc.build, skip build.", flush=True)
-    # mypyc is installed. Compile
-    else:
-        from pathlib import Path
+if os.environ.get("WITHOUT_MYPYC", "False") != "False":
 
-        # This function will be executed in setup.py:
-        def build(setup_kwargs):
-            modules = list(
-                filter(
-                    lambda path: path.replace("\\", "/")
-                    not in (
-                        "baize/asgi.py",
-                        "baize/wsgi.py",
-                    ),
-                    map(str, Path("baize").glob("**/*.py")),
-                )
-            )
-            setup_kwargs.update(
-                {
-                    "ext_modules": mypycify(["--ignore-missing-imports", *modules]),
-                }
-            )
-
-
-try:
-    build
-except NameError:
-    # Got to provide this function. Otherwise, pdm will fail
     def build(setup_kwargs):
         pass
+
+else:
+
+    def build(setup_kwargs):
+        try:
+            from mypyc.build import mypycify
+        except ImportError:
+            print("Error in import mypyc.build, skip build.", flush=True)
+            return
+
+        modules = list(
+            filter(
+                lambda path: path.replace("\\", "/")
+                not in (
+                    # ASGI
+                    "baize/asgi/requests.py",
+                    "baize/asgi/responses.py",
+                    "baize/asgi/routing.py",
+                    "baize/asgi/shortcut.py",
+                    "baize/asgi/staticfiles.py",
+                    # WSGI
+                    "baize/wsgi/requests.py",
+                    "baize/wsgi/responses.py",
+                    "baize/wsgi/routing.py",
+                    "baize/wsgi/shortcut.py",
+                    "baize/wsgi/staticfiles.py",
+                ),
+                map(str, Path("baize").glob("**/*.py")),
+            )
+        )
+        setup_kwargs.update(
+            {
+                "ext_modules": mypycify(["--ignore-missing-imports", *modules]),
+            }
+        )
