@@ -65,7 +65,7 @@ jobs:
     strategy:
       matrix:
         python-version: [3.6, 3.7, 3.8, 3.9, "3.10"]
-        os: [windows-latest, ubuntu-latest, macos-latest]
+        os: [windows-latest, ubuntu-18.04, macos-latest]
 
     steps:
       - uses: actions/checkout@v2
@@ -92,7 +92,8 @@ jobs:
           python setup.py bdist_wheel
 
       - name: Build binary wheel
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-18.04'
+        continue-on-error: true
         run: |
           python setup.py bdist_wheel -d raw_dist
           auditwheel show raw_dist/*-linux*.whl
