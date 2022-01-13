@@ -21,7 +21,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pdm install -dG doc
+          pdm sync -dG doc
 
       - name: Generate document
         run: |

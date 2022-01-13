@@ -39,7 +39,7 @@ jobs:
           version: 1.12.2
           enable-pep582: true # Enable PEP 582 package loading globally
       - name: Install dependencies
-        run: pdm install -v -dG dev -dG test --no-self
+        run: pdm sync -v -dG dev -dG test --no-self
       - name: Static type and format checking
         run: python script/check.py
       - name: Tests
@@ -53,8 +53,18 @@ jobs:
 
       - name: Tests with mypyc
         run: |
-          pdm install -v -dG build --no-isolation
+          pdm sync -v -dG build --no-isolation
           pdm run pytest tests --cov=./baize -o log_cli=true -o log_cli_level=DEBUG
+
+      - name: Tests build wheel
+        run: |
+          python -m pip install -U setuptools wheel twine auditwheel
+          pdm export -f setuppy -o setup.py
+          python setup.py bdist_wheel
+
+          (test $(find dist -name *-linux*.whl | wc -c) -ne 0) \
+            && auditwheel show dist/*-linux*.whl \
+            && auditwheel repair dist/*-linux*.whl -w ./dist --plat manylinux_2_17_x86_64
 
   publish:
     needs: tests
@@ -80,7 +90,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pdm install -v -dG build --no-self
+          pdm sync -v -dG build --no-self
           python -m pip install -U setuptools wheel twine auditwheel
 
       - name: Export setup.py
@@ -93,11 +103,10 @@ jobs:
 
       - name: Build binary wheel
         if: matrix.os == 'ubuntu-18.04'
-        continue-on-error: true
         run: |
           python setup.py bdist_wheel -d raw_dist
           auditwheel show raw_dist/*-linux*.whl
-          auditwheel repair raw_dist/*-linux*.whl -w ./dist
+          auditwheel repair raw_dist/*-linux*.whl -w ./dist --plat manylinux_2_17_x86_64
 
       - name: Build pure python wheel
         run: |
