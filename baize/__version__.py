@@ -1,3 +1,3 @@
 VERSION = (0, 15, 0)
 
-__version__ = ".".join(map(str, VERSION))
+__version__ = ".".join(map(str, VERSION)) + "rc1"
