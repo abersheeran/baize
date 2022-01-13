@@ -16,7 +16,7 @@ license = {text = "Apache-2.0"}
 name = "baize"
 readme = "README.md"
 requires-python = ">=3.6.2"
-version = "0.15.0rc1"
+version = "0.15.0rc2"
 
 [project.urls]
 homepage = "https://github.com/abersheeran/baize"
