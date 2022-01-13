@@ -62,9 +62,7 @@ jobs:
           pdm export -f setuppy -o setup.py
           python setup.py bdist_wheel
 
-          (test $(find dist -name *-linux*.whl | wc -c) -ne 0) \
-            && auditwheel show dist/*-linux*.whl \
-            && auditwheel repair dist/*-linux*.whl -w ./dist --plat manylinux_2_17_x86_64
+          (test $(find dist -name *-linux*.whl | wc -c) -ne 0) && auditwheel show dist/*-linux*.whl && auditwheel repair dist/*-linux*.whl -w ./dist --plat manylinux_2_17_x86_64
 
   publish:
     needs: tests
