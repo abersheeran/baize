@@ -57,6 +57,7 @@ jobs:
           pdm run pytest tests --cov=./baize -o log_cli=true -o log_cli_level=DEBUG
 
       - name: Tests build wheel
+        continue-on-error: true
         run: |
           python -m pip install -U setuptools wheel twine auditwheel
           pdm export -f setuppy -o setup.py
@@ -95,16 +96,10 @@ jobs:
         run: pdm export -f setuppy -o setup.py
 
       - name: Build binary wheel
-        if: matrix.os != 'ubuntu-latest'
+        continue-on-error: true
         run: |
           python setup.py bdist_wheel
-
-      - name: Build binary wheel
-        if: matrix.os == 'ubuntu-18.04'
-        run: |
-          python setup.py bdist_wheel -d raw_dist
-          auditwheel show raw_dist/*-linux*.whl
-          auditwheel repair raw_dist/*-linux*.whl -w ./dist --plat manylinux_2_17_x86_64
+          (test $(find dist -name *-linux*.whl | wc -c) -ne 0) && auditwheel show dist/*-linux*.whl && auditwheel repair dist/*-linux*.whl -w ./dist --plat manylinux_2_17_x86_64
 
       - name: Build pure python wheel
         run: |
