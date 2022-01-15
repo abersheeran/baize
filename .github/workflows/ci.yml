@@ -57,13 +57,18 @@ jobs:
           pdm run pytest tests --cov=./baize -o log_cli=true -o log_cli_level=DEBUG
 
       - name: Tests build wheel
-        continue-on-error: true
         run: |
           python -m pip install -U setuptools wheel twine auditwheel
           pdm export -f setuppy -o setup.py
           python setup.py bdist_wheel
 
-          (test $(find dist -name *-linux*.whl | wc -c) -ne 0) && auditwheel show dist/*-linux*.whl && auditwheel repair dist/*-linux*.whl -w ./dist --plat manylinux_2_17_x86_64
+          if [ $SYSTEM == "ubuntu-latest" ]
+          then
+              auditwheel show dist/*-linux*.whl
+              auditwheel repair dist/*-linux*.whl -w ./dist --plat manylinux_2_17_x86_64
+          fi
+        env:
+          SYSTEM: ${{ matrix.os }}
 
   publish:
     needs: tests
@@ -74,7 +79,7 @@ jobs:
     strategy:
       matrix:
         python-version: [3.6, 3.7, 3.8, 3.9, "3.10"]
-        os: [windows-latest, ubuntu-18.04, macos-latest]
+        os: [windows-latest, ubuntu-latest, macos-latest]
 
     steps:
       - uses: actions/checkout@v2
@@ -96,16 +101,23 @@ jobs:
         run: pdm export -f setuppy -o setup.py
 
       - name: Build binary wheel
-        continue-on-error: true
         run: |
           python setup.py bdist_wheel
-          (test $(find dist -name *-linux*.whl | wc -c) -ne 0) && auditwheel show dist/*-linux*.whl && auditwheel repair dist/*-linux*.whl -w ./dist --plat manylinux_2_17_x86_64
-          rm -f $(find dist -name *-linux*.whl)
+
+      - name: Repair linux binary wheel
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          auditwheel show dist/*-linux*.whl
+          auditwheel repair dist/*-linux*.whl -w ./dist --plat manylinux_2_17_x86_64
 
       - name: Build pure python wheel
         run: |
           pdm run pip uninstall -y mypy
           python setup.py bdist_wheel sdist
+
+      - name: Deleted can't repair linux binary wheel
+        if: matrix.os == 'ubuntu-latest'
+        run: rm -f $(find dist -name *-linux*.whl)
 
       - name: Publish
         run: |
