@@ -62,13 +62,11 @@ jobs:
           pdm export -f setuppy -o setup.py
           python setup.py bdist_wheel
 
-          if [ $SYSTEM == "ubuntu-latest" ]
-          then
-              auditwheel show dist/*-linux*.whl
-              auditwheel repair dist/*-linux*.whl -w ./dist --plat manylinux_2_17_x86_64
-          fi
-        env:
-          SYSTEM: ${{ matrix.os }}
+      - name: Try repair linux binary wheel
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          auditwheel show dist/*-linux*.whl
+          auditwheel repair dist/*-linux*.whl -w ./dist --plat manylinux_2_17_x86_64
 
   publish:
     needs: tests
