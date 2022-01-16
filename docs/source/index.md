@@ -35,4 +35,5 @@ BáiZé is a framework and toolkit that directly faces the WSGI and ASGI protoco
    WSGI <wsgi>
    ASGI <asgi>
    exceptions
+   multipart
 ```
