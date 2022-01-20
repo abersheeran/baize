@@ -2,18 +2,20 @@
 
 BáiZé provides a "bring your own I/O" multipart parser with excellent performance.
 
-## Synchronous example
+## Example
+
+### Synchronous example
 
 ```eval_rst
 .. literalinclude:: ../../baize/wsgi/requests.py
    :language: python
-   :lines: 170-208
+   :emphasize-lines: 6,170-208
 ```
 
-## Asynchronous example
+### Asynchronous example
 
 ```eval_rst
 .. literalinclude:: ../../baize/asgi/requests.py
    :language: python
-   :lines: 200-238
+   :emphasize-lines: 17,200-238
 ```
