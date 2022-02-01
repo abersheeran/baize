@@ -113,7 +113,7 @@ extras = ["toml"]
 requires_python = ">=3.6"
 summary = "Code coverage measurement for Python"
 dependencies = [
-    "coverage>=5.2.1",
+    "coverage==6.2",
     "tomli",
 ]
 
@@ -386,7 +386,7 @@ extras = ["idna2008"]
 summary = "Validating URI References per RFC 3986"
 dependencies = [
     "idna",
-    "rfc3986<2,>=1.3",
+    "rfc3986==1.5.0",
 ]
 
 [[package]]
@@ -522,7 +522,7 @@ summary = "Backport of pathlib-compatible object wrapper for zip files"
 
 [metadata]
 lock_version = "3.1"
-content_hash = "sha256:9301789a0971ae3666a061f6958af50f439b38c6ce8311bdf4e62cd8f53baa60"
+content_hash = "sha256:ea82ecb7181f6dce8f96a94515adb8d4ce002f504b69ea1877aee98d10a52c86"
 
 [metadata.files]
 "alabaster 0.7.12" = [
