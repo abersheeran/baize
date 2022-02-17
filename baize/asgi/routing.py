@@ -8,10 +8,6 @@ class Router(BaseRouter[ASGIApp]):
     """
     A router to assign different paths to different ASGI applications.
 
-    :param routes: A triple composed of path, endpoint, and name. The name is optional. \
-        If the name is not given, the corresponding URL cannot be constructed through \
-        build_url.
-
     ```python
     applications = Router(
         ("/static/{filepath:any}", static_files),
