@@ -31,12 +31,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - uses: pdm-project/setup-pdm@v2.5
+      - uses: pdm-project/setup-pdm@v2.6
         name: Setup Python and PDM
         with:
           python-version: ${{ matrix.python-version }}
           architecture: x64
-          version: 1.12.2
+          version: 1.12.8
           enable-pep582: true # Enable PEP 582 package loading globally
       - name: Install dependencies
         run: pdm sync -v -dG dev -dG test --no-self
@@ -82,12 +82,12 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - uses: pdm-project/setup-pdm@v2.5
+      - uses: pdm-project/setup-pdm@v2.6
         name: Setup Python and PDM
         with:
           python-version: ${{ matrix.python-version }}
           architecture: x64
-          version: 1.12.2
+          version: 1.12.8
           enable-pep582: true # Enable PEP 582 package loading globally
 
       - name: Install dependencies

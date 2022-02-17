@@ -11,12 +11,12 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - uses: pdm-project/setup-pdm@v2.1
+      - uses: pdm-project/setup-pdm@v2.6
         name: Setup Python and PDM
         with:
           python-version: 3.7
           architecture: x64
-          version: 1.12.2
+          version: 1.12.8
           enable-pep582: true # Enable PEP 582 package loading globally
 
       - name: Install dependencies
