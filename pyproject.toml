@@ -49,14 +49,14 @@ includes = ["baize"]
 
 [tool.pdm.dev-dependencies]
 build = [
-  "mypy<1.0,>=0.930",
+  "mypy<1.0,>=0.931",
   "mypy-extensions<1.0.0,>=0.4.3",
 ]
 dev = [
   "black<22,>=21.9b0",
   "isort<6.0.0,>=5.7.0",
   "flake8~=3.9",
-  "mypy<1.0,>=0.930",
+  "mypy<1.0,>=0.931",
 ]
 doc = [
   "Sphinx<4.0.0,>=3.5.3",
