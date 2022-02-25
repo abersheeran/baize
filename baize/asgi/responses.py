@@ -166,14 +166,14 @@ class Sendfile(Protocol):
         pass
 
 
-if os.name == "nt":
+if os.name == "nt":  # pragma: py-no-win32
 
     async def open_for_sendfile(
         path: Union[str, bytes, "os.PathLike[str]", "os.PathLike[bytes]"]
     ) -> int:
         return await run_in_threadpool(os.open, path, os.O_RDONLY | os.O_BINARY)
 
-else:
+else:  # pragma: py-win32
 
     async def open_for_sendfile(
         path: Union[str, bytes, "os.PathLike[str]", "os.PathLike[bytes]"]

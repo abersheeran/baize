@@ -12,9 +12,9 @@ from typing import (
     Type,
 )
 
-if sys.version_info[:2] < (3, 8):
+if sys.version_info[:2] < (3, 8):  # pragma: py-gte-38
     from typing_extensions import Final, Literal, Protocol, TypedDict, final
-else:
+else:  # pragma: py-lt-38
     from typing import Final, Literal, Protocol, TypedDict, final
 
 __all__ = [

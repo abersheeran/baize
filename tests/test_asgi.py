@@ -934,7 +934,7 @@ async def test_request_response():
     with pytest.raises(WebSocketDisconnect) as exc:
         with client.websocket_connect("/"):
             pass
-    assert exc.value.code == 1001
+    assert exc.value.code == 1000
 
 
 @pytest.mark.asyncio

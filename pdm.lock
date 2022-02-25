@@ -107,13 +107,23 @@ requires_python = ">=3.6"
 summary = "Code coverage measurement for Python"
 
 [[package]]
+name = "coverage-conditional-plugin"
+version = "0.5.0"
+requires_python = ">=3.6,<4.0"
+summary = "Conditional coverage based on any rules you define!"
+dependencies = [
+    "coverage<7,>=5",
+    "packaging>=20.4",
+]
+
+[[package]]
 name = "coverage"
 version = "6.2"
 extras = ["toml"]
 requires_python = ">=3.6"
 summary = "Code coverage measurement for Python"
 dependencies = [
-    "coverage>=5.2.1",
+    "coverage==6.2",
     "tomli",
 ]
 
@@ -386,7 +396,7 @@ extras = ["idna2008"]
 summary = "Validating URI References per RFC 3986"
 dependencies = [
     "idna",
-    "rfc3986<2,>=1.3",
+    "rfc3986==1.5.0",
 ]
 
 [[package]]
@@ -522,7 +532,7 @@ summary = "Backport of pathlib-compatible object wrapper for zip files"
 
 [metadata]
 lock_version = "3.1"
-content_hash = "sha256:6702e9d694dec6c09e458e9322c8109e9afc0e62c78ebde8c8ebbde6a8e043de"
+content_hash = "sha256:a529b04eb68d638adbf72d05399c6d0a5101f108b652922fdd5f352c6e252f7d"
 
 [metadata.files]
 "alabaster 0.7.12" = [
@@ -624,6 +634,10 @@ content_hash = "sha256:6702e9d694dec6c09e458e9322c8109e9afc0e62c78ebde8c8ebbde6a
     {file = "coverage-6.2-cp39-cp39-win_amd64.whl", hash = "sha256:86f2e78b1eff847609b1ca8050c9e1fa3bd44ce755b2ec30e70f2d3ba3844644"},
     {file = "coverage-6.2-pp36.pp37.pp38-none-any.whl", hash = "sha256:5829192582c0ec8ca4a2532407bc14c2f338d9878a10442f5d03804a95fac9de"},
     {file = "coverage-6.2.tar.gz", hash = "sha256:e2cad8093172b7d1595b4ad66f24270808658e11acf43a8f95b41276162eb5b8"},
+]
+"coverage-conditional-plugin 0.5.0" = [
+    {file = "coverage_conditional_plugin-0.5.0-py3-none-any.whl", hash = "sha256:513d65ebafdd16f20455d5b0ac0b72807a12ce16b7937a0d09a1c3e810eea5c2"},
+    {file = "coverage-conditional-plugin-0.5.0.tar.gz", hash = "sha256:053af7b38b07131748c6c9548c77895fd8e6b24ac81cb657f337415b64bdd3c1"},
 ]
 "dataclasses 0.8" = [
     {file = "dataclasses-0.8-py3-none-any.whl", hash = "sha256:0201d89fa866f68c8ebd9d08ee6ff50c0b255f8ec63a71c16fda7af82bb887bf"},
