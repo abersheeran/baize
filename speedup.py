@@ -25,6 +25,7 @@ else:
                     "baize/asgi/routing.py",
                     "baize/asgi/shortcut.py",
                     "baize/asgi/staticfiles.py",
+                    "baize/asgi/websocket.py",
                     # WSGI
                     "baize/wsgi/requests.py",
                     "baize/wsgi/responses.py",
