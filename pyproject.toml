@@ -22,6 +22,7 @@ version = "0.15.0"
 homepage = "https://github.com/abersheeran/baize"
 repository = "https://github.com/abersheeran/baize"
 
+[project.optional-dependencies]
 [tool.isort]
 profile = "black"
 
@@ -47,8 +48,8 @@ skip_covered = true
 [tool.coverage.coverage_conditional_plugin.rules]
 py-gte-38 = "sys_version_info >= (3, 8)"
 py-lt-38 = "sys_version_info < (3, 8)"
-py-win32 = "sys_platform == 'win32'"
 py-no-win32 = "sys_platform != 'win32'"
+py-win32 = "sys_platform == 'win32'"
 
 [tool.pdm]
 build = "speedup.py"
@@ -78,6 +79,7 @@ test = [
   "requests<3.0.0,>=2.25.1",
   "starlette<0.15.0,>=0.14.2",
   "coverage-conditional-plugin~=0.5",
+  "setuptools>=59.6", # to fix the fuck `No module named 'pkg_resources'`
 ]
 
 [build-system]
