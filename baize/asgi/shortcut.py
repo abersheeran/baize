@@ -3,8 +3,9 @@ from typing import Awaitable, Callable
 
 from baize.typing import ASGIApp, Receive, Scope, Send
 
-from .requests import Request, WebSocket
+from .requests import Request
 from .responses import Response
+from .websocket import WebSocket, WebsocketDenialResponse
 
 ViewType = Callable[[Request], Awaitable[Response]]
 MiddlewareType = Callable[[Request, ViewType], Awaitable[Response]]
@@ -24,7 +25,7 @@ def request_response(view: ViewType) -> ASGIApp:
     @functools.wraps(view)
     async def asgi(scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] == "websocket":
-            return await send({"type": "websocket.close", "code": 1001})
+            return await WebsocketDenialResponse(Response(404))(scope, receive, send)
         else:
             request = Request(scope, receive, send)
             resposne = await view(request)

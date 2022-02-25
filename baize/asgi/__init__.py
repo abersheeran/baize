@@ -1,12 +1,5 @@
 from baize.asgi.helper import empty_receive, empty_send, send_http_body, send_http_start
-from baize.asgi.requests import (
-    ClientDisconnect,
-    HTTPConnection,
-    Request,
-    WebSocket,
-    WebSocketDisconnect,
-    WebSocketState,
-)
+from baize.asgi.requests import ClientDisconnect, HTTPConnection, Request
 from baize.asgi.responses import (
     FileResponse,
     HTMLResponse,
@@ -21,6 +14,12 @@ from baize.asgi.responses import (
 from baize.asgi.routing import Hosts, Router, Subpaths
 from baize.asgi.shortcut import middleware, request_response, websocket_session
 from baize.asgi.staticfiles import Files, Pages
+from baize.asgi.websocket import (
+    WebSocket,
+    WebsocketDenialResponse,
+    WebSocketDisconnect,
+    WebSocketState,
+)
 
 __all__ = [
     "empty_receive",
@@ -32,6 +31,7 @@ __all__ = [
     "Request",
     "WebSocket",
     "WebSocketDisconnect",
+    "WebsocketDenialResponse",
     "WebSocketState",
     "Response",
     "SmallResponse",
