@@ -45,7 +45,8 @@ class Pages(staticfiles.BasePages):
     Provide the WSGI application to download files in the specified path or
     the specified directory under the specified package.
     Unlike `Files`, when you visit a directory, it will try to return the content
-    of the file named `index.html` in that directory.
+    of the file named `index.html` in that directory. Or if the `pathname.html` is
+    exist, it will return the content of that file.
 
     Support request range and cache (304 status code).
 
@@ -59,6 +60,14 @@ class Pages(staticfiles.BasePages):
         if_modified_since: str = environ.get("HTTP_IF_MODIFIED_SINCE", "")
         filepath = self.ensure_absolute_path(environ.get("PATH_INFO", ""))
         stat_result, is_file = self.check_path_is_file(filepath)
+        if (
+            stat_result is None  # filepath is not exist
+            and filepath is not None  # Just for type check
+            and not filepath.endswith(".html")  # filepath is not a html file
+        ):
+            filepath += ".html"
+            stat_result, is_file = self.check_path_is_file(filepath)
+
         if stat_result is not None:
             assert filepath is not None  # Just for type check
             if is_file:

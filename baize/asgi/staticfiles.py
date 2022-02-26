@@ -64,6 +64,14 @@ class Pages(staticfiles.BasePages):
                 if_modified_since = v.decode("latin-1")
         filepath = self.ensure_absolute_path(scope["path"])
         stat_result, is_file = self.check_path_is_file(filepath)
+        if (
+            stat_result is None  # filepath is not exist
+            and filepath is not None  # Just for type check
+            and not filepath.endswith(".html")  # filepath is not a html file
+        ):
+            filepath += ".html"
+            stat_result, is_file = self.check_path_is_file(filepath)
+
         if stat_result is not None:
             assert filepath is not None  # Just for type check
             if is_file:

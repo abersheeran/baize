@@ -1110,6 +1110,10 @@ async def test_pages(tmpdir):
         assert resp.status_code == 200
         assert resp.text == "<html><body>index</body></html>"
 
+        resp = await client.get("/index")
+        assert resp.status_code == 200
+        assert resp.text == "<html><body>index</body></html>"
+
         assert (
             await client.get(
                 "/", headers={"if-modified-since": resp.headers["last-modified"]}

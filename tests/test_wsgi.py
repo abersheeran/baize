@@ -608,6 +608,10 @@ def test_pages(tmpdir):
         assert resp.status_code == 200
         assert resp.text == "<html><body>index</body></html>"
 
+        resp = client.get("/")
+        assert resp.status_code == 200
+        assert resp.text == "<html><body>index</body></html>"
+
         assert (
             client.get(
                 "/", headers={"if-modified-since": resp.headers["last-modified"]}
