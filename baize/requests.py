@@ -17,9 +17,6 @@ except ImportError:  # pragma: no cover
 from .datastructures import URL, ContentType, Headers, MediaType
 from .utils import cached_property
 
-# Workaround for adding samesite support to pre 3.8 python
-http_cookies.Morsel._reserved["samesite"] = "SameSite"  # type: ignore
-
 
 @mypyc_attr(allow_interpreted_subclasses=True)
 class MoreInfoFromHeaderMixin:
