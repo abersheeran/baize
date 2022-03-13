@@ -8,7 +8,12 @@ import httpx
 import pytest
 
 from baize.datastructures import Address, UploadFile
-from baize.exceptions import HTTPException
+from baize.exceptions import (
+    HTTPException,
+    MalformedJSON,
+    MalformedMultipart,
+    UnsupportedMediaType,
+)
 from baize.typing import ServerSentEvent
 from baize.wsgi import (
     FileResponse,
@@ -159,7 +164,7 @@ def test_request_form_urlencoded():
         response = client.post("/", data={"abc": "123 @"})
         assert response.json() == {"form": {"abc": "123 @"}}
 
-        with pytest.raises(HTTPException):
+        with pytest.raises(UnsupportedMediaType):
             response = client.post(
                 "/", data={"abc": "123 @"}, headers={"content-type": "application/json"}
             )
@@ -182,6 +187,11 @@ def test_request_multipart_form():
             file.seek(0, 0)
             response = client.post("/", data={"abc": "123 @"}, files={"file-key": file})
             assert response.json() == {"file": "None"}
+
+        with pytest.raises(MalformedMultipart):
+            response = client.post(
+                "/", content=b"xxxx", headers={"content-type": "multipart/form-data"}
+            )
 
 
 def test_request_body_then_stream():
@@ -228,11 +238,16 @@ def test_request_json():
         response = client.post("/", json={"a": "123"})
         assert response.json() == {"json": {"a": "123"}}
 
-        with pytest.raises(HTTPException):
+        with pytest.raises(UnsupportedMediaType):
             response = client.post(
                 "/",
                 data={"abc": "123 @"},
                 headers={"content-type": "application/x-www-form-urlencoded"},
+            )
+
+        with pytest.raises(MalformedJSON):
+            response = client.post(
+                "/", content=b"abc", headers={"content-type": "application/json"}
             )
 
 

@@ -31,14 +31,14 @@ except ImportError:  # pragma: no cover
 
 
 from .datastructures import Cookie, MutableHeaders
-from .exceptions import HTTPException
+from .exceptions import MalformedRangeHeader, RangeNotSatisfiable
 from .typing import Literal, ServerSentEvent
 
 
 @mypyc_attr(allow_interpreted_subclasses=True)
 class BaseResponse:
     def __init__(
-        self, status_code: int = 200, headers: Mapping[str, str] = None
+        self, status_code: int = 200, headers: Optional[Mapping[str, str]] = None
     ) -> None:
         self.status_code = status_code
         self.headers = MutableHeaders(headers)
@@ -49,9 +49,9 @@ class BaseResponse:
         key: str,
         value: str = "",
         max_age: int = -1,
-        expires: int = None,
+        expires: Optional[int] = None,
         path: str = "/",
-        domain: str = None,
+        domain: Optional[str] = None,
         secure: bool = False,
         httponly: bool = False,
         samesite: Literal["strict", "lax", "none"] = "lax",
@@ -79,7 +79,7 @@ class BaseResponse:
         key: str,
         value: str = "",
         path: str = "/",
-        domain: str = None,
+        domain: Optional[str] = None,
         secure: bool = False,
         httponly: bool = False,
         samesite: Literal["strict", "lax", "none"] = "lax",
@@ -171,9 +171,9 @@ class FileResponseMixin:
         try:
             unit, ranges_str = range_raw_line.split("=", maxsplit=1)
         except ValueError:
-            raise HTTPException(status_code=400)
+            raise MalformedRangeHeader()
         if unit != "bytes":
-            raise HTTPException(status_code=400)
+            raise MalformedRangeHeader("Only support bytes range")
 
         ranges = [
             (int(_[0]), int(_[1]) + 1 if _[1] else max_size)
@@ -181,13 +181,10 @@ class FileResponseMixin:
         ]
 
         if any(start > end for start, end in ranges):
-            raise HTTPException(status_code=400)
+            raise MalformedRangeHeader("Range header: start must be less than end")
 
         if any(end > max_size for _, end in ranges):
-            raise HTTPException(
-                status_code=416,
-                headers={"Content-Range": f"*/{max_size}"},
-            )
+            raise RangeNotSatisfiable(max_size)
 
         if len(ranges) == 1:
             return ranges

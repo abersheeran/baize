@@ -193,8 +193,8 @@ class URL:
         self,
         url: str = "",
         *,
-        scope: Scope = None,
-        environ: Environ = None,
+        scope: typing.Optional[Scope] = None,
+        environ: typing.Optional[Environ] = None,
         **components: typing.Any,
     ) -> None:
         if components:
@@ -232,8 +232,8 @@ class URL:
         scheme: str,
         path: str,
         query_string: bytes = b"",
-        server: typing.Tuple[str, typing.Optional[int]] = None,
-        host_header: str = None,
+        server: typing.Optional[typing.Tuple[str, typing.Optional[int]]] = None,
+        host_header: typing.Optional[str] = None,
     ) -> str:
         if host_header is not None:
             url = f"{scheme}://{host_header}{path}"
@@ -356,9 +356,11 @@ class MultiMapping(typing.Generic[KT, VT], typing.Mapping[KT, VT]):
 
     def __init__(
         self,
-        raw: typing.Union[
-            typing.Mapping[KT, VT],
-            typing.Iterable[typing.Tuple[KT, VT]],
+        raw: typing.Optional[
+            typing.Union[
+                typing.Mapping[KT, VT],
+                typing.Iterable[typing.Tuple[KT, VT]],
+            ]
         ] = None,
     ) -> None:
         _items: typing.List[typing.Tuple[KT, VT]]
@@ -458,12 +460,14 @@ class QueryParams(MultiMapping[str, str]):
 
     def __init__(
         self,
-        raw: typing.Union[
-            "MultiMapping[str, str]",
-            typing.Mapping[str, str],
-            typing.Iterable[typing.Tuple[str, str]],
-            str,
-            bytes,
+        raw: typing.Optional[
+            typing.Union[
+                "MultiMapping[str, str]",
+                typing.Mapping[str, str],
+                typing.Iterable[typing.Tuple[str, str]],
+                str,
+                bytes,
+            ]
         ] = None,
     ) -> None:
         if isinstance(raw, str):
@@ -586,9 +590,11 @@ class Headers(typing.Mapping[str, str]):
 
     def __init__(
         self,
-        headers: typing.Union[
-            typing.Mapping[str, str],
-            typing.Iterable[typing.Tuple[str, str]],
+        headers: typing.Optional[
+            typing.Union[
+                typing.Mapping[str, str],
+                typing.Iterable[typing.Tuple[str, str]],
+            ]
         ] = None,
     ) -> None:
         store: typing.Dict[str, str] = {}
