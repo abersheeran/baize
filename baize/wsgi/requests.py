@@ -12,7 +12,7 @@ from baize.datastructures import (
     QueryParams,
     UploadFile,
 )
-from baize.exceptions import MalformedMultipart, UnsupportedMediaType, MalformedJSON
+from baize.exceptions import MalformedJSON, MalformedMultipart, UnsupportedMediaType
 from baize.requests import MoreInfoFromHeaderMixin
 from baize.typing import Environ
 from baize.utils import cached_property
