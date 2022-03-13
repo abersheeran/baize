@@ -5,6 +5,10 @@ T = TypeVar("T")
 
 
 class HTTPException(Exception, Generic[T]):
+    """
+    Base HTTP Exception
+    """
+
     def __init__(
         self,
         status_code: int = 400,
@@ -33,11 +37,19 @@ def abort(
 
 
 class UnsupportedMediaType(HTTPException[None]):
+    """
+    415 Unsupported Media Type
+    """
+
     def __init__(self, *supported_media_types: str) -> None:
         super().__init__(415, {"Accpet": ", ".join(supported_media_types)}, None)
 
 
 class RangeNotSatisfiable(HTTPException[None]):
+    """
+    416 Range Not Satisfiable
+    """
+
     def __init__(self, max_size: int) -> None:
         super().__init__(416, {"Content-Range": f"*/{max_size}"}, None)
 
