@@ -15,6 +15,7 @@ from typing import (
     Generic,
     Iterable,
     Mapping,
+    Optional,
     Sequence,
     Tuple,
     TypeVar,
@@ -22,7 +23,7 @@ from typing import (
 )
 
 from baize.datastructures import URL, defaultdict
-from baize.exceptions import HTTPException
+from baize.exceptions import MalformedRangeHeader, RangeNotSatisfiable
 from baize.responses import (
     BaseResponse,
     FileResponseMixin,
@@ -68,9 +69,9 @@ class SmallResponse(Response, abc.ABC, Generic[_ContentType]):
         self,
         content: _ContentType,
         status_code: int = 200,
-        headers: Mapping[str, str] = None,
-        media_type: str = None,
-        charset: str = None,
+        headers: Optional[Mapping[str, str]] = None,
+        media_type: Optional[str] = None,
+        charset: Optional[str] = None,
     ) -> None:
         super().__init__(status_code, headers)
         self.content = content
@@ -121,7 +122,7 @@ class JSONResponse(SmallResponse[Any]):
         self,
         content: Any,
         status_code: int = 200,
-        headers: Mapping[str, str] = None,
+        headers: Optional[Mapping[str, str]] = None,
         **kwargs: Any,
     ) -> None:
         self.json_kwargs: Dict[str, Any] = {
@@ -143,7 +144,7 @@ class RedirectResponse(Response):
         self,
         url: Union[str, URL],
         status_code: int = 307,
-        headers: Mapping[str, str] = None,
+        headers: Optional[Mapping[str, str]] = None,
     ) -> None:
         super().__init__(status_code=status_code, headers=headers)
         self.headers["location"] = iri_to_uri(str(url))
@@ -154,7 +155,7 @@ class StreamResponse(Response):
         self,
         iterable: Iterable[bytes],
         status_code: int = 200,
-        headers: Mapping[str, str] = None,
+        headers: Optional[Mapping[str, str]] = None,
         content_type: str = "application/octet-stream",
     ) -> None:
         self.iterable = iterable
@@ -183,10 +184,10 @@ class FileResponse(Response, FileResponseMixin):
     def __init__(
         self,
         filepath: str,
-        headers: Mapping[str, str] = None,
-        content_type: str = None,
-        download_name: str = None,
-        stat_result: os.stat_result = None,
+        headers: Optional[Mapping[str, str]] = None,
+        content_type: Optional[str] = None,
+        download_name: Optional[str] = None,
+        stat_result: Optional[os.stat_result] = None,
         chunk_size: int = 4096 * 64,
     ) -> None:
         super().__init__(headers=headers)
@@ -291,12 +292,12 @@ class FileResponse(Response, FileResponseMixin):
 
         try:
             ranges = self.parse_range(environ["HTTP_RANGE"], file_size)
-        except HTTPException as exception:
+        except (MalformedRangeHeader, RangeNotSatisfiable) as exception:
             start_response(
                 StatusStringMapping[exception.status_code],
                 [*(exception.headers or {}).items()],
             )
-            yield b""
+            yield b"" if exception.content is None else exception.content.encode("utf8")
             return
 
         if len(ranges) == 1:
@@ -331,7 +332,7 @@ class SendEventResponse(Response):
         self,
         iterable: Iterable[ServerSentEvent],
         status_code: int = 200,
-        headers: Mapping[str, str] = None,
+        headers: Optional[Mapping[str, str]] = None,
         *,
         ping_interval: float = 3,
         charset: str = "utf-8",

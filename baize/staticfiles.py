@@ -20,7 +20,7 @@ class BaseFiles:
     def __init__(
         self,
         directory: Union[str, "os.PathLike[str]"],
-        package: str = None,
+        package: Optional[str] = None,
         *,
         cacheability: Literal["public", "private", "no-cache", "no-store"] = "public",
         max_age: int = 60 * 10,  # 10 minutes
@@ -32,7 +32,7 @@ class BaseFiles:
         self.cacheability = cacheability
         self.max_age = max_age
 
-    def normalize_dir_path(self, directory: str, package: str = None) -> str:
+    def normalize_dir_path(self, directory: str, package: Optional[str] = None) -> str:
         if package is None:
             return os.path.abspath(directory)
         else:

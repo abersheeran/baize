@@ -11,6 +11,7 @@ from typing import (
     Dict,
     Generic,
     Mapping,
+    Optional,
     Sequence,
     Tuple,
     TypeVar,
@@ -19,7 +20,7 @@ from typing import (
 
 from baize.concurrency import run_in_threadpool
 from baize.datastructures import URL
-from baize.exceptions import HTTPException
+from baize.exceptions import MalformedRangeHeader, RangeNotSatisfiable
 from baize.responses import (
     BaseResponse,
     FileResponseMixin,
@@ -58,9 +59,9 @@ class SmallResponse(Response, abc.ABC, Generic[_ContentType]):
         self,
         content: _ContentType,
         status_code: int = 200,
-        headers: Mapping[str, str] = None,
-        media_type: str = None,
-        charset: str = None,
+        headers: Optional[Mapping[str, str]] = None,
+        media_type: Optional[str] = None,
+        charset: Optional[str] = None,
     ) -> None:
         super().__init__(status_code, headers)
         self.content = content
@@ -107,7 +108,7 @@ class JSONResponse(SmallResponse[Any]):
         self,
         content: Any,
         status_code: int = 200,
-        headers: Mapping[str, str] = None,
+        headers: Optional[Mapping[str, str]] = None,
         **kwargs: Any,
     ) -> None:
         self.json_kwargs: Dict[str, Any] = {
@@ -129,7 +130,7 @@ class RedirectResponse(Response):
         self,
         url: Union[str, URL],
         status_code: int = 307,
-        headers: Mapping[str, str] = None,
+        headers: Optional[Mapping[str, str]] = None,
     ) -> None:
         super().__init__(status_code=status_code, headers=headers)
         self.headers["location"] = iri_to_uri(str(url))
@@ -140,7 +141,7 @@ class StreamResponse(Response):
         self,
         iterable: AsyncIterable[bytes],
         status_code: int = 200,
-        headers: Mapping[str, str] = None,
+        headers: Optional[Mapping[str, str]] = None,
         content_type: str = "application/octet-stream",
     ) -> None:
         self.iterable = iterable
@@ -159,8 +160,8 @@ class Sendfile(Protocol):
     async def __call__(
         self,
         file_descriptor: int,
-        offset: int = None,
-        count: int = None,
+        offset: Optional[int] = None,
+        count: Optional[int] = None,
         more_body: bool = False,
     ) -> None:
         pass
@@ -192,10 +193,10 @@ class FileResponse(Response, FileResponseMixin):
     def __init__(
         self,
         filepath: str,
-        headers: Mapping[str, str] = None,
-        content_type: str = None,
-        download_name: str = None,
-        stat_result: os.stat_result = None,
+        headers: Optional[Mapping[str, str]] = None,
+        content_type: Optional[str] = None,
+        download_name: Optional[str] = None,
+        stat_result: Optional[os.stat_result] = None,
         chunk_size: int = 4096 * 64,
     ) -> None:
         super().__init__(headers=headers)
@@ -227,8 +228,8 @@ class FileResponse(Response, FileResponseMixin):
 
             async def sendfile(
                 file_descriptor: int,
-                offset: int = None,
-                count: int = None,
+                offset: Optional[int] = None,
+                count: Optional[int] = None,
                 more_body: bool = False,
             ) -> None:
                 message = {
@@ -247,8 +248,8 @@ class FileResponse(Response, FileResponseMixin):
 
             async def fake_sendfile(
                 file_descriptor: int,
-                offset: int = None,
-                count: int = None,
+                offset: Optional[int] = None,
+                count: Optional[int] = None,
                 more_body: bool = False,
             ) -> None:
                 if offset is not None:
@@ -366,7 +367,7 @@ class FileResponse(Response, FileResponseMixin):
 
         try:
             ranges = self.parse_range(http_range, file_size)
-        except HTTPException as exception:
+        except (MalformedRangeHeader, RangeNotSatisfiable) as exception:
             await send_http_start(
                 send,
                 exception.status_code,
@@ -375,7 +376,10 @@ class FileResponse(Response, FileResponseMixin):
                     for k, v in (exception.headers or {}).items()
                 ],
             )
-            return await send_http_body(send, exception.content or b"")
+            return await send_http_body(
+                send,
+                b"" if exception.content is None else exception.content.encode("utf8"),
+            )
 
         if len(ranges) == 1:
             start, end = ranges[0]
@@ -405,7 +409,7 @@ class SendEventResponse(Response):
         self,
         iterable: AsyncIterable[ServerSentEvent],
         status_code: int = 200,
-        headers: Mapping[str, str] = None,
+        headers: Optional[Mapping[str, str]] = None,
         *,
         ping_interval: float = 3,
         charset: str = "utf-8",

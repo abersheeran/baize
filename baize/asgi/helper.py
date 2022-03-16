@@ -1,10 +1,12 @@
-from typing import Iterable, Tuple
+from typing import Iterable, Optional, Tuple
 
 from baize.typing import Message, Send
 
 
 async def send_http_start(
-    send: Send, status_code: int, headers: Iterable[Tuple[bytes, bytes]] = None
+    send: Send,
+    status_code: int,
+    headers: Optional[Iterable[Tuple[bytes, bytes]]] = None,
 ) -> None:
     """
     helper function for send http.response.start

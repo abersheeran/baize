@@ -57,7 +57,7 @@ class StartResponse(Protocol):
         self,
         status: str,
         response_headers: List[Tuple[str, str]],
-        exc_info: ExcInfo = None,
+        exc_info: Optional[ExcInfo] = None,
     ) -> None:
         ...  # pragma: no cover
 

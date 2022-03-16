@@ -33,7 +33,12 @@ from baize.asgi import (
     websocket_session,
 )
 from baize.datastructures import UploadFile
-from baize.exceptions import HTTPException
+from baize.exceptions import (
+    HTTPException,
+    MalformedJSON,
+    MalformedMultipart,
+    UnsupportedMediaType,
+)
 from baize.typing import Message, ServerSentEvent
 
 starlette.testclient.WebSocketDisconnect = WebSocketDisconnect  # type: ignore
@@ -183,7 +188,7 @@ async def test_request_form_urlencoded():
         response = await client.post("/", data={"abc": "123 @"})
         assert response.json() == {"form": {"abc": "123 @"}}
 
-        with pytest.raises(HTTPException):
+        with pytest.raises(UnsupportedMediaType):
             response = await client.post(
                 "/", data={"abc": "123 @"}, headers={"content-type": "application/json"}
             )
@@ -209,6 +214,11 @@ async def test_request_multipart_form():
                 "/", data={"abc": "123 @"}, files={"file-key": file}
             )
             assert response.json() == {"file": "None"}
+
+        with pytest.raises(MalformedMultipart):
+            response = await client.post(
+                "/", content=b"xxxx", headers={"content-type": "multipart/form-data"}
+            )
 
 
 @pytest.mark.asyncio
@@ -258,11 +268,16 @@ async def test_request_json():
         response = await client.post("/", json={"a": "123"})
         assert response.json() == {"json": {"a": "123"}}
 
-        with pytest.raises(HTTPException):
+        with pytest.raises(UnsupportedMediaType):
             response = await client.post(
                 "/",
                 data={"abc": "123 @"},
                 headers={"content-type": "application/x-www-form-urlencoded"},
+            )
+
+        with pytest.raises(MalformedJSON):
+            response = await client.post(
+                "/", content=b"abc", headers={"content-type": "application/json"}
             )
 
 

@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from baize.exceptions import HTTPException
+from baize.exceptions import MalformedRangeHeader, RangeNotSatisfiable
 from baize.responses import FileResponseMixin
 
 
@@ -20,11 +20,11 @@ def test_base_file_response_parse_range(tmp_path: Path):
         (40, 4623),
     ] == response.parse_range("bytes=0-10, 50-, 20-29, 40-50, 20-29", 4623)
 
-    with pytest.raises(HTTPException):
+    with pytest.raises(MalformedRangeHeader):
         response.parse_range("byte=0-10", 4623)
 
-    with pytest.raises(HTTPException):
+    with pytest.raises(MalformedRangeHeader):
         response.parse_range("bytes=10-0", 4623)
 
-    with pytest.raises(HTTPException):
+    with pytest.raises(RangeNotSatisfiable):
         response.parse_range("bytes=0-4623", 4623)

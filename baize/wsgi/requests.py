@@ -12,7 +12,7 @@ from baize.datastructures import (
     QueryParams,
     UploadFile,
 )
-from baize.exceptions import HTTPException
+from baize.exceptions import MalformedJSON, MalformedMultipart, UnsupportedMediaType
 from baize.requests import MoreInfoFromHeaderMixin
 from baize.typing import Environ
 from baize.utils import cached_property
@@ -148,11 +148,14 @@ class Request(HTTPConnection):
         an HTTPExcption exception will be thrown.
         """
         if self.content_type == "application/json":
-            return json.loads(
-                self.body.decode(self.content_type.options.get("charset", "utf8"))
-            )
+            try:
+                return json.loads(
+                    self.body.decode(self.content_type.options.get("charset", "utf8"))
+                )
+            except json.JSONDecodeError as exc:
+                raise MalformedJSON(str(exc)) from None
 
-        raise HTTPException(415, {"Accpet": "application/json"})
+        raise UnsupportedMediaType("application/json")
 
     @cached_property
     def form(self) -> FormData:
@@ -168,6 +171,8 @@ class Request(HTTPConnection):
         """
         if self.content_type == "multipart/form-data":
             charset = self.content_type.options.get("charset", "utf8")
+            if "boundary" not in self.content_type.options:
+                raise MalformedMultipart("Missing boundary in header content-type")
             parser = multipart.MultipartDecoder(
                 self.content_type.options["boundary"].encode("latin-1"), charset
             )
@@ -214,8 +219,8 @@ class Request(HTTPConnection):
             )
             return FormData(parse_qsl(body, keep_blank_values=True))
 
-        raise HTTPException(
-            415, {"Accpet": "multipart/form-data, application/x-www-form-urlencoded"}
+        raise UnsupportedMediaType(
+            "multipart/form-data, application/x-www-form-urlencoded"
         )
 
     def close(self) -> None:
