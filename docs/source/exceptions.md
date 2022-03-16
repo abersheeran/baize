@@ -1,13 +1,9 @@
 # Exceptions
 
-## HTTPException
-
 ```eval_rst
 .. autoclass:: baize.exceptions.HTTPException
    :members:
 ```
-
-## abort
 
 ```eval_rst
 .. autofunction:: baize.exceptions.abort
