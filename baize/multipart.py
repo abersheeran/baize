@@ -1,9 +1,9 @@
 import re
-from cgi import parse_header
 from typing import List, Optional, Tuple, Union, cast
 
 from .datastructures import Headers
 from .typing import Final
+from .utils import parse_header
 
 __all__ = [
     "Event",

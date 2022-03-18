@@ -4,12 +4,12 @@ import os
 import re
 import string
 import typing
-from cgi import parse_header
 from collections import namedtuple
 from tempfile import SpooledTemporaryFile
 from urllib.parse import SplitResult, parse_qsl, urlencode, urlsplit
 
 from .typing import Environ, Final, Literal, Scope
+from .utils import parse_header
 
 __all__ = [
     "Address",
