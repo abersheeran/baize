@@ -88,6 +88,13 @@
    :members:
 ```
 
+## WebsocketDenialResponse
+
+```eval_rst
+.. autoclass:: baize.asgi.WebsocketDenialResponse
+   :members:
+```
+
 ## Router
 
 ```eval_rst
