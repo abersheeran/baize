@@ -161,7 +161,6 @@ class StreamResponse(Response):
         self.iterable = iterable
         super().__init__(status_code, headers)
         self.headers["content-type"] = content_type
-        self.headers["transfer-encoding"] = "chunked"
 
     def __call__(
         self, environ: Environ, start_response: StartResponse
