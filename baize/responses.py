@@ -131,8 +131,11 @@ class FileResponseMixin:
         download_name: Optional[str],
         stat_result: os.stat_result,
     ) -> Dict[str, str]:
-        headers: Dict[str, str] = {}
-        headers["accept-ranges"] = "bytes"
+        headers: Dict[str, str] = {
+            "accept-ranges": "bytes",
+            "last-modified": formatdate(stat_result.st_mtime, usegmt=True),
+            "etag": self.generate_etag(stat_result),
+        }
         if download_name or content_type == "application/octet-stream":
             download_name = download_name or os.path.basename(filepath)
             content_disposition = (
@@ -141,8 +144,7 @@ class FileResponseMixin:
                 f"filename*=utf-8''{quote(download_name)}"
             )
             headers["content-disposition"] = content_disposition
-        headers["last-modified"] = formatdate(stat_result.st_mtime, usegmt=True)
-        headers["etag"] = self.generate_etag(stat_result)
+
         return headers
 
     @staticmethod
