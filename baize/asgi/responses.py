@@ -147,7 +147,6 @@ class StreamResponse(Response):
         self.iterable = iterable
         super().__init__(status_code, headers)
         self.headers["content-type"] = content_type
-        self.headers["transfer-encoding"] = "chunked"
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         await send_http_start(send, self.status_code, self.list_headers(as_bytes=True))
