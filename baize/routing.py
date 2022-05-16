@@ -172,15 +172,6 @@ class Route(Generic[Interface]):
         )
         self.endpoint: Interface = endpoint
 
-    def matches(self, path: str) -> Tuple[bool, Dict[str, Any]]:
-        match = self.re_pattern.fullmatch(path)
-        if match is None:
-            return False, {}
-        return True, {
-            name: self.path_convertors[name].to_python(value)
-            for name, value in match.groupdict().items()
-        }
-
 
 @mypyc_attr(allow_interpreted_subclasses=True)
 class BaseRouter(Generic[Interface]):
@@ -188,13 +179,27 @@ class BaseRouter(Generic[Interface]):
         self._route_array: List[Route[Interface]] = [
             Route(path, endpoint) for path, endpoint in routes
         ]
+        self._route_regex = re.compile(
+            "|".join(
+                r"(?P<%s>%s)"
+                % (f"endpoint_{id(route.endpoint)}", route.re_pattern.pattern)
+                for route in self._route_array
+            )
+        )
+        self._route_mapping = {
+            f"endpoint_{id(route.endpoint)}": route for route in self._route_array
+        }
 
     def search(self, path: str) -> Optional[Tuple[Route[Interface], Dict[str, Any]]]:
-        for route in self._route_array:
-            match_up, params = route.matches(path)
-            if match_up:
-                return route, params
-        return None
+        match_up = self._route_regex.fullmatch(path)
+        if match_up is None:
+            return None
+        assert match_up.lastgroup is not None
+        route = self._route_mapping[match_up.lastgroup]
+        return route, {
+            name: path_convertor.to_python(match_up.groupdict()[name])
+            for name, path_convertor in route.path_convertors.items()
+        }
 
 
 @mypyc_attr(allow_interpreted_subclasses=True)
