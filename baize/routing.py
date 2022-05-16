@@ -197,7 +197,7 @@ class BaseRouter(Generic[Interface]):
         assert match_up.lastgroup is not None
         route = self._route_mapping[match_up.lastgroup]
         return route, {
-            name: path_convertor.to_python(match_up.groupdict()[name])
+            name: path_convertor.to_python(match_up.group(name))
             for name, path_convertor in route.path_convertors.items()
         }
 
