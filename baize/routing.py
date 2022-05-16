@@ -186,7 +186,7 @@ class BaseRouter(Generic[Interface]):
                 for route in self._route_array
             )
         )
-        self._route_mapping = {
+        self._route_mapping: Dict[str, Route[Interface]] = {
             f"endpoint_{id(route.endpoint)}": route for route in self._route_array
         }
 
