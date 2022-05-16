@@ -181,12 +181,12 @@ class BaseRouter(Generic[Interface]):
         ]
         self._route_regex = re.compile(
             "|".join(
-                r"(?P<%s>%s)" % (f"endpoint_{id(route)}", route.re_pattern.pattern)
+                r"(?P<%s>%s)" % (f"route_{id(route)}", route.re_pattern.pattern)
                 for route in self._route_array
             )
         )
         self._route_mapping: Dict[str, Route[Interface]] = {
-            f"endpoint_{id(route)}": route for route in self._route_array
+            f"route_{id(route)}": route for route in self._route_array
         }
 
     def search(self, path: str) -> Optional[Tuple[Route[Interface], Dict[str, Any]]]:
