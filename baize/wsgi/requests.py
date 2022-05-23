@@ -14,7 +14,7 @@ from baize.datastructures import (
 )
 from baize.exceptions import MalformedJSON, MalformedMultipart, UnsupportedMediaType
 from baize.requests import MoreInfoFromHeaderMixin
-from baize.typing import Environ
+from baize.typing import Environ, StartResponse
 from baize.utils import cached_property
 
 
@@ -26,9 +26,11 @@ class HTTPConnection(Mapping[str, Any], MoreInfoFromHeaderMixin):
     access the values in any WSGI `environ` dictionary.
     """
 
-    def __init__(self, environ: Environ) -> None:
+    def __init__(
+        self, environ: Environ, start_response: Optional[StartResponse] = None
+    ) -> None:
         self._environ = environ
-        self._stream_consumed = False
+        self._start_response = start_response
 
     def __getitem__(self, key: str) -> Any:
         return self._environ[key]
@@ -42,7 +44,10 @@ class HTTPConnection(Mapping[str, Any], MoreInfoFromHeaderMixin):
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, self.__class__):
             return NotImplemented
-        return self._environ == other._environ
+        return (
+            self._environ == other._environ
+            and self._start_response == other._start_response
+        )
 
     @cached_property
     def client(self) -> Address:
@@ -102,6 +107,12 @@ class HTTPConnection(Mapping[str, Any], MoreInfoFromHeaderMixin):
 
 
 class Request(HTTPConnection):
+    def __init__(
+        self, environ: Environ, start_response: Optional[StartResponse] = None
+    ) -> None:
+        super().__init__(environ, start_response)
+        self._stream_consumed = False
+
     @cached_property
     def method(self) -> str:
         """
