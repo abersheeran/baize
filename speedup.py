@@ -19,6 +19,7 @@ else:
             filter(
                 lambda path: path.replace("\\", "/")
                 not in (
+                    "baize/multipart_helper.py",
                     # ASGI
                     "baize/asgi/requests.py",
                     "baize/asgi/responses.py",

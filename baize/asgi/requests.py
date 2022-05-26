@@ -3,9 +3,9 @@ import json
 from typing import Any, AsyncIterator, Dict, Iterator, Mapping
 from urllib.parse import parse_qsl
 
-from baize import multipart
 from baize.datastructures import URL, Address, FormData, Headers, QueryParams
 from baize.exceptions import MalformedJSON, MalformedMultipart, UnsupportedMediaType
+from baize.multipart_helper import parse_async_stream as parse_multipart
 from baize.requests import MoreInfoFromHeaderMixin
 from baize.typing import Receive, Scope, Send
 from baize.utils import cached_property
@@ -186,8 +186,7 @@ class Request(HTTPConnection):
             if "boundary" not in self.content_type.options:
                 raise MalformedMultipart("Missing boundary in header content-type")
             boundary = self.content_type.options["boundary"].encode("latin-1")
-            items = await multipart.parse_async_stream(self.stream(), boundary, charset)
-            return FormData(items)
+            return FormData(await parse_multipart(self.stream(), boundary, charset))
         if self.content_type == "application/x-www-form-urlencoded":
             body = (await self.body).decode(
                 encoding=self.content_type.options.get("charset", "latin-1")
