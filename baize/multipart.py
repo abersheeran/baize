@@ -281,12 +281,12 @@ async def parse_async_stream(
     file_factory: Type[_UploadFile] = UploadFile,  # type: ignore
     # the error is mypy bug, it doesn't understand the type of the bound
     # related link https://github.com/microsoft/pyright/discussions/3090
-) -> AsyncIterable[Tuple[str, Union[str, _UploadFile]]]:
+) -> List[Tuple[str, Union[str, _UploadFile]]]:
     """
     Parse an asynchronous stream in multipart format
 
     ```python
-    async for field_name, field_or_file in parse_async_stream(stream, boundary, charset):
+    for field_name, field_or_file in await parse_async_stream(stream, boundary, charset):
         print(field_name, field_or_file)
     ```
     """
@@ -294,6 +294,8 @@ async def parse_async_stream(
     field_name = ""
     data = bytearray()
     file: Optional[_UploadFile] = None
+
+    items: List[Tuple[str, Union[str, _UploadFile]]] = []
 
     async for chunk in stream:
         parser.receive_data(chunk)
@@ -314,12 +316,13 @@ async def parse_async_stream(
 
                 if not event.more_data:
                     if file is None:
-                        yield (field_name, safe_decode(data, charset))
+                        items.append((field_name, safe_decode(data, charset)))
                         data.clear()
                     else:
                         await file.aseek(0)
-                        yield (field_name, file)
+                        items.append((field_name, file))
                         file = None
+    return items
 
 
 def parse_stream(
@@ -330,7 +333,7 @@ def parse_stream(
     file_factory: Type[_UploadFile] = UploadFile,  # type: ignore
     # the error is mypy bug, it doesn't understand the type of the bound
     # related link https://github.com/microsoft/pyright/discussions/3090
-) -> Iterable[Tuple[str, Union[str, _UploadFile]]]:
+) -> List[Tuple[str, Union[str, _UploadFile]]]:
     """
     Parse a synchronous stream in multipart format
 
@@ -343,6 +346,8 @@ def parse_stream(
     field_name = ""
     data = bytearray()
     file: Optional[_UploadFile] = None
+
+    items: List[Tuple[str, Union[str, _UploadFile]]] = []
 
     for chunk in stream:
         parser.receive_data(chunk)
@@ -363,9 +368,10 @@ def parse_stream(
 
                 if not event.more_data:
                     if file is None:
-                        yield (field_name, safe_decode(data, charset))
+                        items.append((field_name, safe_decode(data, charset)))
                         data.clear()
                     else:
                         file.seek(0)
-                        yield (field_name, file)
+                        items.append((field_name, file))
                         file = None
+    return items

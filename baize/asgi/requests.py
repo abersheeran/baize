@@ -186,12 +186,7 @@ class Request(HTTPConnection):
             if "boundary" not in self.content_type.options:
                 raise MalformedMultipart("Missing boundary in header content-type")
             boundary = self.content_type.options["boundary"].encode("latin-1")
-            items = [
-                item
-                async for item in multipart.parse_async_stream(
-                    self.stream(), boundary, charset
-                )
-            ]
+            items = await multipart.parse_async_stream(self.stream(), boundary, charset)
             return FormData(items)
         if self.content_type == "application/x-www-form-urlencoded":
             body = (await self.body).decode(
