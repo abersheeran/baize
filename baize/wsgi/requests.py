@@ -1,18 +1,11 @@
 import json
 from itertools import chain
-from typing import Any, Dict, Iterator, List, Mapping, Optional, Tuple, Union
+from typing import Any, Dict, Iterator, Mapping, Optional
 from urllib.parse import parse_qsl
 
-from baize import multipart
-from baize.datastructures import (
-    URL,
-    Address,
-    FormData,
-    Headers,
-    QueryParams,
-    UploadFile,
-)
+from baize.datastructures import URL, Address, FormData, Headers, QueryParams
 from baize.exceptions import MalformedJSON, MalformedMultipart, UnsupportedMediaType
+from baize.multipart_helper import parse_stream as parse_multipart
 from baize.requests import MoreInfoFromHeaderMixin
 from baize.typing import Environ, StartResponse
 from baize.utils import cached_property
@@ -184,46 +177,8 @@ class Request(HTTPConnection):
             charset = self.content_type.options.get("charset", "utf8")
             if "boundary" not in self.content_type.options:
                 raise MalformedMultipart("Missing boundary in header content-type")
-            parser = multipart.MultipartDecoder(
-                self.content_type.options["boundary"].encode("latin-1"), charset
-            )
-            field_name = ""
-            data = bytearray()
-            file: Optional[UploadFile] = None
-
-            items: List[Tuple[str, Union[str, UploadFile]]] = []
-
-            for chunk in self.stream():
-                parser.receive_data(chunk)
-                while True:
-                    event = parser.next_event()
-                    if isinstance(event, (multipart.Epilogue, multipart.NeedData)):
-                        break
-                    elif isinstance(event, multipart.Field):
-                        field_name = event.name
-                    elif isinstance(event, multipart.File):
-                        field_name = event.name
-                        file = UploadFile(
-                            event.filename, event.headers.get("content-type", "")
-                        )
-                    elif isinstance(event, multipart.Data):
-                        if file is None:
-                            data.extend(event.data)
-                        else:
-                            file.write(event.data)
-
-                        if not event.more_data:
-                            if file is None:
-                                items.append(
-                                    (field_name, multipart.safe_decode(data, charset))
-                                )
-                                data.clear()
-                            else:
-                                file.seek(0)
-                                items.append((field_name, file))
-                                file = None
-
-            return FormData(items)
+            boundary = self.content_type.options["boundary"].encode("latin-1")
+            return FormData(parse_multipart(self.stream(), boundary, charset))
         if self.content_type == "application/x-www-form-urlencoded":
             body = self.body.decode(
                 encoding=self.content_type.options.get("charset", "latin-1")

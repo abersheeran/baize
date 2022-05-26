@@ -7,7 +7,7 @@ import typing
 from tempfile import SpooledTemporaryFile
 from urllib.parse import SplitResult, parse_qsl, urlencode, urlsplit
 
-from .typing import Environ, Final, Literal, Scope
+from .typing import Environ, Final, Literal, Protocol, Scope
 from .utils import parse_header
 
 __all__ = [
@@ -19,10 +19,11 @@ __all__ = [
     "MultiMapping",
     "MutableMultiMapping",
     "QueryParams",
-    "UploadFile",
-    "FormData",
     "Headers",
     "MutableHeaders",
+    "UploadFileInterface",
+    "UploadFile",
+    "FormData",
 ]
 
 
@@ -487,18 +488,94 @@ class QueryParams(MultiMapping[str, str]):
         return f"{class_name}({query_string!r})"
 
 
-class UploadFile:
+class Headers(typing.Mapping[str, str]):
+    __slots__ = ("_dict",)
+
+    def __init__(
+        self,
+        headers: typing.Optional[
+            typing.Union[
+                typing.Mapping[str, str],
+                typing.Iterable[typing.Tuple[str, str]],
+            ]
+        ] = None,
+    ) -> None:
+        store: typing.Dict[str, str] = {}
+        items: typing.Iterable[typing.Tuple[str, str]]
+        if isinstance(headers, typing.Mapping):
+            items = typing.cast(
+                typing.Iterable[typing.Tuple[str, str]], headers.items()
+            )
+        elif headers is None:
+            items = ()
+        else:
+            items = headers
+        for key, value in items:
+            key = key.lower()
+            if key in store:
+                store[key] = f"{store[key]}, {value}"
+            else:
+                store[key] = value
+
+        self._dict = store
+
+    def __getitem__(self, key: str) -> str:
+        return self._dict[key.lower()]
+
+    def __iter__(self) -> typing.Iterator[str]:
+        return self._dict.__iter__()
+
+    def __len__(self) -> int:
+        return self._dict.__len__()
+
+
+class MutableHeaders(Headers, typing.MutableMapping[str, str]):
+    __slots__ = Headers.__slots__
+
+    def __setitem__(self, key: str, value: str) -> None:
+        self._dict[key.lower()] = value
+
+    def __delitem__(self, key: str) -> None:
+        del self._dict[key.lower()]
+
+    def append(self, key: str, value: str) -> None:
+        key = key.lower()
+        if key in self._dict:
+            self._dict[key] = f"{self._dict[key]}, {value}"
+        else:
+            self._dict[key] = value
+
+
+class UploadFileInterface(Protocol):
+    def __init__(self, filename: str, headers: Headers) -> None:
+        ...
+
+    def write(self, data: bytes) -> None:
+        ...
+
+    async def awrite(self, data: bytes) -> None:
+        ...
+
+    def seek(self, offset: int) -> None:
+        ...
+
+    async def aseek(self, offset: int) -> None:
+        ...
+
+
+class UploadFile(UploadFileInterface):
     """
     An uploaded file included as part of the request data.
     """
 
-    __slots__ = ("filename", "content_type", "file")
+    __slots__ = ("filename", "headers", "content_type", "file")
 
     spool_max_size = 1024 * 1024
 
-    def __init__(self, filename: str, content_type: str = "") -> None:
+    def __init__(self, filename: str, headers: Headers) -> None:
         self.filename = filename
-        self.content_type = content_type
+        self.headers = headers
+        self.content_type = headers.get("content-type", "")
         self.file = SpooledTemporaryFile(max_size=self.spool_max_size, mode="w+b")
 
     @property
@@ -584,61 +661,3 @@ class FormData(MultiMapping[str, typing.Union[str, UploadFile]]):
         for key, value in self.multi_items():
             if isinstance(value, UploadFile):
                 await value.aclose()
-
-
-class Headers(typing.Mapping[str, str]):
-    __slots__ = ("_dict",)
-
-    def __init__(
-        self,
-        headers: typing.Optional[
-            typing.Union[
-                typing.Mapping[str, str],
-                typing.Iterable[typing.Tuple[str, str]],
-            ]
-        ] = None,
-    ) -> None:
-        store: typing.Dict[str, str] = {}
-        items: typing.Iterable[typing.Tuple[str, str]]
-        if isinstance(headers, typing.Mapping):
-            items = typing.cast(
-                typing.Iterable[typing.Tuple[str, str]], headers.items()
-            )
-        elif headers is None:
-            items = ()
-        else:
-            items = headers
-        for key, value in items:
-            key = key.lower()
-            if key in store:
-                store[key] = f"{store[key]}, {value}"
-            else:
-                store[key] = value
-
-        self._dict = store
-
-    def __getitem__(self, key: str) -> str:
-        return self._dict[key.lower()]
-
-    def __iter__(self) -> typing.Iterator[str]:
-        return self._dict.__iter__()
-
-    def __len__(self) -> int:
-        return self._dict.__len__()
-
-
-class MutableHeaders(Headers, typing.MutableMapping[str, str]):
-    __slots__ = Headers.__slots__
-
-    def __setitem__(self, key: str, value: str) -> None:
-        self._dict[key.lower()] = value
-
-    def __delitem__(self, key: str) -> None:
-        del self._dict[key.lower()]
-
-    def append(self, key: str, value: str) -> None:
-        key = key.lower()
-        if key in self._dict:
-            self._dict[key] = f"{self._dict[key]}, {value}"
-        else:
-            self._dict[key] = value
