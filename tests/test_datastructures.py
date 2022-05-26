@@ -236,7 +236,7 @@ def test_queryparams():
 
 
 def test_sync_upload_file():
-    file = UploadFile("file")
+    file = UploadFile("file", Headers())
     file.write(b"data" * 512)
     file.write(b"data")
     file.seek(0)
@@ -246,7 +246,7 @@ def test_sync_upload_file():
 
 @pytest.mark.asyncio
 async def test_async_upload_file():
-    file = UploadFile("file")
+    file = UploadFile("file", Headers())
     await file.awrite(b"data" * 512)
     await file.awrite(b"data")
     await file.aseek(0)
@@ -266,7 +266,7 @@ async def test_async_big_upload_file():
     _copy_spool_max_size = UploadFile.spool_max_size
     UploadFile.spool_max_size = 1024
     try:
-        big_file = UploadFile("big-file")
+        big_file = UploadFile("big-file", Headers())
         await big_file.awrite(b"big-data" * 512)
         await big_file.awrite(b"big-data")
         await big_file.aseek(0)
