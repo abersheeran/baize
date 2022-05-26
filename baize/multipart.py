@@ -278,7 +278,9 @@ async def parse_async_stream(
     boundary: bytes,
     charset: str,
     *,
-    file_factory: Type[_UploadFile] = UploadFile,
+    file_factory: Type[_UploadFile] = UploadFile,  # type: ignore
+    # the error is mypy bug, it doesn't understand the type of the bound
+    # related link https://github.com/microsoft/pyright/discussions/3090
 ) -> AsyncIterable[Tuple[str, Union[str, _UploadFile]]]:
     """
     Parse an asynchronous stream in multipart format
@@ -303,7 +305,7 @@ async def parse_async_stream(
                 field_name = event.name
             elif isinstance(event, File):
                 field_name = event.name
-                file = UploadFile(event.filename, event.headers)
+                file = file_factory(event.filename, event.headers)
             elif isinstance(event, Data):
                 if file is None:
                     data.extend(event.data)
@@ -325,7 +327,9 @@ def parse_stream(
     boundary: bytes,
     charset: str,
     *,
-    file_factory: Type[_UploadFile] = UploadFile,
+    file_factory: Type[_UploadFile] = UploadFile,  # type: ignore
+    # the error is mypy bug, it doesn't understand the type of the bound
+    # related link https://github.com/microsoft/pyright/discussions/3090
 ) -> Iterable[Tuple[str, Union[str, _UploadFile]]]:
     """
     Parse a synchronous stream in multipart format
@@ -350,7 +354,7 @@ def parse_stream(
                 field_name = event.name
             elif isinstance(event, File):
                 field_name = event.name
-                file = UploadFile(event.filename, event.headers)
+                file = file_factory(event.filename, event.headers)
             elif isinstance(event, Data):
                 if file is None:
                     data.extend(event.data)
