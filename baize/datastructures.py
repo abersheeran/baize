@@ -4,7 +4,6 @@ import os
 import re
 import string
 import typing
-from collections import namedtuple
 from tempfile import SpooledTemporaryFile
 from urllib.parse import SplitResult, parse_qsl, urlencode, urlsplit
 
@@ -32,7 +31,9 @@ KT = typing.TypeVar("KT")  # Key type.
 VT = typing.TypeVar("VT")  # Value type.
 
 
-Address = namedtuple("Address", ["host", "port"])
+class Address(typing.NamedTuple):
+    host: typing.Optional[str]
+    port: typing.Optional[int]
 
 
 class defaultdict(dict):
