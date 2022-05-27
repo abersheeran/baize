@@ -168,8 +168,7 @@ class StreamResponse(Response):
         start_response(
             StatusStringMapping[self.status_code], self.list_headers(as_bytes=False)
         )
-        for chunk in self.iterable:
-            yield chunk
+        yield from self.iterable
 
 
 class FileResponse(Response, FileResponseMixin):
