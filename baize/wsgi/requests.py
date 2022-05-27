@@ -3,7 +3,14 @@ from itertools import chain
 from typing import Any, Dict, Iterator, Mapping, Optional
 from urllib.parse import parse_qsl
 
-from baize.datastructures import URL, Address, FormData, Headers, QueryParams
+from baize.datastructures import (
+    URL,
+    Address,
+    FormData,
+    Headers,
+    QueryParams,
+    UploadFile,
+)
 from baize.exceptions import MalformedJSON, MalformedMultipart, UnsupportedMediaType
 from baize.multipart_helper import parse_stream as parse_multipart
 from baize.requests import MoreInfoFromHeaderMixin
@@ -178,7 +185,11 @@ class Request(HTTPConnection):
             if "boundary" not in self.content_type.options:
                 raise MalformedMultipart("Missing boundary in header content-type")
             boundary = self.content_type.options["boundary"].encode("latin-1")
-            return FormData(parse_multipart(self.stream(), boundary, charset))
+            return FormData(
+                parse_multipart(
+                    self.stream(), boundary, charset, file_factory=UploadFile
+                )
+            )
         if self.content_type == "application/x-www-form-urlencoded":
             body = self.body.decode(
                 encoding=self.content_type.options.get("charset", "latin-1")

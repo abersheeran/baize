@@ -1,6 +1,6 @@
 from typing import AsyncIterable, Iterable, List, Optional, Tuple, Type, TypeVar, Union
 
-from .datastructures import UploadFile, UploadFileInterface
+from .datastructures import Headers
 from .multipart import (
     Data,
     Epilogue,
@@ -10,6 +10,25 @@ from .multipart import (
     NeedData,
     safe_decode,
 )
+from .typing import Protocol
+
+
+class UploadFileInterface(Protocol):
+    def __init__(self, filename: str, headers: Headers) -> None:
+        ...
+
+    def write(self, data: bytes) -> None:
+        ...
+
+    async def awrite(self, data: bytes) -> None:
+        ...
+
+    def seek(self, offset: int) -> None:
+        ...
+
+    async def aseek(self, offset: int) -> None:
+        ...
+
 
 _UploadFile = TypeVar("_UploadFile", bound=UploadFileInterface)
 
@@ -19,9 +38,7 @@ async def parse_async_stream(
     boundary: bytes,
     charset: str,
     *,
-    file_factory: Type[_UploadFile] = UploadFile,  # type: ignore
-    # the error is mypy bug, it doesn't understand the type of the bound
-    # related link https://github.com/microsoft/pyright/discussions/3090
+    file_factory: Type[_UploadFile],
 ) -> List[Tuple[str, Union[str, _UploadFile]]]:
     """
     Parse an asynchronous stream in multipart format
@@ -71,9 +88,7 @@ def parse_stream(
     boundary: bytes,
     charset: str,
     *,
-    file_factory: Type[_UploadFile] = UploadFile,  # type: ignore
-    # the error is mypy bug, it doesn't understand the type of the bound
-    # related link https://github.com/microsoft/pyright/discussions/3090
+    file_factory: Type[_UploadFile],
 ) -> List[Tuple[str, Union[str, _UploadFile]]]:
     """
     Parse a synchronous stream in multipart format

@@ -7,7 +7,7 @@ import typing
 from tempfile import SpooledTemporaryFile
 from urllib.parse import SplitResult, parse_qsl, urlencode, urlsplit
 
-from .typing import Environ, Final, Literal, Protocol, Scope
+from .typing import Environ, Final, Literal, Scope
 from .utils import parse_header
 
 __all__ = [
@@ -21,7 +21,6 @@ __all__ = [
     "QueryParams",
     "Headers",
     "MutableHeaders",
-    "UploadFileInterface",
     "UploadFile",
     "FormData",
 ]
@@ -546,24 +545,7 @@ class MutableHeaders(Headers, typing.MutableMapping[str, str]):
             self._dict[key] = value
 
 
-class UploadFileInterface(Protocol):
-    def __init__(self, filename: str, headers: Headers) -> None:
-        ...
-
-    def write(self, data: bytes) -> None:
-        ...
-
-    async def awrite(self, data: bytes) -> None:
-        ...
-
-    def seek(self, offset: int) -> None:
-        ...
-
-    async def aseek(self, offset: int) -> None:
-        ...
-
-
-class UploadFile(UploadFileInterface):
+class UploadFile:
     """
     An uploaded file included as part of the request data.
     """
