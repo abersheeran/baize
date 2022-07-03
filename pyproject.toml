@@ -22,7 +22,6 @@ version = "0.17.1"
 homepage = "https://github.com/abersheeran/baize"
 repository = "https://github.com/abersheeran/baize"
 
-[project.optional-dependencies]
 [tool.isort]
 profile = "black"
 
