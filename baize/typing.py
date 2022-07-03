@@ -12,10 +12,17 @@ from typing import (
     Type,
 )
 
-if sys.version_info[:2] < (3, 8):  # pragma: py-gte-38
-    from typing_extensions import Final, Literal, Protocol, TypedDict, final
-else:  # pragma: py-lt-38
-    from typing import Final, Literal, Protocol, TypedDict, final
+if sys.version_info[:2] < (3, 8):
+    from typing_extensions import (
+        Final,
+        Literal,
+        Protocol,
+        TypedDict,
+        final,
+        runtime_checkable,
+    )
+else:
+    from typing import Final, Literal, Protocol, TypedDict, final, runtime_checkable
 
 __all__ = [
     "Scope",
@@ -33,6 +40,7 @@ __all__ = [
     "Final",
     "final",
     "Protocol",
+    "runtime_checkable",
 ]
 
 # ASGI

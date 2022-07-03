@@ -10,27 +10,35 @@ from .multipart import (
     NeedData,
     safe_decode,
 )
-from .typing import Protocol
+from .typing import Protocol, runtime_checkable
 
 
-class UploadFileInterface(Protocol):
+@runtime_checkable
+class SyncUploadFileInterface(Protocol):
     def __init__(self, filename: str, headers: Headers) -> None:
         ...
 
     def write(self, data: bytes) -> None:
         ...
 
-    async def awrite(self, data: bytes) -> None:
+    def seek(self, offset: int) -> None:
         ...
 
-    def seek(self, offset: int) -> None:
+
+@runtime_checkable
+class AsyncUploadFileInterface(Protocol):
+    def __init__(self, filename: str, headers: Headers) -> None:
+        ...
+
+    async def awrite(self, data: bytes) -> None:
         ...
 
     async def aseek(self, offset: int) -> None:
         ...
 
 
-_UploadFile = TypeVar("_UploadFile", bound=UploadFileInterface)
+_SyncUploadFile = TypeVar("_SyncUploadFile", bound=SyncUploadFileInterface)
+_AsyncUploadFile = TypeVar("_AsyncUploadFile", bound=AsyncUploadFileInterface)
 
 
 async def parse_async_stream(
@@ -38,8 +46,8 @@ async def parse_async_stream(
     boundary: bytes,
     charset: str,
     *,
-    file_factory: Type[_UploadFile],
-) -> List[Tuple[str, Union[str, _UploadFile]]]:
+    file_factory: Type[_AsyncUploadFile],
+) -> List[Tuple[str, Union[str, _AsyncUploadFile]]]:
     """
     Parse an asynchronous stream in multipart format
 
@@ -51,9 +59,9 @@ async def parse_async_stream(
     parser = MultipartDecoder(boundary, charset)
     field_name = ""
     data = bytearray()
-    file: Optional[_UploadFile] = None
+    file: Optional[_AsyncUploadFile] = None
 
-    items: List[Tuple[str, Union[str, _UploadFile]]] = []
+    items: List[Tuple[str, Union[str, _AsyncUploadFile]]] = []
 
     async for chunk in stream:
         parser.receive_data(chunk)
@@ -88,8 +96,8 @@ def parse_stream(
     boundary: bytes,
     charset: str,
     *,
-    file_factory: Type[_UploadFile],
-) -> List[Tuple[str, Union[str, _UploadFile]]]:
+    file_factory: Type[_SyncUploadFile],
+) -> List[Tuple[str, Union[str, _SyncUploadFile]]]:
     """
     Parse a synchronous stream in multipart format
 
@@ -101,9 +109,9 @@ def parse_stream(
     parser = MultipartDecoder(boundary, charset)
     field_name = ""
     data = bytearray()
-    file: Optional[_UploadFile] = None
+    file: Optional[_SyncUploadFile] = None
 
-    items: List[Tuple[str, Union[str, _UploadFile]]] = []
+    items: List[Tuple[str, Union[str, _SyncUploadFile]]] = []
 
     for chunk in stream:
         parser.receive_data(chunk)

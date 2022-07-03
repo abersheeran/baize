@@ -10,7 +10,7 @@ classifiers = [
   "Topic :: Internet :: WWW/HTTP :: WSGI",
   "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
 ]
-dependencies = ["typing-extensions<4.0.0,>=3.7.4; python_version < \"3.8\""]
+dependencies = ["typing-extensions>=4.1.1; python_version < \"3.8\""]
 description = "Powerful and exquisite WSGI/ASGI framework/toolkit."
 license = {text = "Apache-2.0"}
 name = "baize"
@@ -22,7 +22,6 @@ version = "0.17.1"
 homepage = "https://github.com/abersheeran/baize"
 repository = "https://github.com/abersheeran/baize"
 
-[project.optional-dependencies]
 [tool.isort]
 profile = "black"
 
@@ -47,8 +46,6 @@ show_missing = true
 skip_covered = true
 
 [tool.coverage.coverage_conditional_plugin.rules]
-py-gte-38 = "sys_version_info >= (3, 8)"
-py-lt-38 = "sys_version_info < (3, 8)"
 py-no-win32 = "sys_platform != 'win32'"
 py-win32 = "sys_platform == 'win32'"
 
