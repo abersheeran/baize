@@ -69,7 +69,6 @@ dev = [
   "isort<6.0.0,>=5.7.0",
   "flake8~=3.9",
   "mypy<1.0,>=0.931",
-  "types-contextvars>=2.4.7",
 ]
 doc = [
   "Sphinx<4.0.0,>=3.5.3",
