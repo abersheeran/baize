@@ -2,6 +2,7 @@ import asyncio
 import functools
 import sys
 from concurrent.futures import ThreadPoolExecutor as _ThreadPoolExecutor
+from contextvars import copy_context
 from typing import Any, Callable, TypeVar
 
 __all__ = [
@@ -24,23 +25,18 @@ else:
 
 T = TypeVar("T")
 
-try:
-    from contextvars import copy_context
-except ImportError:
-    ThreadPoolExecutor = _ThreadPoolExecutor
-else:
 
-    class ThreadPoolExecutor(_ThreadPoolExecutor):  # type: ignore
-        """
-        Thread pool with ContextVars
+class ThreadPoolExecutor(_ThreadPoolExecutor):  # type: ignore
+    """
+    Thread pool with ContextVars
 
-        - https://github.com/python/cpython/issues/78195
-        """
+    - https://github.com/python/cpython/issues/78195
+    """
 
-        def submit(self, __fn, *args, **kwargs):
-            return super().submit(
-                functools.partial(copy_context().run, __fn), *args, **kwargs
-            )
+    def submit(self, __fn, *args, **kwargs):
+        return super().submit(
+            functools.partial(copy_context().run, __fn), *args, **kwargs
+        )
 
 
 if sys.version_info[:2] < (3, 9):
