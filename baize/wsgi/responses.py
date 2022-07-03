@@ -3,7 +3,6 @@ import json
 import os
 import queue
 import stat
-from concurrent.futures import ThreadPoolExecutor
 from http import HTTPStatus
 from mimetypes import guess_type
 from queue import Queue
@@ -22,6 +21,7 @@ from typing import (
     Union,
 )
 
+from baize.concurrency import ThreadPoolExecutor
 from baize.datastructures import URL, defaultdict
 from baize.exceptions import MalformedRangeHeader, RangeNotSatisfiable
 from baize.responses import (

@@ -1,4 +1,3 @@
-import asyncio
 import datetime
 import os
 import re
@@ -7,6 +6,7 @@ import typing
 from tempfile import SpooledTemporaryFile
 from urllib.parse import SplitResult, parse_qsl, urlencode, urlsplit
 
+from .concurrency import run_in_threadpool
 from .typing import Environ, Final, Literal, Scope
 from .utils import parse_header
 
@@ -572,7 +572,7 @@ class UploadFile:
         if self.in_memory:
             self.write(data)
         else:
-            await asyncio.get_event_loop().run_in_executor(None, self.write, data)
+            await run_in_threadpool(self.write, data)
 
     def read(self, size: int = -1) -> bytes:
         return self.file.read(size)
@@ -580,7 +580,7 @@ class UploadFile:
     async def aread(self, size: int = -1) -> bytes:
         if self.in_memory:
             return self.read(size)
-        return await asyncio.get_event_loop().run_in_executor(None, self.read, size)
+        return await run_in_threadpool(self.read, size)
 
     def seek(self, offset: int) -> None:
         self.file.seek(offset)
@@ -589,7 +589,7 @@ class UploadFile:
         if self.in_memory:
             self.seek(offset)
         else:
-            await asyncio.get_event_loop().run_in_executor(None, self.seek, offset)
+            await run_in_threadpool(self.seek, offset)
 
     def close(self) -> None:
         self.file.close()
@@ -598,7 +598,7 @@ class UploadFile:
         if self.in_memory:
             self.close()
         else:
-            await asyncio.get_event_loop().run_in_executor(None, self.close)
+            await run_in_threadpool(self.close)
 
     def save(self, filepath: str) -> None:
         """
@@ -624,7 +624,7 @@ class UploadFile:
         """
         Save file to disk, work in threading pool.
         """
-        await asyncio.get_event_loop().run_in_executor(None, self.save, filepath)
+        await run_in_threadpool(self.save, filepath)
 
 
 class FormData(MultiMapping[str, typing.Union[str, UploadFile]]):
