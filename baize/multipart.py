@@ -2,6 +2,7 @@ import re
 from typing import List, Optional, Tuple, Union, cast
 
 from .datastructures import Headers
+from .exceptions import MalformedMultipart
 from .typing import Final
 from .utils import parse_header
 
@@ -107,12 +108,12 @@ class State:
 
 # Multipart line breaks MUST be CRLF (\r\n) by RFC-7578, except that
 # many implementations break this and either use CR or LF alone.
-LINE_BREAK = b"(?:\r\n|\n|\r)"
-BLANK_LINE_RE = re.compile(b"(?:\r\n\r\n|\r\r|\n\n)", re.MULTILINE)
-LINE_BREAK_RE = re.compile(LINE_BREAK, re.MULTILINE)
+LINE_BREAK: Final = b"(?:\r\n|\n|\r)"
+BLANK_LINE_RE: Final = re.compile(b"(?:\r\n\r\n|\r\r|\n\n)", re.MULTILINE)
+LINE_BREAK_RE: Final = re.compile(LINE_BREAK, re.MULTILINE)
 # Header values can be continued via a space or tab after the linebreak, as
 # per RFC2231
-HEADER_CONTINUATION_RE = re.compile(b"%s[ \t]" % LINE_BREAK, re.MULTILINE)
+HEADER_CONTINUATION_RE: Final = re.compile(b"%s[ \t]" % LINE_BREAK, re.MULTILINE)
 
 
 class MultipartDecoder:
@@ -191,7 +192,7 @@ class MultipartDecoder:
                 del self.buffer[: match.end()]
 
                 if "content-disposition" not in headers:  # pragma: no cover
-                    raise ValueError("Missing Content-Disposition header")
+                    raise MalformedMultipart("Missing Content-Disposition header")
 
                 disposition, extra = parse_header(headers["content-disposition"])
                 name = cast(str, extra.get("name"))
@@ -234,7 +235,9 @@ class MultipartDecoder:
             self.state = State.COMPLETE
 
         if self.complete and isinstance(event, NeedData):  # pragma: no cover
-            raise ValueError(f"Invalid form-data cannot parse beyond {self.state}")
+            raise MalformedMultipart(
+                f"Invalid form-data cannot parse beyond {self.state}"
+            )
 
         return event
 
