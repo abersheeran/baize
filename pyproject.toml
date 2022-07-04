@@ -54,10 +54,7 @@ py-win32 = "sys_platform == 'win32'"
 
 [tool.pdm]
 includes = ["baize"]
-
-[tool.pdm.build]
-setup-script = "speedup.py"
-run-setuptools = true
+build = "speedup.py"
 
 [tool.pdm.dev-dependencies]
 build = [
