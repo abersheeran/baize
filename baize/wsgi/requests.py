@@ -98,9 +98,9 @@ class HTTPConnection(Mapping[str, Any], MoreInfoFromHeaderMixin):
                     if key.startswith("HTTP_")
                 ),
                 (
-                    (key, value)
-                    for key, value in self._environ.items()
-                    if key in ("CONTENT_TYPE", "CONTENT_LENGTH")
+                    (key, self._environ[key])
+                    for key in ("CONTENT_TYPE", "CONTENT_LENGTH")
+                    if key in self._environ
                 ),
             )
         )
