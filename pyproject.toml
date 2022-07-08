@@ -22,8 +22,9 @@ requires-python = ">=3.6.2"
 version = "0.17.1"
 
 [project.urls]
-homepage = "https://github.com/abersheeran/baize"
-repository = "https://github.com/abersheeran/baize"
+Homepage = "https://github.com/abersheeran/baize"
+Repository = "https://github.com/abersheeran/baize"
+Documentation = "https://baize.aber.sh/"
 
 [tool.isort]
 profile = "black"
