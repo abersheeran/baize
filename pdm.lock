@@ -539,7 +539,7 @@ summary = "Backport of pathlib-compatible object wrapper for zip files"
 
 [metadata]
 lock_version = "4.0"
-content_hash = "sha256:066bb32859eb925037acaa841a865386d8c87188142a386cdfede607c3cbe9e0"
+content_hash = "sha256:38a4f42acbf6aeffbc5eb6a1e71f6c0ac43c47707fc64ea5648d894a27bcb6c2"
 
 [metadata.files]
 "alabaster 0.7.12" = [
