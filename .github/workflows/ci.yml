@@ -101,9 +101,6 @@ jobs:
           pdm sync -v -dG build --no-self
           python -m pip install -U setuptools wheel twine auditwheel
 
-      - name: Static type and format checking
-        run: python script/check.py
-
       - name: Export setup.py
         run: pdm export -f setuppy -o setup.py
 
