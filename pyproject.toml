@@ -61,7 +61,7 @@ build = "speedup.py"
 build = [
   "mypy<1.0,>=0.931",
   "mypy-extensions<1.0.0,>=0.4.3",
-  "types-contextvars>=2.4.7",
+  "types-contextvars>=2.4.7; python_version < \"3.7\"",
 ]
 dev = [
   "black<22,>=21.9b0",
