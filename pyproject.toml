@@ -53,6 +53,9 @@ skip_covered = true
 py-no-win32 = "sys_platform != 'win32'"
 py-win32 = "sys_platform == 'win32'"
 
+[tool.mypy]
+ignore_missing_imports = true
+
 [tool.pdm]
 includes = ["baize"]
 build = "speedup.py"
