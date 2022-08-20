@@ -62,7 +62,7 @@ build = "speedup.py"
 
 [tool.pdm.dev-dependencies]
 build = [
-  "mypy<1.0,>=0.931",
+  "mypy<1.0,>=0.971",
   "mypy-extensions<1.0.0,>=0.4.3",
   "types-contextvars>=2.4.7; python_version < \"3.7\"",
 ]
@@ -70,7 +70,7 @@ dev = [
   "black<22,>=21.9b0",
   "isort<6.0.0,>=5.7.0",
   "flake8~=3.9",
-  "mypy<1.0,>=0.931",
+  "mypy<1.0,>=0.971",
   "types-contextvars>=2.4.7; python_version < \"3.7\"",
 ]
 doc = [
