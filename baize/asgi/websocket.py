@@ -8,8 +8,9 @@ from .responses import Response
 
 
 class WebSocketDisconnect(Exception):
-    def __init__(self, code: int = 1000) -> None:
+    def __init__(self, code: int = 1000, reason: str = "") -> None:
         self.code = code
+        self.reason = reason
 
 
 class WebSocketState(enum.Enum):
