@@ -178,10 +178,12 @@ class FileResponseMixin:
             raise MalformedRangeHeader("Only support bytes range")
 
         ranges = [
-            (int(_[0]) if _[0] else max_size-int(_[1]),
-             int(_[1]) + 1 if _[0] and _[1] and int(_[1]) < max_size else max_size)
+            (
+                int(_[0]) if _[0] else max_size - int(_[1]),
+                int(_[1]) + 1 if _[0] and _[1] and int(_[1]) < max_size else max_size,
+            )
             for _ in re.findall(r"(\d*)-(\d*)", ranges_str)
-         ]
+        ]
 
         if any(start > max_size for start, _ in ranges):
             raise RangeNotSatisfiable(max_size)
