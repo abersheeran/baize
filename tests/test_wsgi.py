@@ -366,8 +366,8 @@ def test_file_response(tmp_path: Path):
         )
         assert response.status_code == 206
 
-        response = client.head("/", headers={"Range": "bytes=0-1000"})
-        assert response.status_code == 206
+        response = client.head("/", headers={"Range": "bytes:0-1000"})
+        assert response.status_code == 400
 
         response = client.head(
             "/", headers={"Range": f"bytes={len(README.encode('utf8'))+1}-{len(README.encode('utf8'))+12}"}
