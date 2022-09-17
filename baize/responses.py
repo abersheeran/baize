@@ -183,7 +183,11 @@ class FileResponseMixin:
                 int(_[1]) + 1 if _[0] and _[1] and int(_[1]) < max_size else max_size,
             )
             for _ in re.findall(r"(\d*)-(\d*)", ranges_str)
+            if _ != ("", "")
         ]
+
+        if len(ranges) == 0:
+            raise MalformedRangeHeader("Range header: range must be requested")
 
         if any(not (0 <= start < max_size) for start, _ in ranges):
             raise RangeNotSatisfiable(max_size)

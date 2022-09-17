@@ -11,6 +11,8 @@ def test_base_file_response_parse_range(tmp_path: Path):
     response = FileResponseMixin
 
     assert response.parse_range("bytes=0-10", 4623) == [(0, 11)]
+    assert response.parse_range("bytes=0-10,hello", 4623) == [(0, 11)]
+    assert response.parse_range("bytes=0-10,-", 4623) == [(0, 11)]
     assert response.parse_range("bytes=0-10, 11-20", 4623) == [(0, 21)]
     assert response.parse_range("bytes=0-", 4623) == [(0, 4623)]
     assert response.parse_range("bytes=0-10, 5-", 4623) == [(0, 4623)]
@@ -23,6 +25,12 @@ def test_base_file_response_parse_range(tmp_path: Path):
     assert response.parse_range("bytes=-500", 4623) == [(4123, 4623)]
     assert response.parse_range("bytes=20-29, -500", 4623) == [(20, 30), (4123, 4623)]
     assert response.parse_range("bytes=4100-4200, -500", 4623) == [(4100, 4623)]
+
+    with pytest.raises(MalformedRangeHeader):
+        response.parse_range("bytes=-", 4623)
+
+    with pytest.raises(MalformedRangeHeader):
+        response.parse_range("bytes=", 4623)
 
     with pytest.raises(MalformedRangeHeader):
         response.parse_range("byte=0-10", 4623)
