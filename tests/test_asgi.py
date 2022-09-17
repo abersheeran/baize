@@ -883,8 +883,7 @@ def test_rejected_connection():
 
     client = TestClient(app)
     with pytest.raises(WebSocketDisconnect) as exc:
-        with client.websocket_connect("/"):
-            pass
+        client.websocket_connect("/")
     assert exc.value.code == 1001
 
 
