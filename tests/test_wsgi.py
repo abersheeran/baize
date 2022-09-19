@@ -370,7 +370,10 @@ def test_file_response(tmp_path: Path):
         assert response.status_code == 400
 
         response = client.head(
-            "/", headers={"Range": f"bytes=0-{len(README.encode('utf8'))+1}"}
+            "/",
+            headers={
+                "Range": f"bytes={len(README.encode('utf8'))+1}-{len(README.encode('utf8'))+12}"
+            },
         )
         assert response.status_code == 416
         assert response.headers["Content-Range"] == f"*/{len(README.encode('utf8'))}"
