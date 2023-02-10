@@ -13,7 +13,7 @@ class HTTPException(Exception, Generic[T]):
         self,
         status_code: int = 400,
         headers: Optional[Mapping[str, str]] = None,
-        content: T = None,
+        content: Optional[T] = None,
     ) -> None:
         self.status_code = status_code
         self.headers = headers

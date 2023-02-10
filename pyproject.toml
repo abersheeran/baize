@@ -1,24 +1,22 @@
 [project]
-authors = [
-  {name = "abersheeran", email = "me@abersheeran.com"},
-]
+authors = [{ name = "abersheeran", email = "me@abersheeran.com" }]
 classifiers = [
-  "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: Implementation :: CPython",
-  "Programming Language :: Python :: Implementation :: PyPy",
-  "Topic :: Internet :: WWW/HTTP",
-  "Topic :: Internet :: WWW/HTTP :: WSGI",
-  "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Internet :: WWW/HTTP :: WSGI",
+    "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
 ]
 dependencies = [
-  "typing-extensions>=4.1.1; python_version < \"3.8\"",
-  "contextvars; python_version < \"3.7\"",
+    "typing-extensions>=4.1.1; python_version < \"3.8\"",
+    "contextvars; python_version < \"3.7\"",
 ]
 description = "Powerful and exquisite WSGI/ASGI framework/toolkit."
-license = {text = "Apache-2.0"}
+license = { text = "Apache-2.0" }
 name = "baize"
 readme = "README.md"
-requires-python = ">=3.6.2"
+requires-python = ">=3.7"
 version = "0.18.2"
 
 [project.urls]
@@ -35,16 +33,16 @@ plugins = ["coverage_conditional_plugin"]
 
 [tool.coverage.report]
 exclude_lines = [
-  "pragma: no cover",
-  "raise NotImplementedError",
-  "if False:",
-  "assert False",
-  "if typing.TYPE_CHECKING:",
-  "if TYPE_CHECKING:",
-  "@typing.overload",
-  "@overload",
-  "pass",
-  "...",
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if False:",
+    "assert False",
+    "if typing.TYPE_CHECKING:",
+    "if TYPE_CHECKING:",
+    "@typing.overload",
+    "@overload",
+    "pass",
+    "...",
 ]
 show_missing = true
 skip_covered = true
@@ -58,35 +56,57 @@ ignore_missing_imports = true
 
 [tool.pdm]
 includes = ["baize"]
-build = "speedup.py"
+# build = "speedup.py"
+
+[tool.pdm.scripts]
+lint-isort = "isort {args}"
+lint-black = "black {args}"
+lint = { composite = [
+    "lint-isort baize tests",
+    "lint-black baize tests",
+    "check-flake8 baize tests",
+    "check-mypy baize tests",
+] }
+check-isort = "isort --check --diff {args}"
+check-black = "black --check --diff {args}"
+check-flake8 = "flake8 --ignore W503,E203,E501,E731 {args}"
+check-mypy = "mypy {args}"
+check = { composite = [
+    "check-isort baize tests",
+    "check-black baize tests",
+    "check-flake8 baize tests",
+    "check-mypy baize tests",
+] }
+test = "pytest tests {args}"
 
 [tool.pdm.dev-dependencies]
 build = [
-  "mypy<1.0,>=0.971",
-  "mypy-extensions<1.0.0,>=0.4.3",
-  "types-contextvars>=2.4.7; python_version < \"3.7\"",
+    "mypy<2.0,>=1.0",
+    "mypy-extensions>=1.0",
+    "types-contextvars>=2.4.7; python_version < \"3.7\"",
 ]
 dev = [
-  "black<22,>=21.9b0",
-  "isort<6.0.0,>=5.7.0",
-  "flake8~=3.9",
-  "mypy<1.0,>=0.971",
-  "types-contextvars>=2.4.7; python_version < \"3.7\"",
+    "black<22,>=21.9b0",
+    "isort<6.0.0,>=5.7.0",
+    "flake8~=3.9",
+    "mypy<2.0,>=1.0",
+    "types-contextvars>=2.4.7; python_version < \"3.7\"",
 ]
 doc = [
-  "Sphinx<4.0.0,>=3.5.3",
-  "recommonmark<1.0.0,>=0.7.1",
-  "sphinx-autodoc-typehints<2.0.0,>=1.11.1",
+    "Sphinx<4.0.0,>=3.5.3",
+    "recommonmark<1.0.0,>=0.7.1",
+    "sphinx-autodoc-typehints<2.0.0,>=1.11.1",
 ]
 test = [
-  "httpx<1.0.0,>=0.19.0",
-  "pytest<7.0.0,>=6.2.5",
-  "pytest-cov~=3.0",
-  "pytest-asyncio<1.0.0,>=0.15.1",
-  "requests<3.0.0,>=2.25.1",
-  "starlette<0.15.0,>=0.14.2",
-  "coverage-conditional-plugin~=0.5",
-  "setuptools>=59.6", # to fix the fuck `No module named 'pkg_resources'`
+    "httpx<1.0.0,>=0.19.0",
+    "pytest<8.0.0,>=7.2.1",
+    "requests<3.0.0,>=2.25.1",
+    "starlette<0.15.0,>=0.14.2",
+    "setuptools>=59.6",                   # to fix the fuck `No module named 'pkg_resources'`
+    "pytest-cov>=4.0.0",
+    "coverage>=6.3",
+    "pytest-asyncio>=0.20.3",
+    "coverage-conditional-plugin>=0.8.0",
 ]
 
 [build-system]

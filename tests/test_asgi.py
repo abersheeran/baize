@@ -60,7 +60,7 @@ def test_request_scope_interface():
     )
 
     async def mock_receive() -> Message:
-        ...  # pragma: no cover
+        return {}
 
     assert request != Request(
         {"type": "http", "method": "GET", "path": "/abc/"}, mock_receive
@@ -920,7 +920,7 @@ def test_websocket_scope_interface():
     """
 
     async def mock_receive() -> Message:
-        ...  # pragma: no cover
+        return {}
 
     async def mock_send(message: Message) -> None:
         ...  # pragma: no cover

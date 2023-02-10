@@ -610,7 +610,6 @@ def test_files(app):
             client.get("/%2E%2E/baize/%2E%2E/%2E%2E/README.md")
 
 
-@pytest.mark.asyncio
 def test_pages(tmpdir):
     (tmpdir / "index.html").write_text(
         "<html><body>index</body></html>", encoding="utf8"
