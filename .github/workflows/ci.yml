@@ -47,7 +47,7 @@ jobs:
         run: pdm run check
 
       - name: Tests
-        run: pdm run test
+        run: pdm run test --cov=./baize -o log_cli=true -o log_cli_level=DEBUG
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
