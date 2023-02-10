@@ -1,4 +1,3 @@
-import io
 import os
 import tempfile
 
@@ -44,6 +43,24 @@ def test_url():
 
     new = URL(**u.components._asdict())
     assert new == u
+
+    ipv6_url = URL("https://[fe::2]:12345")
+    new = ipv6_url.replace(port=8080)
+    assert new == "https://[fe::2]:8080"
+
+    new = ipv6_url.replace(username="username", password="password")
+    assert new == "https://username:password@[fe::2]:12345"
+    assert new.netloc == "username:password@[fe::2]:12345"
+
+    ipv6_url = URL("https://[fe::2]")
+    new = ipv6_url.replace(port=123)
+    assert new == "https://[fe::2]:123"
+
+    url = URL("http://u:p@host/")
+    assert url.replace(hostname="bar") == URL("http://u:p@bar/")
+
+    url = URL("http://u:p@host:80")
+    assert url.replace(port=88) == URL("http://u:p@host:88")
 
 
 def test_url_query_params():
@@ -198,7 +215,7 @@ def test_url_blank_params():
     assert "abc" in q
     assert "def" in q
     assert "b" in q
-    assert len(q.get("abc")) == 0
+    assert len(q["abc"]) == 0
     assert len(q["a"]) == 3
     assert list(q.keys()) == ["a", "abc", "def", "b"]
 
@@ -284,7 +301,7 @@ async def test_async_big_upload_file():
 
 
 def test_formdata():
-    upload = io.BytesIO(b"test")
+    upload = UploadFile("filename", Headers())
     form = FormData([("a", "123"), ("a", "456"), ("b", upload)])
     assert "a" in form
     assert "A" not in form
@@ -309,7 +326,9 @@ def test_formdata():
 
 
 def test_mutable_multi_mapping():
-    q = MutableMultiMapping([("a", "123"), ("a", "456"), ("b", "789")])
+    q: MutableMultiMapping[str, str] = MutableMultiMapping(
+        [("a", "123"), ("a", "456"), ("b", "789")]
+    )
     assert "a" in q
     assert "A" not in q
     assert "c" not in q
@@ -393,7 +412,7 @@ def test_mutable_multi_mapping():
     q = MutableMultiMapping([("a", "123"), ("b", "456")])
     q.update({"a": "789"})
     assert q.getlist("a") == ["789"]
-    q == MutableMultiMapping([("a", "789"), ("b", "456")])
+    assert q == MutableMultiMapping([("a", "789"), ("b", "456")])
 
     q = MutableMultiMapping([("a", "123"), ("b", "456")])
     q.update(q)
