@@ -11,23 +11,23 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - uses: pdm-project/setup-pdm@v2.6
-        name: Setup Python and PDM
-        with:
-          python-version: 3.7
-          architecture: x64
-          version: 2.1.1
-          prerelease: true
-          enable-pep582: true # Enable PEP 582 package loading globally
+      # - uses: pdm-project/setup-pdm@v2.6
+      #   name: Setup Python and PDM
+      #   with:
+      #     python-version: 3.7
+      #     architecture: x64
+      #     version: 2.4.5
+      #     prerelease: true
+      #     enable-pep582: true # Enable PEP 582 package loading globally
 
-      - name: Install dependencies
-        run: |
-          pdm sync -dG doc
+      # - name: Install dependencies
+      #   run: |
+      #     pdm sync -dG doc
 
-      - name: Generate document
-        run: |
-          export PATH=$PATH:$(pdm info --packages)/bin
-          cd docs && make html
+      # - name: Generate document
+      #   run: |
+      #     export PATH=$PATH:$(pdm info --packages)/bin
+      #     cd docs && make html
 
       # - name: Push document to branch `gh-pages`
       #   run: |
