@@ -50,7 +50,7 @@ jobs:
         run: pdm run test tests --cov=./baize --cov-report=xml -o log_cli=true -o log_cli_level=DEBUG
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v3
         with:
           files: ./coverage.xml
           directory: ./coverage/reports/
