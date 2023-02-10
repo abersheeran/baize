@@ -77,7 +77,7 @@ check = { composite = [
     "check-flake8 baize tests",
     "check-mypy baize tests",
 ] }
-test = "pytest {args}"
+test = "pytest tests {args}"
 
 [tool.pdm.dev-dependencies]
 build = [
