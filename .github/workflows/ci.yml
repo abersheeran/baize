@@ -61,18 +61,6 @@ jobs:
           pdm sync -v -dG build --no-isolation
           pdm run test --cov=./baize -o log_cli=true -o log_cli_level=DEBUG
 
-      - name: Tests build wheel
-        run: |
-          python -m pip install -U setuptools wheel twine auditwheel
-          pdm export -f setuppy -o setup.py --without-hashes -v
-          python setup.py bdist_wheel
-
-      - name: Try repair linux binary wheel
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          auditwheel show dist/*-linux*.whl
-          auditwheel repair dist/*-linux*.whl -w ./dist --plat manylinux_2_17_x86_64
-
   publish:
     needs: tests
     if: startsWith(github.ref, 'refs/tags/')
@@ -98,30 +86,17 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install -U setuptools wheel twine auditwheel
+          python -m pip install -U twine
           pdm sync -v -dG build --no-self
-
-      - name: Export setup.py
-        run: pdm export -f setuppy -o setup.py --without-hashes -v
 
       - name: Build binary wheel
         run: |
-          python setup.py bdist_wheel
-
-      - name: Repair linux binary wheel
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          auditwheel show dist/*-linux*.whl
-          auditwheel repair dist/*-linux*.whl -w ./dist --plat manylinux_2_17_x86_64
+          pdm build --no-isolation
 
       - name: Build pure python wheel
         run: |
-          pdm run pip uninstall -y mypy
-          python setup.py bdist_wheel sdist
-
-      - name: Deleted can't repair linux binary wheel
-        if: matrix.os == 'ubuntu-latest'
-        run: rm -f $(find dist -name *-linux*.whl)
+          python script/disable_build.py
+          pdm build
 
       - name: Publish
         run: |
