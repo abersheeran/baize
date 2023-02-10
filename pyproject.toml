@@ -56,7 +56,7 @@ ignore_missing_imports = true
 
 [tool.pdm]
 includes = ["baize"]
-# build = "speedup.py"
+build = "speedup.py"
 
 [tool.pdm.scripts]
 lint-isort = "isort {args}"
