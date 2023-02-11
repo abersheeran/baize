@@ -61,11 +61,13 @@ jobs:
           pdm sync -v -dG build --no-isolation
           pdm run test --cov=./baize -o log_cli=true -o log_cli_level=DEBUG
 
+      - name: Build binary wheel
+        run: pdm build --no-isolation -v
+
       - name: Try repair linux binary wheel
         if: matrix.os == 'ubuntu-latest'
         run: |
           pip install auditwheel
-          pdm build --no-isolation
           auditwheel show dist/*-linux*.whl
           auditwheel repair dist/*-linux*.whl -w ./dist --plat manylinux_2_17_x86_64
 
@@ -99,7 +101,7 @@ jobs:
 
       - name: Build binary wheel
         run: |
-          pdm build --no-isolation
+          pdm build --no-isolation -v
 
       - name: Repair linux binary wheel
         if: matrix.os == 'ubuntu-latest'
@@ -116,7 +118,7 @@ jobs:
       - name: Build pure python wheel
         run: |
           python script/disable_build.py
-          pdm build
+          pdm build -v
 
       - name: Publish
         run: |
