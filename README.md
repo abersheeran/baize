@@ -20,12 +20,6 @@ Under the ASGI/WSGI protocol, the interface of the request object and the respon
 pip install -U baize
 ```
 
-Or install from GitHub master branch
-
-```
-pip install -U git+https://github.com/abersheeran/baize@setup.py
-```
-
 ## Document and other website
 
 [BáiZé Document](https://baize.aber.sh/)
