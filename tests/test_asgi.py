@@ -1166,3 +1166,7 @@ async def test_pages(tmpdir):
 
         with pytest.raises(HTTPException):
             await client.get("/d")
+
+    app = Pages(tmpdir, handle_404=PlainTextResponse("", 404))
+    async with httpx.AsyncClient(app=app, base_url="http://testServer/") as client:
+        assert (await client.get("/d")).status_code == 404
