@@ -2,10 +2,10 @@ import importlib.util
 import os
 import stat
 from email.utils import parsedate_to_datetime
-from typing import Optional, Tuple, Union
+from typing import Generic, Optional, Tuple, TypeVar, Union
 
 from .responses import BaseResponse
-from .typing import Literal
+from .typing import ASGIApp, Literal, WSGIApp
 
 try:
     from mypy_extensions import mypyc_attr
@@ -15,13 +15,17 @@ except ImportError:  # pragma: no cover
         return lambda x: x
 
 
+Interface = TypeVar("Interface", ASGIApp, WSGIApp)
+
+
 @mypyc_attr(allow_interpreted_subclasses=True)
-class BaseFiles:
+class BaseFiles(Generic[Interface]):
     def __init__(
         self,
         directory: Union[str, "os.PathLike[str]"],
         package: Optional[str] = None,
         *,
+        handle_404: Optional[Interface] = None,
         cacheability: Literal["public", "private", "no-cache", "no-store"] = "public",
         max_age: int = 60 * 10,  # 10 minutes
     ) -> None:
@@ -29,6 +33,7 @@ class BaseFiles:
             os.path.isabs(directory) and package is not None
         ), "directory must be a relative path, with package is not None"
         self.directory = self.normalize_dir_path(str(directory), package)
+        self.handle_404: Optional[Interface] = handle_404
         self.cacheability = cacheability
         self.max_age = max_age
 
@@ -103,7 +108,7 @@ class BaseFiles:
 
 
 @mypyc_attr(allow_interpreted_subclasses=True)
-class BasePages(BaseFiles):
+class BasePages(BaseFiles[Interface], Generic[Interface]):
     def ensure_absolute_path(self, path: str) -> Optional[str]:
         abspath = super().ensure_absolute_path(path)
         if abspath is not None:

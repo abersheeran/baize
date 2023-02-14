@@ -1067,6 +1067,7 @@ async def test_hosts():
     [
         Files(Path(__file__).absolute().parent.parent / "baize"),
         Files(".", "baize"),
+        Files(".", "baize", handle_404=PlainTextResponse("", 404)),
     ],
 )
 async def test_files(app):
@@ -1107,11 +1108,16 @@ async def test_files(app):
             )
         ).status_code == 304
 
-        with pytest.raises(HTTPException):
-            await client.get("/")
+        if app.handle_404 is None:
 
-        with pytest.raises(HTTPException):
-            await client.get("/%2E%2E/baize/%2E%2E/%2E%2E/README.md")
+            with pytest.raises(HTTPException):
+                await client.get("/")
+
+            with pytest.raises(HTTPException):
+                await client.get("/%2E%2E/baize/%2E%2E/%2E%2E/README.md")
+
+        else:
+            assert (await client.get("/")).status_code == 404
 
 
 @pytest.mark.asyncio

@@ -4,19 +4,17 @@ from typing import Iterable
 from baize import staticfiles
 from baize.datastructures import URL
 from baize.exceptions import HTTPException
-from baize.typing import Environ, StartResponse
+from baize.typing import Environ, StartResponse, WSGIApp
 
 from .responses import FileResponse, RedirectResponse, Response
 
 
-class Files(staticfiles.BaseFiles):
+class Files(staticfiles.BaseFiles[WSGIApp]):
     """
     Provide the WSGI application to download files in the specified path or
     the specified directory under the specified package.
 
     Support request range and cache (304 status code).
-
-    NOTE: Need users handle HTTPException(404).
     """
 
     def __call__(
@@ -37,10 +35,13 @@ class Files(staticfiles.BaseFiles):
             self.set_response_headers(response)
             return response(environ, start_response)
 
-        raise HTTPException(404)
+        if self.handle_404 is None:
+            raise HTTPException(404)
+        else:
+            return self.handle_404(environ, start_response)
 
 
-class Pages(staticfiles.BasePages):
+class Pages(staticfiles.BasePages[WSGIApp]):
     """
     Provide the WSGI application to download files in the specified path or
     the specified directory under the specified package.
@@ -49,8 +50,6 @@ class Pages(staticfiles.BasePages):
     exist, it will return the content of that file.
 
     Support request range and cache (304 status code).
-
-    NOTE: Need users handle HTTPException(404).
     """
 
     def __call__(
@@ -84,4 +83,7 @@ class Pages(staticfiles.BasePages):
                 url = url.replace(scheme="", path=url.path + "/")
                 return RedirectResponse(url)(environ, start_response)
 
-        raise HTTPException(404)
+        if self.handle_404 is None:
+            raise HTTPException(404)
+        else:
+            return self.handle_404(environ, start_response)

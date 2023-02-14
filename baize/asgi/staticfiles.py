@@ -3,19 +3,17 @@ import stat
 from baize import staticfiles
 from baize.datastructures import URL
 from baize.exceptions import HTTPException
-from baize.typing import Receive, Scope, Send
+from baize.typing import ASGIApp, Receive, Scope, Send
 
 from .responses import FileResponse, RedirectResponse, Response
 
 
-class Files(staticfiles.BaseFiles):
+class Files(staticfiles.BaseFiles[ASGIApp]):
     """
     Provide the ASGI application to download files in the specified path or
     the specified directory under the specified package.
 
     Support request range and cache (304 status code).
-
-    NOTE: Need users handle HTTPException(404).
     """
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
@@ -39,7 +37,10 @@ class Files(staticfiles.BaseFiles):
             self.set_response_headers(response)
             return await response(scope, receive, send)
 
-        raise HTTPException(404)
+        if self.handle_404 is None:
+            raise HTTPException(404)
+        else:
+            return await self.handle_404(scope, receive, send)
 
 
 class Pages(staticfiles.BasePages):
@@ -50,8 +51,6 @@ class Pages(staticfiles.BasePages):
     of the file named `index.html` in that directory.
 
     Support request range and cache (304 status code).
-
-    NOTE: Need users handle HTTPException(404).
     """
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
@@ -88,4 +87,7 @@ class Pages(staticfiles.BasePages):
                 url = url.replace(scheme="", path=url.path + "/")
                 return await RedirectResponse(url)(scope, receive, send)
 
-        raise HTTPException(404)
+        if self.handle_404 is None:
+            raise HTTPException(404)
+        else:
+            return await self.handle_404(scope, receive, send)
