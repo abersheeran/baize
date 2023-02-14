@@ -18,12 +18,6 @@ Under the ASGI/WSGI protocol, the interface of the request object and the respon
 pip install -U baize
 ```
 
-Or install from GitHub master branch
-
-```
-pip install -U git+https://github.com/abersheeran/baize@setup.py
-```
-
 ## Usage
 
 BáiZé is a framework and toolkit that directly faces the WSGI and ASGI protocols. Please read the corresponding chapters according to your needs.
