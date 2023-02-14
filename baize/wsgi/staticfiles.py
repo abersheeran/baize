@@ -1,23 +1,38 @@
+import os
 import stat
 from typing import Iterable
 
 from baize import staticfiles
 from baize.datastructures import URL
 from baize.exceptions import HTTPException
-from baize.typing import Environ, StartResponse
+from baize.typing import Environ, StartResponse, WSGIApp
 
 from .responses import FileResponse, RedirectResponse, Response
 
 
-class Files(staticfiles.BaseFiles):
+class Files(staticfiles.BaseFiles[WSGIApp]):
     """
     Provide the WSGI application to download files in the specified path or
     the specified directory under the specified package.
 
     Support request range and cache (304 status code).
-
-    NOTE: Need users handle HTTPException(404).
     """
+
+    def file_response(
+        self,
+        filepath: str,
+        stat_result: os.stat_result,
+        if_none_match: str,
+        if_modified_since: str,
+    ) -> Response:
+        if self.if_none_match(
+            FileResponse.generate_etag(stat_result), if_none_match
+        ) or self.if_modified_since(stat_result.st_ctime, if_modified_since):
+            response = Response(304)
+        else:
+            response = FileResponse(filepath, stat_result=stat_result)
+        self.set_response_headers(response)
+        return response
 
     def __call__(
         self, environ: Environ, start_response: StartResponse
@@ -28,19 +43,17 @@ class Files(staticfiles.BaseFiles):
         stat_result, is_file = self.check_path_is_file(filepath)
         if is_file and stat_result:
             assert filepath is not None  # Just for type check
-            if self.if_none_match(
-                FileResponse.generate_etag(stat_result), if_none_match
-            ) or self.if_modified_since(stat_result.st_ctime, if_modified_since):
-                response = Response(304)
-            else:
-                response = FileResponse(filepath, stat_result=stat_result)
-            self.set_response_headers(response)
-            return response(environ, start_response)
+            return self.file_response(
+                filepath, stat_result, if_none_match, if_modified_since
+            )(environ, start_response)
 
-        raise HTTPException(404)
+        if self.handle_404 is None:
+            raise HTTPException(404)
+        else:
+            return self.handle_404(environ, start_response)
 
 
-class Pages(staticfiles.BasePages):
+class Pages(staticfiles.BasePages[WSGIApp], Files):
     """
     Provide the WSGI application to download files in the specified path or
     the specified directory under the specified package.
@@ -49,8 +62,6 @@ class Pages(staticfiles.BasePages):
     exist, it will return the content of that file.
 
     Support request range and cache (304 status code).
-
-    NOTE: Need users handle HTTPException(404).
     """
 
     def __call__(
@@ -71,17 +82,15 @@ class Pages(staticfiles.BasePages):
         if stat_result is not None:
             assert filepath is not None  # Just for type check
             if is_file:
-                if self.if_none_match(
-                    FileResponse.generate_etag(stat_result), if_none_match
-                ) or self.if_modified_since(stat_result.st_ctime, if_modified_since):
-                    response = Response(304)
-                else:
-                    response = FileResponse(filepath, stat_result=stat_result)
-                self.set_response_headers(response)
-                return response(environ, start_response)
+                return self.file_response(
+                    filepath, stat_result, if_none_match, if_modified_since
+                )(environ, start_response)
             if stat.S_ISDIR(stat_result.st_mode):
                 url = URL(environ=environ)
                 url = url.replace(scheme="", path=url.path + "/")
                 return RedirectResponse(url)(environ, start_response)
 
-        raise HTTPException(404)
+        if self.handle_404 is None:
+            raise HTTPException(404)
+        else:
+            return self.handle_404(environ, start_response)
