@@ -661,3 +661,7 @@ def test_pages(tmpdir):
 
         with pytest.raises(HTTPException):
             client.get("/d")
+
+    app = Pages(tmpdir, handle_404=PlainTextResponse("", 404))
+    with httpx.Client(app=app, base_url="http://testServer/") as client:
+        assert client.get("/d").status_code == 404

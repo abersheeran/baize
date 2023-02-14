@@ -1,26 +1,13 @@
 import asyncio
 import functools
-import sys
 from concurrent.futures import ThreadPoolExecutor as _ThreadPoolExecutor
 from contextvars import copy_context
 from typing import Any, Callable, TypeVar, cast
 
 __all__ = [
-    "get_running_loop",
     "ThreadPoolExecutor",
     "run_in_threadpool",
 ]
-
-
-if sys.version_info[:2] < (3, 7):
-
-    def get_running_loop() -> asyncio.AbstractEventLoop:
-        return asyncio.get_event_loop()
-
-else:
-
-    def get_running_loop() -> asyncio.AbstractEventLoop:
-        return asyncio.get_running_loop()
 
 
 T = TypeVar("T")
@@ -49,7 +36,7 @@ async def run_in_threadpool(__fn: Callable[..., T], *args: Any, **kwargs: Any) -
 
     https://github.com/python/cpython/blob/0f56263e62ba91d0baae40fb98947a3a98034a73/Lib/asyncio/threads.py
     """
-    loop = get_running_loop()
+    loop = asyncio.get_running_loop()
     ctx = copy_context()
     func_call = functools.partial(ctx.run, __fn, *args, **kwargs)
     return await loop.run_in_executor(None, cast(Callable[[], T], func_call))
