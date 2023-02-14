@@ -42,7 +42,7 @@ exclude_lines = [
     "@typing.overload",
     "@overload",
     "pass",
-    "...",
+    "\\.\\.\\.",
 ]
 show_missing = true
 skip_covered = true
