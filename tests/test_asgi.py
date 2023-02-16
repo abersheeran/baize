@@ -37,8 +37,8 @@ from baize.exceptions import (
     HTTPException,
     MalformedJSON,
     MalformedMultipart,
-    UnsupportedMediaType,
     RequestEntityTooLarge,
+    UnsupportedMediaType,
 )
 from baize.typing import Message, ServerSentEvent
 
