@@ -1,6 +1,7 @@
 from typing import AsyncIterable, Iterable, List, Optional, Tuple, Type, TypeVar, Union
 
 from .datastructures import Headers
+from .exceptions import RequestEntityTooLarge
 from .multipart import (
     Data,
     Epilogue,
@@ -47,6 +48,8 @@ async def parse_async_stream(
     charset: str,
     *,
     file_factory: Type[_AsyncUploadFile],
+    max_form_parts: int = 324,
+    max_form_memory_size: Union[int, None] = None,
 ) -> List[Tuple[str, Union[str, _AsyncUploadFile]]]:
     """
     Parse an asynchronous stream in multipart format
@@ -60,6 +63,8 @@ async def parse_async_stream(
     field_name = ""
     data = bytearray()
     file: Optional[_AsyncUploadFile] = None
+    form_parts_count = 0
+    form_memory_size_count = 0
 
     items: List[Tuple[str, Union[str, _AsyncUploadFile]]] = []
 
@@ -77,6 +82,14 @@ async def parse_async_stream(
             elif isinstance(event, Data):
                 if file is None:
                     data.extend(event.data)
+
+                    # Check if we have exceeded the maximum memory size
+                    form_memory_size_count += len(event.data)
+                    if (
+                        max_form_memory_size is not None
+                        and form_memory_size_count > max_form_memory_size
+                    ):
+                        raise RequestEntityTooLarge()
                 else:
                     await file.awrite(event.data)
 
@@ -88,6 +101,11 @@ async def parse_async_stream(
                         await file.aseek(0)
                         items.append((field_name, file))
                         file = None
+
+                    # Check if we have exceeded the maximum number of form parts
+                    form_parts_count += 1
+                    if form_parts_count > max_form_parts:
+                        raise RequestEntityTooLarge()
     return items
 
 
@@ -97,6 +115,8 @@ def parse_stream(
     charset: str,
     *,
     file_factory: Type[_SyncUploadFile],
+    max_form_parts: int = 324,
+    max_form_memory_size: Union[int, None] = None,
 ) -> List[Tuple[str, Union[str, _SyncUploadFile]]]:
     """
     Parse a synchronous stream in multipart format
@@ -110,6 +130,8 @@ def parse_stream(
     field_name = ""
     data = bytearray()
     file: Optional[_SyncUploadFile] = None
+    form_parts_count = 0
+    form_memory_size_count = 0
 
     items: List[Tuple[str, Union[str, _SyncUploadFile]]] = []
 
@@ -127,6 +149,14 @@ def parse_stream(
             elif isinstance(event, Data):
                 if file is None:
                     data.extend(event.data)
+
+                    # Check if we have exceeded the maximum memory size
+                    form_memory_size_count += len(event.data)
+                    if (
+                        max_form_memory_size is not None
+                        and form_memory_size_count > max_form_memory_size
+                    ):
+                        raise RequestEntityTooLarge()
                 else:
                     file.write(event.data)
 
@@ -138,4 +168,9 @@ def parse_stream(
                         file.seek(0)
                         items.append((field_name, file))
                         file = None
+
+                    # Check if we have exceeded the maximum number of form parts
+                    form_parts_count += 1
+                    if form_parts_count > max_form_parts:
+                        raise RequestEntityTooLarge()
     return items

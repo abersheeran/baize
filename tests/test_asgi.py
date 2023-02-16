@@ -32,12 +32,13 @@ from baize.asgi import (
     request_response,
     websocket_session,
 )
-from baize.datastructures import UploadFile
+from baize.datastructures import FormData, UploadFile
 from baize.exceptions import (
     HTTPException,
     MalformedJSON,
     MalformedMultipart,
     UnsupportedMediaType,
+    RequestEntityTooLarge,
 )
 from baize.typing import Message, ServerSentEvent
 
@@ -219,6 +220,44 @@ async def test_request_multipart_form():
             response = await client.post(
                 "/", content=b"xxxx", headers={"content-type": "multipart/form-data"}
             )
+
+
+@pytest.mark.asyncio
+async def test_request_multipart_form_limit():
+    class FRequest(Request):
+        async def _parse_multipart(self, boundary: bytes, charset: str) -> FormData:
+            from baize.multipart_helper import parse_async_stream as parse_multipart
+
+            return FormData(
+                await parse_multipart(
+                    self.stream(),
+                    boundary,
+                    charset,
+                    file_factory=UploadFile,
+                    max_form_parts=2,
+                    max_form_memory_size=1024,
+                )
+            )
+
+    async def app(scope, receive, send):
+        await FRequest(scope, receive).form
+
+    async with httpx.AsyncClient(app=app, base_url="http://testServer/") as client:
+        with pytest.raises(RequestEntityTooLarge):
+            with tempfile.SpooledTemporaryFile(1024) as file:
+                file.write(b"temporary file")
+                file.seek(0, 0)
+                await client.post(
+                    "/", data={"part1": "1", "part2": "2"}, files={"file-key": file}
+                )
+
+        with pytest.raises(RequestEntityTooLarge):
+            with tempfile.SpooledTemporaryFile(1024) as file:
+                file.write(b"temporary file")
+                file.seek(0, 0)
+                await client.post(
+                    "/", data={"abc": "*" * 2048}, files={"file-key": file}
+                )
 
 
 @pytest.mark.asyncio

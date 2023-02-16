@@ -7,11 +7,12 @@ from typing import Callable, Generator
 import httpx
 import pytest
 
-from baize.datastructures import Address, UploadFile
+from baize.datastructures import Address, FormData, UploadFile
 from baize.exceptions import (
     HTTPException,
     MalformedJSON,
     MalformedMultipart,
+    RequestEntityTooLarge,
     UnsupportedMediaType,
 )
 from baize.typing import ServerSentEvent
@@ -192,6 +193,41 @@ def test_request_multipart_form():
             response = client.post(
                 "/", content=b"xxxx", headers={"content-type": "multipart/form-data"}
             )
+
+
+def test_request_multipart_form_limit():
+    class FRequest(Request):
+        def _parse_multipart(self, boundary: bytes, charset: str) -> FormData:
+            from baize.multipart_helper import parse_stream as parse_multipart
+
+            return FormData(
+                parse_multipart(
+                    self.stream(),
+                    boundary,
+                    charset,
+                    file_factory=UploadFile,
+                    max_form_parts=2,
+                    max_form_memory_size=1024,
+                )
+            )
+
+    def app(environ, start_response):
+        FRequest(environ).form
+
+    with httpx.Client(app=app, base_url="http://testServer/") as client:
+        with pytest.raises(RequestEntityTooLarge):
+            with tempfile.SpooledTemporaryFile(1024) as file:
+                file.write(b"temporary file")
+                file.seek(0, 0)
+                client.post(
+                    "/", data={"part1": "1", "part2": "2"}, files={"file-key": file}
+                )
+
+        with pytest.raises(RequestEntityTooLarge):
+            with tempfile.SpooledTemporaryFile(1024) as file:
+                file.write(b"temporary file")
+                file.seek(0, 0)
+                client.post("/", data={"abc": "*" * 2048}, files={"file-key": file})
 
 
 def test_request_body_then_stream():
