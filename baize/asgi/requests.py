@@ -176,6 +176,13 @@ class Request(HTTPConnection):
 
         raise UnsupportedMediaType("application/json")
 
+    async def _parse_multipart(self, boundary: bytes, charset: str) -> FormData:
+        return FormData(
+            await parse_multipart(
+                self.stream(), boundary, charset, file_factory=UploadFile
+            )
+        )
+
     @cached_property
     async def form(self) -> FormData:
         """
@@ -193,11 +200,7 @@ class Request(HTTPConnection):
             if "boundary" not in self.content_type.options:
                 raise MalformedMultipart("Missing boundary in header content-type")
             boundary = self.content_type.options["boundary"].encode("latin-1")
-            return FormData(
-                await parse_multipart(
-                    self.stream(), boundary, charset, file_factory=UploadFile
-                )
-            )
+            return await self._parse_multipart(boundary, charset)
         if self.content_type == "application/x-www-form-urlencoded":
             body = (await self.body).decode(
                 encoding=self.content_type.options.get("charset", "latin-1")

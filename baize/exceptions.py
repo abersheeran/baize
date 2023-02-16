@@ -36,6 +36,17 @@ def abort(
     raise HTTPException(status_code=status_code, headers=headers, content=content)
 
 
+class RequestEntityTooLarge(HTTPException[None]):
+    """
+    413 Request Entity Too Large
+    """
+
+    def __init__(self, retry_after: Optional[int] = None) -> None:
+        super().__init__(
+            413, {"Retry-After": str(retry_after)} if retry_after is not None else None
+        )
+
+
 class UnsupportedMediaType(HTTPException[None]):
     """
     415 Unsupported Media Type
