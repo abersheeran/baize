@@ -482,6 +482,24 @@ def test_send_event_response():
             assert events.replace(": ping\n\n", "") == expected_events
 
 
+def test_send_event_response_raise_exception():
+    def send_events() -> Generator[ServerSentEvent, None, None]:
+        yield ServerSentEvent(data="hello\nworld")
+        time.sleep(0.2)
+        raise Exception("Something went wrong")
+
+    with httpx.Client(
+        app=SendEventResponse(send_events(), ping_interval=0.1),
+        base_url="http://testServer/",
+    ) as client:
+        with client.stream("GET", "/") as resp:
+            resp.raise_for_status()
+            events = ""
+            with pytest.raises(Exception, match="Something went wrong"):
+                for line in resp.iter_lines():
+                    events += line
+
+
 @pytest.mark.parametrize(
     "response_class",
     [

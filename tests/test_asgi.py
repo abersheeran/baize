@@ -761,6 +761,25 @@ async def test_send_event_response():
             assert events.replace(": ping\n\n", "") == expected_events
 
 
+@pytest.mark.asyncio
+async def test_send_event_response_raise_exception():
+    async def send_events() -> AsyncGenerator[ServerSentEvent, None]:
+        yield ServerSentEvent(data="hello\nworld")
+        await asyncio.sleep(0.2)
+        raise Exception("Something went wrong")
+
+    async with httpx.AsyncClient(
+        app=SendEventResponse(send_events(), ping_interval=0.1),
+        base_url="http://testServer/",
+    ) as client:
+        with pytest.raises(Exception, match="Something went wrong"):
+            async with client.stream("GET", "/") as resp:
+                resp.raise_for_status()
+                events = ""
+                async for line in resp.aiter_lines():
+                    events += line
+
+
 @pytest.mark.parametrize(
     "response_class",
     [
