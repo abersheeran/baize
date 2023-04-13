@@ -363,9 +363,14 @@ class SendEventResponse(Response):
                     yield b": ping\n\n"
         finally:
             self.has_more_data = False
-            future.cancel()
+            if not future.cancel():
+                exc = future.exception()
+                if exc is not None:
+                    raise exc
 
     def send_event(self) -> None:
-        for chunk in self.iterable:
-            self.queue.put(build_bytes_from_sse(chunk, self.charset))
-        self.has_more_data = False
+        try:
+            for chunk in self.iterable:
+                self.queue.put(build_bytes_from_sse(chunk, self.charset))
+        finally:
+            self.has_more_data = False
