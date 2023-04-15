@@ -396,16 +396,16 @@ class SendEventResponse(Response):
     """
     Server-sent events response.
 
-    When the cilent closes the connection, the generator will got a `StopAsyncIteration`
-    exception. Use `try-except` to handle it like this:
+    When the cilent closes the connection, the generator will be closed.
+    Use `try-finally` to clean up resources.
 
     ```python
     async def generator():
         while True:
             try:
-                yield ServerSentEvent("message", "data")
-            except StopAsyncIteration:
-                pass
+                yield ServerSentEvent()
+            finally:
+                print("generator closed")
 
     response = SendEventResponse(generator())
     ```
@@ -483,7 +483,7 @@ class SendEventResponse(Response):
         finally:
             self.has_more_data = False
             if self.client_closed:
-                await self.generator.athrow(StopAsyncIteration)  # pragma: no cover
+                await self.generator.aclose()  # pragma: no cover
 
     async def wait_close(self, receive: Receive) -> None:
         while not self.client_closed:

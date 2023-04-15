@@ -313,16 +313,16 @@ class SendEventResponse(Response):
     """
     Server-sent events response.
 
-    When the cilent closes the connection, the generator will got a `StopIteration`
-    exception. Use `try-except` to handle it like this:
+    When the cilent closes the connection, the generator will be closed.
+    Use `try-finally` to clean up resources.
 
     ```python
     def generator():
         while True:
             try:
-                yield ServerSentEvent("message", "data")
-            except StopIteration:
-                pass
+                yield ServerSentEvent()
+            finally:
+                print("generator closed")
 
     response = SendEventResponse(generator())
     ```
@@ -394,5 +394,5 @@ class SendEventResponse(Response):
             pass
         finally:
             if self.client_closed:
-                self.generator.throw(StopIteration)  # pragma: no cover
+                self.generator.close()  # pragma: no cover
             self.has_more_data = False

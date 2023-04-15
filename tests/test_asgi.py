@@ -780,6 +780,29 @@ async def test_send_event_response_raise_exception():
                     events += line
 
 
+@pytest.mark.asyncio
+async def test_send_event_response_be_killed():
+    killed = False
+
+    async def send_events() -> AsyncGenerator[ServerSentEvent, None]:
+        nonlocal killed
+
+        try:
+            for _ in range(1000):
+                yield ServerSentEvent(data="hello\nworld")
+        finally:
+            killed = True
+
+    async with httpx.AsyncClient(
+        app=SendEventResponse(send_events(), ping_interval=0.1),
+        base_url="http://testServer/",
+    ) as client:
+        async with client.stream("GET", "/") as resp:
+            resp.raise_for_status()
+
+    assert killed
+
+
 @pytest.mark.parametrize(
     "response_class",
     [
