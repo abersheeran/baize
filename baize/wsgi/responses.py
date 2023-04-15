@@ -318,11 +318,11 @@ class SendEventResponse(Response):
 
     ```python
     def generator():
-        while True:
-            try:
+        try:
+            while True:
                 yield ServerSentEvent()
-            finally:
-                print("generator closed")
+        finally:
+            print("generator closed")
 
     response = SendEventResponse(generator())
     ```
