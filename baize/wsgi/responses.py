@@ -360,6 +360,7 @@ class SendEventResponse(Response):
         self.charset = charset
         self.queue: Queue = Queue(13)
         self.has_more_data = True
+        self.client_closed = False
 
     def __call__(
         self, environ: Environ, start_response: StartResponse
@@ -370,13 +371,15 @@ class SendEventResponse(Response):
         future = self.thread_pool.submit(self.send_event)
 
         try:
-            while self.has_more_data or not self.queue.empty():
+            while not self.client_closed and (
+                self.has_more_data or not self.queue.empty()
+            ):
                 try:
                     yield self.queue.get(timeout=self.ping_interval)
                 except queue.Empty:
                     yield b": ping\n\n"
         finally:
-            self.has_more_data = False
+            self.client_closed = self.has_more_data
             if not future.cancel():
                 exc = future.exception()
                 if exc is not None:
@@ -384,12 +387,12 @@ class SendEventResponse(Response):
 
     def send_event(self) -> None:
         try:
-            while self.has_more_data:
+            while not self.client_closed:
                 chunk = next(self.generator)
                 self.queue.put(build_bytes_from_sse(chunk, self.charset))
         except StopIteration:
             pass
         finally:
-            if not self.has_more_data:
+            if self.client_closed:
                 self.generator.throw(StopIteration)
             self.has_more_data = False
