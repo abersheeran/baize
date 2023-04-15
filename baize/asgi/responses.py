@@ -476,7 +476,7 @@ class SendEventResponse(Response):
     async def push_event(self) -> None:
         try:
             while not self.client_closed:
-                chunk = await anext(self.generator)
+                chunk = await self.generator.asend(None)
                 await self.queue.put(build_bytes_from_sse(chunk, self.charset))
         except StopAsyncIteration:
             pass
