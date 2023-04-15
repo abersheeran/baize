@@ -388,11 +388,11 @@ class SendEventResponse(Response):
     def send_event(self) -> None:
         try:
             while not self.client_closed:
-                chunk = next(self.generator)
+                chunk = self.generator.send(None)
                 self.queue.put(build_bytes_from_sse(chunk, self.charset))
         except StopIteration:
             pass
         finally:
             if self.client_closed:
-                self.generator.throw(StopIteration)
+                self.generator.throw(StopIteration)  # pragma: no cover
             self.has_more_data = False

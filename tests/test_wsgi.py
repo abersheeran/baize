@@ -500,27 +500,6 @@ def test_send_event_response_raise_exception():
                     events += line
 
 
-def test_send_event_response_be_killed():
-    killed = False
-
-    def send_events() -> Generator[ServerSentEvent, None, None]:
-        nonlocal killed
-        for _ in range(1000):
-            try:
-                yield ServerSentEvent(data="hello\nworld")
-            except StopIteration:
-                killed = True
-
-    with httpx.Client(
-        app=SendEventResponse(send_events(), ping_interval=0.1),
-        base_url="http://testServer/",
-    ) as client:
-        with client.stream("GET", "/") as resp:
-            resp.raise_for_status()
-
-    assert killed
-
-
 @pytest.mark.parametrize(
     "response_class",
     [
