@@ -7,6 +7,7 @@ from mimetypes import guess_type
 from random import choices as random_choices
 from typing import (
     Any,
+    AsyncGenerator,
     AsyncIterable,
     Dict,
     Generic,
@@ -406,7 +407,7 @@ class SendEventResponse(Response):
 
     def __init__(
         self,
-        iterable: AsyncIterable[ServerSentEvent],
+        generator: AsyncGenerator[ServerSentEvent, None],
         status_code: int = 200,
         headers: Optional[Mapping[str, str]] = None,
         *,
@@ -419,10 +420,12 @@ class SendEventResponse(Response):
             headers = dict(self.required_headers)
         headers["Content-Type"] += f"; charset={charset}"
         super().__init__(status_code, headers)
-        self.iterable = iterable
+        self.generator = generator
         self.ping_interval = ping_interval
-        self.client_closed = False
         self.charset = charset
+        self.queue: "asyncio.Queue[bytes]" = asyncio.Queue(13)
+        self.has_more_data = True
+        self.client_closed = False
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         await send(
@@ -432,29 +435,40 @@ class SendEventResponse(Response):
                 "headers": self.list_headers(as_bytes=True),
             }
         )
+        push_event_future = asyncio.ensure_future(self.push_event())
+        wait_close_future = asyncio.ensure_future(self.wait_close(receive))
 
-        done, pending = await asyncio.wait(
-            (
-                asyncio.ensure_future(self.keep_alive(send)),
-                asyncio.ensure_future(self.send_event(send)),
-                asyncio.ensure_future(self.wait_close(receive)),
-            ),
-            return_when=asyncio.FIRST_COMPLETED,
-        )
-        [task.cancel() for task in pending]
-        [task.result() for task in done]
-        return await send_http_body(send)
+        try:
+            while not self.client_closed and (
+                self.has_more_data or not self.queue.empty()
+            ):
+                try:
+                    body = await asyncio.wait_for(
+                        self.queue.get(), timeout=self.ping_interval
+                    )
+                except asyncio.TimeoutError:
+                    body = b": ping\n\n"
+                await send_http_body(send, body, more_body=True)
+            return await send_http_body(send)
+        finally:
+            done, pending = await asyncio.wait(
+                (push_event_future, wait_close_future),
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+            [task.cancel() for task in pending]
+            [task.result() for task in done]
 
-    async def send_event(self, send: Send) -> None:
-        async for chunk in self.iterable:
-            body = build_bytes_from_sse(chunk, self.charset)
-            await send_http_body(send, body, more_body=True)
-
-    async def keep_alive(self, send: Send) -> None:
-        while not self.client_closed:
-            await asyncio.sleep(self.ping_interval)
-            ping = b": ping\n\n"
-            await send_http_body(send, ping, more_body=True)
+    async def push_event(self) -> None:
+        try:
+            while not self.client_closed:
+                chunk = await anext(self.generator)
+                await self.queue.put(build_bytes_from_sse(chunk, self.charset))
+        except StopAsyncIteration:
+            pass
+        finally:
+            self.has_more_data = False
+            if self.client_closed:
+                await self.generator.athrow(StopAsyncIteration)  # pragma: no cover
 
     async def wait_close(self, receive: Receive) -> None:
         while not self.client_closed:

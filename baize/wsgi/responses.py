@@ -328,7 +328,7 @@ class SendEventResponse(Response):
 
     def __init__(
         self,
-        iterable: Iterable[ServerSentEvent],
+        generator: Generator[ServerSentEvent, None, None],
         status_code: int = 200,
         headers: Optional[Mapping[str, str]] = None,
         *,
@@ -341,7 +341,7 @@ class SendEventResponse(Response):
             headers = dict(self.required_headers)
         headers["Content-Type"] += f"; charset={charset}"
         super().__init__(status_code, headers)
-        self.iterable = iterable
+        self.generator = generator
         self.ping_interval = ping_interval
         self.charset = charset
         self.queue: Queue = Queue(13)
@@ -370,7 +370,12 @@ class SendEventResponse(Response):
 
     def send_event(self) -> None:
         try:
-            for chunk in self.iterable:
+            while self.has_more_data:
+                chunk = next(self.generator)
                 self.queue.put(build_bytes_from_sse(chunk, self.charset))
+        except StopIteration:
+            pass
         finally:
+            if not self.has_more_data:
+                self.generator.throw(StopIteration)
             self.has_more_data = False

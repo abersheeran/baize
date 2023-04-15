@@ -780,6 +780,30 @@ async def test_send_event_response_raise_exception():
                     events += line
 
 
+# Because HTTPX doesn't support streaming read ASGI app, this test is not working
+#
+# @pytest.mark.asyncio
+# async def test_send_event_response_be_killed():
+#     killed = False
+
+#     async def send_events() -> AsyncGenerator[ServerSentEvent, None]:
+#         nonlocal killed
+#         for _ in range(1000):
+#             try:
+#                 yield ServerSentEvent(data="hello\nworld")
+#             except StopIteration:
+#                 killed = True
+
+#     async with httpx.AsyncClient(
+#         app=SendEventResponse(send_events(), ping_interval=0.1),
+#         base_url="http://testServer/",
+#     ) as client:
+#         async with client.stream("GET", "/") as resp:
+#             resp.raise_for_status()
+
+#     assert killed
+
+
 @pytest.mark.parametrize(
     "response_class",
     [
@@ -981,7 +1005,7 @@ def test_websocket_scope_interface():
         return {}
 
     async def mock_send(message: Message) -> None:
-        ...  # pragma: no cover
+        ...
 
     websocket = WebSocket(
         {"type": "websocket", "path": "/abc/", "headers": []},

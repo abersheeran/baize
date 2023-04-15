@@ -12,7 +12,7 @@ from typing import (
     Type,
 )
 
-if sys.version_info[:2] < (3, 8):
+if sys.version_info < (3, 8):
     from typing_extensions import (
         Final,
         Literal,
@@ -67,7 +67,7 @@ class StartResponse(Protocol):
         response_headers: List[Tuple[str, str]],
         exc_info: Optional[ExcInfo] = None,
     ) -> None:
-        ...  # pragma: no cover
+        ...
 
 
 WSGIApp = Callable[[Environ, StartResponse], Iterable[bytes]]
