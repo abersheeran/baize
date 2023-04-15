@@ -462,7 +462,7 @@ def test_send_event_response():
             resp.raise_for_status()
             events = ""
             for line in resp.iter_lines():
-                events += line
+                events += line + "\n"
             assert events.replace(": ping\n\n", "") == expected_events
 
     with httpx.Client(
@@ -478,7 +478,7 @@ def test_send_event_response():
             assert resp.headers["custom-header"] == "value"
             events = ""
             for line in resp.iter_lines():
-                events += line
+                events += line + "\n"
             assert events.replace(": ping\n\n", "") == expected_events
 
 

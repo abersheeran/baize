@@ -741,7 +741,7 @@ async def test_send_event_response():
             resp.raise_for_status()
             events = ""
             async for line in resp.aiter_lines():
-                events += line
+                events += line + "\n"
             assert events.replace(": ping\n\n", "") == expected_events
 
     async with httpx.AsyncClient(
@@ -757,7 +757,7 @@ async def test_send_event_response():
             assert resp.headers["custom-header"] == "value"
             events = ""
             async for line in resp.aiter_lines():
-                events += line
+                events += line + "\n"
             assert events.replace(": ping\n\n", "") == expected_events
 
 
