@@ -313,6 +313,20 @@ class SendEventResponse(Response):
     """
     Server-sent events response.
 
+    When the cilent closes the connection, the generator will got a `StopIteration`
+    exception. Use `try-except` to handle it like this:
+
+    ```python
+    def generator():
+        while True:
+            try:
+                yield ServerSentEvent("message", "data")
+            except StopIteration:
+                pass
+
+    response = SendEventResponse(generator())
+    ```
+
     :param ping_interval: This determines the time interval (in seconds) between sending ping messages.
     """
 
