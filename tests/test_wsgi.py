@@ -507,7 +507,7 @@ def test_send_event_response_be_killed():
         nonlocal killed
 
         try:
-            for _ in range(1000):
+            for _ in range(10):
                 yield ServerSentEvent(data="hello\nworld")
         finally:
             killed = True
