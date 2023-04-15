@@ -409,9 +409,6 @@ class SendEventResponse(Response):
 
     response = SendEventResponse(generator())
     ```
-
-
-    :param ping_interval: This determines the time interval (in seconds) between sending ping messages.
     """
 
     required_headers = {

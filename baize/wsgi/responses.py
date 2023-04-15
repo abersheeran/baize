@@ -326,8 +326,6 @@ class SendEventResponse(Response):
 
     response = SendEventResponse(generator())
     ```
-
-    :param ping_interval: This determines the time interval (in seconds) between sending ping messages.
     """
 
     thread_pool = ThreadPoolExecutor(max_workers=10, thread_name_prefix="SendEvent_")
