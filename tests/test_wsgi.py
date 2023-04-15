@@ -462,7 +462,7 @@ def test_send_event_response():
             resp.raise_for_status()
             events = ""
             for line in resp.iter_lines():
-                events += line
+                events += line + "\n"
             assert events.replace(": ping\n\n", "") == expected_events
 
     with httpx.Client(
@@ -478,7 +478,7 @@ def test_send_event_response():
             assert resp.headers["custom-header"] == "value"
             events = ""
             for line in resp.iter_lines():
-                events += line
+                events += line + "\n"
             assert events.replace(": ping\n\n", "") == expected_events
 
 
@@ -498,6 +498,28 @@ def test_send_event_response_raise_exception():
             with pytest.raises(Exception, match="Something went wrong"):
                 for line in resp.iter_lines():
                     events += line
+
+
+def test_send_event_response_be_killed():
+    killed = False
+
+    def send_events() -> Generator[ServerSentEvent, None, None]:
+        nonlocal killed
+
+        try:
+            for _ in range(10):
+                yield ServerSentEvent(data="hello\nworld")
+        finally:
+            killed = True
+
+    with httpx.Client(
+        app=SendEventResponse(send_events(), ping_interval=0.1),
+        base_url="http://testServer/",
+    ) as client:
+        with client.stream("GET", "/") as resp:
+            resp.raise_for_status()
+
+    assert killed
 
 
 @pytest.mark.parametrize(

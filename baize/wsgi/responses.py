@@ -313,7 +313,19 @@ class SendEventResponse(Response):
     """
     Server-sent events response.
 
-    :param ping_interval: This determines the time interval (in seconds) between sending ping messages.
+    When the cilent closes the connection, the generator will be closed.
+    Use `try-finally` to clean up resources.
+
+    ```python
+    def generator():
+        try:
+            while True:
+                yield ServerSentEvent()
+        finally:
+            print("generator closed")
+
+    response = SendEventResponse(generator())
+    ```
     """
 
     thread_pool = ThreadPoolExecutor(max_workers=10, thread_name_prefix="SendEvent_")
@@ -328,7 +340,7 @@ class SendEventResponse(Response):
 
     def __init__(
         self,
-        iterable: Iterable[ServerSentEvent],
+        generator: Generator[ServerSentEvent, None, None],
         status_code: int = 200,
         headers: Optional[Mapping[str, str]] = None,
         *,
@@ -341,11 +353,12 @@ class SendEventResponse(Response):
             headers = dict(self.required_headers)
         headers["Content-Type"] += f"; charset={charset}"
         super().__init__(status_code, headers)
-        self.iterable = iterable
+        self.generator = generator
         self.ping_interval = ping_interval
         self.charset = charset
         self.queue: Queue = Queue(13)
         self.has_more_data = True
+        self.client_closed = False
 
     def __call__(
         self, environ: Environ, start_response: StartResponse
@@ -356,13 +369,15 @@ class SendEventResponse(Response):
         future = self.thread_pool.submit(self.send_event)
 
         try:
-            while self.has_more_data or not self.queue.empty():
+            while not self.client_closed and (
+                self.has_more_data or not self.queue.empty()
+            ):
                 try:
                     yield self.queue.get(timeout=self.ping_interval)
                 except queue.Empty:
                     yield b": ping\n\n"
         finally:
-            self.has_more_data = False
+            self.client_closed = self.has_more_data
             if not future.cancel():
                 exc = future.exception()
                 if exc is not None:
@@ -370,7 +385,12 @@ class SendEventResponse(Response):
 
     def send_event(self) -> None:
         try:
-            for chunk in self.iterable:
+            while not self.client_closed:
+                chunk = self.generator.send(None)
                 self.queue.put(build_bytes_from_sse(chunk, self.charset))
+        except StopIteration:
+            pass
         finally:
+            if self.client_closed:
+                self.generator.close()  # pragma: no cover
             self.has_more_data = False

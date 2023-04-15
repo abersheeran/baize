@@ -741,7 +741,7 @@ async def test_send_event_response():
             resp.raise_for_status()
             events = ""
             async for line in resp.aiter_lines():
-                events += line
+                events += line + "\n"
             assert events.replace(": ping\n\n", "") == expected_events
 
     async with httpx.AsyncClient(
@@ -757,7 +757,7 @@ async def test_send_event_response():
             assert resp.headers["custom-header"] == "value"
             events = ""
             async for line in resp.aiter_lines():
-                events += line
+                events += line + "\n"
             assert events.replace(": ping\n\n", "") == expected_events
 
 
@@ -778,6 +778,29 @@ async def test_send_event_response_raise_exception():
                 events = ""
                 async for line in resp.aiter_lines():
                     events += line
+
+
+@pytest.mark.asyncio
+async def test_send_event_response_be_killed():
+    killed = False
+
+    async def send_events() -> AsyncGenerator[ServerSentEvent, None]:
+        nonlocal killed
+
+        try:
+            for _ in range(10):
+                yield ServerSentEvent(data="hello\nworld")
+        finally:
+            killed = True
+
+    async with httpx.AsyncClient(
+        app=SendEventResponse(send_events(), ping_interval=0.1),
+        base_url="http://testServer/",
+    ) as client:
+        async with client.stream("GET", "/") as resp:
+            resp.raise_for_status()
+
+    assert killed
 
 
 @pytest.mark.parametrize(
@@ -981,7 +1004,7 @@ def test_websocket_scope_interface():
         return {}
 
     async def mock_send(message: Message) -> None:
-        ...  # pragma: no cover
+        ...
 
     websocket = WebSocket(
         {"type": "websocket", "path": "/abc/", "headers": []},
