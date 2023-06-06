@@ -113,12 +113,12 @@ class Request(HTTPConnection):
         self._stream_consumed = False
         self._is_disconnected = False
 
-    @cached_property
+    @property
     def method(self) -> str:
         """
         HTTP method. Uppercase string.
         """
-        return self._scope["method"]
+        return self["method"]
 
     async def stream(self) -> AsyncIterator[bytes]:
         """

@@ -113,7 +113,7 @@ class Request(HTTPConnection):
         super().__init__(environ, start_response)
         self._stream_consumed = False
 
-    @cached_property
+    @property
     def method(self) -> str:
         """
         HTTP method. Uppercase string.
