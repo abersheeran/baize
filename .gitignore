@@ -105,4 +105,4 @@ site/
 
 # pdm
 __pypackages__
-.pdm.toml
+.pdm-python
