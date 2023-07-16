@@ -18,10 +18,13 @@ class HTTPException(Exception, Generic[T]):
         self.status_code = status_code
         self.headers = headers
         self.content = content
-        try:
-            status_description = HTTPStatus(status_code).description
-        except ValueError:
-            status_description = "Maybe a custom HTTP status code"
+        if content is not None:
+            status_description = repr(content)
+        else:
+            try:
+                status_description = HTTPStatus(status_code).description
+            except ValueError:
+                status_description = "Maybe a custom HTTP status code"
         super().__init__(status_code, status_description)
 
 
@@ -73,16 +76,13 @@ class RangeNotSatisfiable(HTTPException[None]):
 class MalformedJSON(HTTPException[str]):
     def __init__(self, message: str = "Malformed JSON") -> None:
         super().__init__(content=message)
-        super(Exception, self).__init__(self.status_code, message)
 
 
 class MalformedMultipart(HTTPException[str]):
     def __init__(self, message: str = "Malformed multipart") -> None:
         super().__init__(content=message)
-        super(Exception, self).__init__(self.status_code, message)
 
 
 class MalformedRangeHeader(HTTPException[str]):
     def __init__(self, message: str = "Malformed Range header") -> None:
         super().__init__(content=message)
-        super(Exception, self).__init__(self.status_code, message)
