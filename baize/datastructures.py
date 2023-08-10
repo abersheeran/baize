@@ -539,6 +539,8 @@ class MutableHeaders(Headers, typing.MutableMapping[str, str]):
     __slots__ = Headers.__slots__
 
     def __setitem__(self, key: str, value: str) -> None:
+        if "\n" in key or "\r" in key or "\0" in key:
+            raise ValueError("Header names must not contain control characters.")
         if "\n" in value or "\r" in value or "\0" in value:
             raise ValueError("Header values must not contain control characters.")
         self._dict[key.lower()] = value

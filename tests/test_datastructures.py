@@ -223,6 +223,11 @@ def test_mutable_headers():
     ):
         h["error"] = "has\r\n"
 
+    with pytest.raises(
+        ValueError, match="Header names must not contain control characters."
+    ):
+        h["has\n"] = "value"
+
 
 def test_url_blank_params():
     q = QueryParams("a=123&abc&def&b=456")
