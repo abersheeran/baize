@@ -539,17 +539,18 @@ class MutableHeaders(Headers, typing.MutableMapping[str, str]):
     __slots__ = Headers.__slots__
 
     def __setitem__(self, key: str, value: str) -> None:
+        if "\n" in value or "\r" in value or "\0" in value:
+            raise ValueError("Header values must not contain control characters.")
         self._dict[key.lower()] = value
 
     def __delitem__(self, key: str) -> None:
         del self._dict[key.lower()]
 
     def append(self, key: str, value: str) -> None:
-        key = key.lower()
-        if key in self._dict:
-            self._dict[key] = f"{self._dict[key]}, {value}"
+        if key in self:
+            self[key] = f"{self[key]}, {value}"
         else:
-            self._dict[key] = value
+            self[key] = value
 
 
 class UploadFile:

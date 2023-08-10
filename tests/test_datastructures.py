@@ -208,6 +208,21 @@ def test_mutable_headers():
     h.append("vary", "vary2")
     assert dict(h) == {"vary": "vary, vary2", "a": "0", "b": "4", "c": "8"}
 
+    with pytest.raises(
+        ValueError, match="Header values must not contain control characters."
+    ):
+        h["error"] = "has\r"
+
+    with pytest.raises(
+        ValueError, match="Header values must not contain control characters."
+    ):
+        h["error"] = "has\n"
+
+    with pytest.raises(
+        ValueError, match="Header values must not contain control characters."
+    ):
+        h["error"] = "has\r\n"
+
 
 def test_url_blank_params():
     q = QueryParams("a=123&abc&def&b=456")
