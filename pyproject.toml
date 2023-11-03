@@ -23,9 +23,6 @@ Homepage = "https://github.com/abersheeran/baize"
 Repository = "https://github.com/abersheeran/baize"
 Documentation = "https://baize.aber.sh/"
 
-[tool.isort]
-profile = "black"
-
 [tool.coverage.run]
 omit = ["*/.venv/*", "*/tests/*"]
 plugins = ["coverage_conditional_plugin"]
