@@ -55,17 +55,17 @@ jobs:
           verbose: true
 
       - name: Tests with mypyc
-        if: matrix.python-version <= 3.12
+        if: matrix.python-version < 3.12
         run: |
           pdm sync -v -dG build --no-isolation
           pdm run test --cov=./baize -o log_cli=true -o log_cli_level=DEBUG
 
       - name: Build binary wheel
-        if: matrix.python-version <= 3.12
+        if: matrix.python-version < 3.12
         run: pdm build --no-isolation -v
 
       - name: Try repair linux binary wheel
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version <= 3.12
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version < 3.12
         run: |
           pip install auditwheel
           auditwheel show dist/*-linux*.whl
