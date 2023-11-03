@@ -26,7 +26,7 @@ jobs:
     runs-on: "${{ matrix.os }}"
     strategy:
       matrix:
-        python-version: [3.7, 3.8, 3.9, "3.10", 3.11]
+        python-version: [3.7, 3.8, 3.9, "3.10", 3.11, 3.12]
         os: [windows-latest, ubuntu-latest, macos-latest]
 
     steps:
@@ -36,15 +36,13 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           architecture: x64
-          version: 2.7.0
-          prerelease: true
-          enable-pep582: true # Enable PEP 582 package loading globally
+          version: 2.10.0
       - name: Install dependencies
         run: |
           pdm sync -v -dG dev -dG test --no-self
 
       - name: Static type and format checking
-        run: pdm run check
+        run: pdm run lint && pdm run format --check --diff
 
       - name: Tests
         run: pdm run test --cov=./baize --cov-report=xml -o log_cli=true -o log_cli_level=DEBUG
@@ -57,15 +55,17 @@ jobs:
           verbose: true
 
       - name: Tests with mypyc
+        if: matrix.python-version < 3.12
         run: |
           pdm sync -v -dG build --no-isolation
           pdm run test --cov=./baize -o log_cli=true -o log_cli_level=DEBUG
 
       - name: Build binary wheel
+        if: matrix.python-version < 3.12
         run: pdm build --no-isolation -v
 
       - name: Try repair linux binary wheel
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version < 3.12
         run: |
           pip install auditwheel
           auditwheel show dist/*-linux*.whl
@@ -90,9 +90,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           architecture: x64
-          version: 2.7.0
-          prerelease: true
-          enable-pep582: true # Enable PEP 582 package loading globally
+          version: 2.10.0
 
       - name: Install dependencies
         run: |

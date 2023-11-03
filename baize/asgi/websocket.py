@@ -167,7 +167,6 @@ class WebsocketDenialResponse:
             await send({"type": "websocket.close"})
             return
         else:  # pragma: no cover
-
             # call the specified response, mapping send/receive events
             # between http/websocket ASGI protocols
 

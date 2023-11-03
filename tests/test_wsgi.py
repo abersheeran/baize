@@ -681,7 +681,6 @@ def test_files(app):
         ).status_code == 304
 
         if app.handle_404 is None:
-
             with pytest.raises(HTTPException):
                 client.get("/")
 
