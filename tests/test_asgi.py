@@ -1087,7 +1087,7 @@ async def test_router():
         assert (await client.get("/")).text == "homepage"
         assert (await client.get("/baize")).json() == {"path": "baize"}
         assert (await client.get("/baize/")).status_code == 404
-        assert (await (client.get("/redirect"))).headers["location"] == "/cat"
+        assert (await client.get("/redirect")).headers["location"] == "/cat"
 
 
 @pytest.mark.asyncio
@@ -1190,7 +1190,6 @@ async def test_files(app):
         ).status_code == 304
 
         if app.handle_404 is None:
-
             with pytest.raises(HTTPException):
                 await client.get("/")
 
