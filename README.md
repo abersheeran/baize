@@ -3,7 +3,7 @@
 [![Codecov](https://img.shields.io/codecov/c/github/abersheeran/baize?style=flat-square)](https://codecov.io/gh/abersheeran/baize)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/baize?label=Support%20Python%20Version&style=flat-square)](https://pypi.org/project/baize/)
 
-Powerful and exquisite WSGI/ASGI framework/toolkit. Use [MyPyC](https://mypyc.readthedocs.io/en/latest/) to improve code running speed.
+Powerful and exquisite WSGI/ASGI framework/toolkit.
 
 The minimize implementation of methods required in the Web framework. No redundant implementation means that you can freely customize functions without considering the conflict with baize's own implementation.
 
