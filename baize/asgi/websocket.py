@@ -8,8 +8,12 @@ from .responses import Response
 
 
 class WebSocketDisconnect(Exception):
-    def __init__(self, code: int = 1000) -> None:
+    def __init__(self, code: int = 1000, reason: Optional[str] = None) -> None:
         self.code = code
+        self.reason = reason or ""
+
+    def __repr__(self) -> str:
+        return f"WebSocketDisconnect(code={self.code}, reason={self.reason})"
 
 
 class WebSocketState(enum.Enum):
@@ -79,7 +83,7 @@ class WebSocket(HTTPConnection):
 
     def _raise_on_disconnect(self, message: Message) -> None:
         if message["type"] == "websocket.disconnect":
-            raise WebSocketDisconnect(message["code"])
+            raise WebSocketDisconnect(message["code"], message.get("reason"))
 
     async def receive_text(self) -> str:
         """
@@ -131,12 +135,12 @@ class WebSocket(HTTPConnection):
         """
         await self.send({"type": "websocket.send", "bytes": data})
 
-    async def close(self, code: int = 1000) -> None:
+    async def close(self, code: int = 1000, reason: Optional[str] = None) -> None:
         """
         Close WebSocket connection. It can be called multiple times.
         """
         if self.application_state != WebSocketState.DISCONNECTED:
-            await self.send({"type": "websocket.close", "code": code})
+            await self.send({"type": "websocket.close", "code": code, "reason": reason})
 
 
 WEBSOCKET_DENIAL_RESPONSE_MAPPING = {

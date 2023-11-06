@@ -925,6 +925,7 @@ def test_client_close():
             await websocket.receive_text()
         except WebSocketDisconnect as exc:
             assert exc.code == 1001
+            assert repr(exc) == "WebSocketDisconnect(code=1001, reason=)"
 
     client = TestClient(app)
     with client.websocket_connect("/") as websocket:
