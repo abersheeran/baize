@@ -8,14 +8,12 @@ classifiers = [
     "Topic :: Internet :: WWW/HTTP :: WSGI",
     "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
 ]
-dependencies = [
-    "typing-extensions>=4.1.1; python_version < \"3.8\"",
-]
+dependencies = []
 description = "Powerful and exquisite WSGI/ASGI framework/toolkit."
 license = { text = "Apache-2.0" }
 name = "baize"
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 version = "0.20.6"
 
 [project.urls]

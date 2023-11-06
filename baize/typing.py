@@ -1,4 +1,3 @@
-import sys
 from types import TracebackType
 from typing import (
     Any,
@@ -10,19 +9,13 @@ from typing import (
     Optional,
     Tuple,
     Type,
+    Final,
+    Literal,
+    Protocol,
+    TypedDict,
+    final,
+    runtime_checkable,
 )
-
-if sys.version_info < (3, 8):
-    from typing_extensions import (
-        Final,
-        Literal,
-        Protocol,
-        TypedDict,
-        final,
-        runtime_checkable,
-    )
-else:
-    from typing import Final, Literal, Protocol, TypedDict, final, runtime_checkable
 
 __all__ = [
     "Scope",
