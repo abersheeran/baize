@@ -402,9 +402,9 @@ class MultiMapping(typing.Generic[KT, VT], typing.Mapping[KT, VT]):
         return list(self._list)
 
     def __eq__(self, other: typing.Any) -> bool:
-        if not isinstance(other, self.__class__):
-            return False
-        return sorted(self._list) == sorted(other._list)
+        return isinstance(other, self.__class__) and sorted(self._list) == sorted(
+            other._list
+        )
 
     def __repr__(self) -> str:
         class_name = self.__class__.__name__
