@@ -1,5 +1,6 @@
 import os
 import stat
+from typing import Optional
 
 from baize import staticfiles
 from baize.datastructures import URL
@@ -55,7 +56,7 @@ class Files(staticfiles.BaseFiles[ASGIApp]):
             return await self.handle_404(scope, receive, send)
 
 
-class Pages(staticfiles.BasePages[ASGIApp], Files):
+class Pages(Files):
     """
     Provide the ASGI application to download files in the specified path or
     the specified directory under the specified package.
@@ -98,3 +99,10 @@ class Pages(staticfiles.BasePages[ASGIApp], Files):
             raise HTTPException(404)
         else:
             return await self.handle_404(scope, receive, send)
+
+    def ensure_absolute_path(self, path: str) -> Optional[str]:
+        abspath = super().ensure_absolute_path(path)
+        if abspath is not None:
+            if abspath.endswith("/"):
+                abspath += "index.html"
+        return abspath

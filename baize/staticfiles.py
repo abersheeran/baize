@@ -105,13 +105,3 @@ class BaseFiles(Generic[Interface]):
             "Cache-Control", f"{self.cacheability}, max-age={self.max_age}"
         )
         response.headers.append("Vary", "Accept-Encoding, User-Agent, Cookie, Referer")
-
-
-@mypyc_attr(allow_interpreted_subclasses=True)
-class BasePages(BaseFiles[Interface], Generic[Interface]):
-    def ensure_absolute_path(self, path: str) -> Optional[str]:
-        abspath = super().ensure_absolute_path(path)
-        if abspath is not None:
-            if abspath.endswith("/"):
-                abspath += "index.html"
-        return abspath
