@@ -160,7 +160,7 @@ class FileResponseMixin:
         Judge whether if-range is consistent with the value of etag or last-modified
         """
         return (
-            if_range_raw_line == cls.generate_etag(stat_result)
+            if_range_raw_line == f'"{cls.generate_etag(stat_result)}"'
         ) or if_range_raw_line == formatdate(stat_result.st_mtime, usegmt=True)
 
     @staticmethod
