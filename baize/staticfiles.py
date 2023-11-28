@@ -88,7 +88,7 @@ class BaseFiles(Generic[Interface]):
         if if_none_match.startswith("W/"):
             if_none_match = if_none_match[2:]
 
-        return any(etag == i.strip() for i in if_none_match.split(","))
+        return any(etag == i.strip().strip('"') for i in if_none_match.split(","))
 
     def if_modified_since(self, last_modified: float, if_modified_since: str) -> bool:
         try:

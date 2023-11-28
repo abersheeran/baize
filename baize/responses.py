@@ -134,7 +134,7 @@ class FileResponseMixin:
         headers: Dict[str, str] = {
             "accept-ranges": "bytes",
             "last-modified": formatdate(stat_result.st_mtime, usegmt=True),
-            "etag": self.generate_etag(stat_result),
+            "etag": f'"{self.generate_etag(stat_result)}"',
         }
         if download_name or content_type == "application/octet-stream":
             download_name = download_name or os.path.basename(filepath)
