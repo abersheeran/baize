@@ -1106,12 +1106,30 @@ async def test_subpaths():
         app=Subpaths(
             ("/frist", root),
             ("/latest", path),
+            (
+                "/s",
+                Subpaths(
+                    ("/frist", root),
+                    ("/latest", path),
+                ),
+            ),
+            (
+                "/r",
+                Router(
+                    ("/frist", root),
+                    ("/latest", path),
+                ),
+            ),
         ),
         base_url="http://testServer/",
     ) as client:
         assert (await client.get("/")).status_code == 404
         assert (await client.get("/frist")).text == "/frist"
-        assert (await client.get("/latest")).text == ""
+        assert (await client.get("/latest/")).text == "/latest/"
+        assert (await client.get("/s/frist/")).text == "/s/frist"
+        assert (await client.get("/s/latest/")).text == "/s/latest/"
+        assert (await client.get("/r/frist")).text == "/r"
+        assert (await client.get("/r/latest")).text == "/r/latest"
 
     async with httpx.AsyncClient(
         app=Subpaths(
