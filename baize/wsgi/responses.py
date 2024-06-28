@@ -104,7 +104,7 @@ class PlainTextResponse(SmallResponse[Union[bytes, str]]):
     media_type = "text/plain"
 
     def render(self, content: Union[bytes, str]) -> bytes:
-        return content if isinstance(content, bytes) else content.encode(self.charset)
+        return content.encode(self.charset) if isinstance(content, str) else content
 
 
 class HTMLResponse(PlainTextResponse):

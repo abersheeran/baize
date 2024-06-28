@@ -1,5 +1,4 @@
 import json
-from itertools import chain
 from typing import Any, Dict, Iterator, Mapping, Optional
 from urllib.parse import parse_qsl
 
@@ -90,19 +89,12 @@ class HTTPConnection(Mapping[str, Any], MoreInfoFromHeaderMixin):
         Note that in its internal storage, all keys are in lower case.
         """
         return Headers(
-            (key.lower().replace("_", "-"), value)
-            for key, value in chain(
-                (
-                    (key[5:], value)
-                    for key, value in self._environ.items()
-                    if key.startswith("HTTP_")
-                ),
-                (
-                    (key, self._environ[key])
-                    for key in ("CONTENT_TYPE", "CONTENT_LENGTH")
-                    if key in self._environ
-                ),
+            (
+                (key[5:] if key.startswith("HTTP_") else key).lower().replace("_", "-"),
+                value,
             )
+            for key, value in self._environ.items()
+            if key.startswith("HTTP_") or key in ("CONTENT_TYPE", "CONTENT_LENGTH")
         )
 
 

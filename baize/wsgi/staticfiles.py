@@ -1,6 +1,6 @@
 import os
 import stat
-from typing import Iterable
+from typing import Iterable, Optional
 
 from baize import staticfiles
 from baize.datastructures import URL
@@ -53,7 +53,7 @@ class Files(staticfiles.BaseFiles[WSGIApp]):
             return self.handle_404(environ, start_response)
 
 
-class Pages(staticfiles.BasePages[WSGIApp], Files):
+class Pages(Files):
     """
     Provide the WSGI application to download files in the specified path or
     the specified directory under the specified package.
@@ -94,3 +94,10 @@ class Pages(staticfiles.BasePages[WSGIApp], Files):
             raise HTTPException(404)
         else:
             return self.handle_404(environ, start_response)
+
+    def ensure_absolute_path(self, path: str) -> Optional[str]:
+        abspath = super().ensure_absolute_path(path)
+        if abspath is not None:
+            if abspath.endswith("/"):
+                abspath += "index.html"
+        return abspath
