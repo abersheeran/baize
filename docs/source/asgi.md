@@ -129,10 +129,10 @@ If the built-in types are not enough, then you only need to write a class that i
 .. autofunction:: baize.asgi.request_response
 ```
 
-### middleware
+### decorator
 
 ```eval_rst
-.. autofunction:: baize.asgi.middleware
+.. autofunction:: baize.asgi.decorator
 ```
 
 ### websocket_session

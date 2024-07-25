@@ -1,7 +1,7 @@
 import time
 from typing import Callable
 from baize.wsgi import (
-    middleware,
+    decorator,
     request_response,
     Router,
     Request,
@@ -10,7 +10,7 @@ from baize.wsgi import (
 )
 
 
-@middleware
+@decorator
 def timer(request: Request, next_call: Callable[[Request], Response]) -> Response:
     start_time = time.time()
     response = next_call(request)

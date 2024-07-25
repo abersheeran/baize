@@ -28,7 +28,7 @@ from baize.asgi import (
     Subpaths,
     WebSocket,
     WebSocketDisconnect,
-    middleware,
+    decorator,
     request_response,
     websocket_session,
 )
@@ -1052,9 +1052,9 @@ async def test_websocket_session():
 
 
 @pytest.mark.asyncio
-async def test_middleware():
-    @middleware
-    async def middleware_func(
+async def test_decorator():
+    @decorator
+    async def decorator_func(
         request: Request, handler: Callable[[Request], Awaitable[Response]]
     ) -> Response:
         response = await handler(request)
@@ -1062,7 +1062,7 @@ async def test_middleware():
         return response
 
     @request_response
-    @middleware_func
+    @decorator_func
     async def view(request: Request) -> Response:
         return PlainTextResponse(await request.body)
 

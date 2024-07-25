@@ -7,7 +7,6 @@ from .requests import Request
 from .responses import Response
 
 ViewType = Callable[[Request], Response]
-MiddlewareType = Callable[[Request, ViewType], Response]
 
 
 def request_response(view: ViewType) -> WSGIApp:
@@ -30,12 +29,14 @@ def request_response(view: ViewType) -> WSGIApp:
     return wsgi
 
 
-def middleware(handler: MiddlewareType) -> Callable[[ViewType], ViewType]:
+def decorator(
+    handler: Callable[[Request, ViewType], Response]
+) -> Callable[[ViewType], ViewType]:
     """
-    This can turn a callable object into a middleware for view.
+    This can turn a callable object into a decorator for view.
 
     ```python
-    @middleware
+    @decorator
     def m(request: Request, next_call: Callable[[Request], Response]) -> Response:
         ...
         response = next_call(request)
@@ -50,7 +51,7 @@ def middleware(handler: MiddlewareType) -> Callable[[ViewType], ViewType]:
     """
 
     @functools.wraps(handler)
-    def decorator(next_call: ViewType) -> ViewType:
+    def d(next_call: ViewType) -> ViewType:
         """
         This is the actual decorator.
         """
@@ -61,4 +62,4 @@ def middleware(handler: MiddlewareType) -> Callable[[ViewType], ViewType]:
 
         return view
 
-    return decorator
+    return d

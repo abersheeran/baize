@@ -31,7 +31,7 @@ from baize.wsgi import (
     SendEventResponse,
     StreamResponse,
     Subpaths,
-    middleware,
+    decorator,
     request_response,
 )
 
@@ -553,9 +553,9 @@ def test_request_response():
         assert client.post("/", content="hello").text == "hello"
 
 
-def test_middleware():
-    @middleware
-    def middleware_func(
+def test_decorator():
+    @decorator
+    def decorator_func(
         request: Request, handler: Callable[[Request], Response]
     ) -> Response:
         response = handler(request)
@@ -563,7 +563,7 @@ def test_middleware():
         return response
 
     @request_response
-    @middleware_func
+    @decorator_func
     def view(request: Request) -> Response:
         return PlainTextResponse(request.body)
 

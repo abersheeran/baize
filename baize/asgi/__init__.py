@@ -12,7 +12,7 @@ from baize.asgi.responses import (
     StreamResponse,
 )
 from baize.asgi.routing import Hosts, Router, Subpaths
-from baize.asgi.shortcut import middleware, request_response, websocket_session
+from baize.asgi.shortcut import decorator, request_response, websocket_session
 from baize.asgi.staticfiles import Files, Pages
 from baize.asgi.websocket import (
     WebSocket,
@@ -49,5 +49,5 @@ __all__ = [
     "Pages",
     "request_response",
     "websocket_session",
-    "middleware",
+    "decorator",
 ]
