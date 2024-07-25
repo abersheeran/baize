@@ -8,7 +8,6 @@ from .responses import Response
 from .websocket import WebSocket, WebsocketDenialResponse
 
 ViewType = Callable[[Request], Awaitable[Response]]
-MiddlewareType = Callable[[Request, ViewType], Awaitable[Response]]
 
 
 def request_response(view: ViewType) -> ASGIApp:
@@ -56,12 +55,14 @@ def websocket_session(view: Callable[[WebSocket], Awaitable[None]]) -> ASGIApp:
     return asgi
 
 
-def middleware(handler: MiddlewareType) -> Callable[[ViewType], ViewType]:
+def decorator(
+    handler: Callable[[Request, ViewType], Awaitable[Response]]
+) -> Callable[[ViewType], ViewType]:
     """
-    This can turn a callable object into a middleware for view.
+    This can turn a callable object into a decorator for view.
 
     ```python
-    @middleware
+    @decorator
     async def m(request: Request, next_call: Callable[[Request], Awaitable[Response]]) -> Response:
         ...
         response = await next_call(request)
@@ -77,7 +78,7 @@ def middleware(handler: MiddlewareType) -> Callable[[ViewType], ViewType]:
     """
 
     @functools.wraps(handler)
-    def decorator(next_call: ViewType) -> ViewType:
+    def d(next_call: ViewType) -> ViewType:
         """
         This is the actual decorator.
         """
@@ -88,4 +89,4 @@ def middleware(handler: MiddlewareType) -> Callable[[ViewType], ViewType]:
 
         return view
 
-    return decorator
+    return d

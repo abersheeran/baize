@@ -1,7 +1,7 @@
 import time
 from typing import Awaitable, Callable
 from baize.asgi import (
-    middleware,
+    decorator,
     request_response,
     Router,
     Request,
@@ -10,7 +10,7 @@ from baize.asgi import (
 )
 
 
-@middleware
+@decorator
 async def timer(
     request: Request, next_call: Callable[[Request], Awaitable[Response]]
 ) -> Response:

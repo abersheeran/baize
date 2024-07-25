@@ -11,7 +11,7 @@ from baize.wsgi.responses import (
     StreamResponse,
 )
 from baize.wsgi.routing import Hosts, Router, Subpaths
-from baize.wsgi.shortcut import middleware, request_response
+from baize.wsgi.shortcut import decorator, request_response
 from baize.wsgi.staticfiles import Files, Pages
 
 __all__ = [
@@ -32,5 +32,5 @@ __all__ = [
     "Files",
     "Pages",
     "request_response",
-    "middleware",
+    "decorator",
 ]

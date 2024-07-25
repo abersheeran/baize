@@ -115,10 +115,10 @@ If the built-in types are not enough, then you only need to write a class that i
 .. autofunction:: baize.wsgi.request_response
 ```
 
-### middleware
+### decorator
 
 ```eval_rst
-.. autofunction:: baize.wsgi.middleware
+.. autofunction:: baize.wsgi.decorator
 ```
 
 ## Files
