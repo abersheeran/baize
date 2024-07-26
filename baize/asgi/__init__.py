@@ -20,6 +20,7 @@ from baize.asgi.websocket import (
     WebSocketDisconnect,
     WebSocketState,
 )
+from baize.asgi.middleware import NextRequest, NextResponse, middleware, CachedStream
 
 __all__ = [
     "empty_receive",
@@ -50,4 +51,8 @@ __all__ = [
     "request_response",
     "websocket_session",
     "decorator",
+    "NextRequest",
+    "NextResponse",
+    "middleware",
+    "CachedStream",
 ]
