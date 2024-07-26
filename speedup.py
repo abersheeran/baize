@@ -21,6 +21,7 @@ else:
                 not in (
                     "baize/multipart_helper.py",
                     # ASGI
+                    "baize/asgi/middleware.py",
                     "baize/asgi/requests.py",
                     "baize/asgi/responses.py",
                     "baize/asgi/routing.py",
@@ -28,6 +29,7 @@ else:
                     "baize/asgi/staticfiles.py",
                     "baize/asgi/websocket.py",
                     # WSGI
+                    "baize/wsgi/middleware.py" if os.name == "nt" else None,
                     "baize/wsgi/requests.py",
                     "baize/wsgi/responses.py",
                     "baize/wsgi/routing.py",
