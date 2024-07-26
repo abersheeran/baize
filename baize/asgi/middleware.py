@@ -30,6 +30,7 @@ class CachedStream(AsyncIterator[bytes]):
 
     async def push_eof(self) -> None:
         await run_in_threadpool(self._buffer.seek, 0)
+        self._pushed_eof = True
 
     async def __anext__(self) -> bytes:
         chunk = await run_in_threadpool(self._buffer.read, 4096 * 16)
