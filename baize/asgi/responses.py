@@ -248,11 +248,11 @@ class SendEventResponse(StreamingResponse[ServerSentEvent]):
             nonlocal should_stop
 
             try:
-                i = aiter(self.iterable)
+                i = self.iterable.__aiter__()
 
                 while not should_stop:
                     try:
-                        await q.put(await anext(i))
+                        await q.put(await i.__anext__())
                     except StopAsyncIteration:
                         should_stop = True
             finally:
