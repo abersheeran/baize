@@ -1,5 +1,5 @@
 import functools
-from typing import Any, Callable, Generator, Iterable, Iterator, MutableMapping
+from typing import Any, Callable, Generator, Iterable, Iterator, MutableMapping, Tuple
 
 from ..datastructures import Headers
 from ..typing import Environ, StartResponse, WSGIApp
@@ -35,7 +35,7 @@ class NextResponse(StreamingResponse):
         headers: Headers = Headers()
 
         def start_response(
-            status: str, response_headers: Iterable[tuple[str, str]], exc_info=None
+            status: str, response_headers: Iterable[Tuple[str, str]], exc_info=None
         ) -> None:
             nonlocal status_code
             nonlocal headers
