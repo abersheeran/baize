@@ -29,7 +29,7 @@ else:
                     "baize/asgi/staticfiles.py",
                     "baize/asgi/websocket.py",
                     # WSGI
-                    "baize/wsgi/middleware.py" if os.name == "nt" else None,
+                    "baize/wsgi/middleware.py",
                     "baize/wsgi/requests.py",
                     "baize/wsgi/responses.py",
                     "baize/wsgi/routing.py",
