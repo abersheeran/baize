@@ -240,7 +240,7 @@ class SendEventResponse(StreamingResponse[ServerSentEvent]):
         self.charset = charset
 
     async def render_stream(self) -> AsyncGenerator[bytes, None]:
-        q = asyncio.Queue(maxsize=1)
+        q: "asyncio.Queue[ServerSentEvent]" = asyncio.Queue(maxsize=1)
 
         should_stop = False
 

@@ -238,7 +238,7 @@ class SendEventResponse(StreamingResponse[ServerSentEvent]):
         self.charset = charset
 
     def render_stream(self) -> Generator[bytes, None, None]:
-        q = queue.Queue(maxsize=1)
+        q: "queue.Queue[ServerSentEvent]" = queue.Queue(maxsize=1)
         should_stop = False
 
         def push() -> None:
