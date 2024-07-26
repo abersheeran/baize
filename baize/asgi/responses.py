@@ -180,7 +180,7 @@ class StreamResponse(StreamingResponse[bytes]):
         self,
         iterable: AsyncIterable[bytes],
         status_code: int = 200,
-        headers: Mapping[str, str] | None = None,
+        headers: Optional[Mapping[str, str]] = None,
         content_type: str = "application/octet-stream",
     ) -> None:
         super().__init__(iterable, status_code, headers)
