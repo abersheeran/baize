@@ -31,6 +31,9 @@ from baize.asgi import (
     decorator,
     request_response,
     websocket_session,
+    middleware,
+    NextRequest,
+    NextResponse,
 )
 from baize.datastructures import FormData, UploadFile
 from baize.exceptions import (
@@ -1024,53 +1027,6 @@ def test_websocket_scope_interface():
 
 
 @pytest.mark.asyncio
-async def test_request_response():
-    @request_response
-    async def view(request: Request) -> Response:
-        return PlainTextResponse(await request.body)
-
-    async with httpx.AsyncClient(app=view, base_url="http://testServer/") as client:
-        assert (await client.get("/")).text == ""
-        assert (await client.post("/", content="hello")).text == "hello"
-
-    client = TestClient(view)
-    with pytest.raises(WebSocketDisconnect) as exc:
-        with client.websocket_connect("/"):
-            pass
-    assert exc.value.code == 1000
-
-
-@pytest.mark.asyncio
-async def test_websocket_session():
-    @websocket_session
-    async def view(websocket: WebSocket) -> None:
-        await websocket.accept()
-        await websocket.close()
-
-    async with httpx.AsyncClient(app=view, base_url="http://testServer/") as client:
-        assert (await client.get("/")).status_code == 404
-
-
-@pytest.mark.asyncio
-async def test_decorator():
-    @decorator
-    async def decorator_func(
-        request: Request, handler: Callable[[Request], Awaitable[Response]]
-    ) -> Response:
-        response = await handler(request)
-        response.headers["X-Middleware"] = "1"
-        return response
-
-    @request_response
-    @decorator_func
-    async def view(request: Request) -> Response:
-        return PlainTextResponse(await request.body)
-
-    async with httpx.AsyncClient(app=view, base_url="http://testServer/") as client:
-        assert (await client.get("/")).headers["X-Middleware"] == "1"
-
-
-@pytest.mark.asyncio
 async def test_router():
     @request_response
     async def path(request: Request) -> Response:
@@ -1252,3 +1208,101 @@ async def test_pages(tmpdir):
     app = Pages(tmpdir, handle_404=PlainTextResponse("", 404))
     async with httpx.AsyncClient(app=app, base_url="http://testServer/") as client:
         assert (await client.get("/d")).status_code == 404
+
+
+# ######################################################################################
+# #################################### Shortcut tests ##################################
+# ######################################################################################
+
+
+@pytest.mark.asyncio
+async def test_request_response():
+    @request_response
+    async def view(request: Request) -> Response:
+        return PlainTextResponse(await request.body)
+
+    async with httpx.AsyncClient(app=view, base_url="http://testServer/") as client:
+        assert (await client.get("/")).text == ""
+        assert (await client.post("/", content="hello")).text == "hello"
+
+    client = TestClient(view)
+    with pytest.raises(WebSocketDisconnect) as exc:
+        with client.websocket_connect("/"):
+            pass
+    assert exc.value.code == 1000
+
+
+@pytest.mark.asyncio
+async def test_websocket_session():
+    @websocket_session
+    async def view(websocket: WebSocket) -> None:
+        await websocket.accept()
+        await websocket.close()
+
+    async with httpx.AsyncClient(app=view, base_url="http://testServer/") as client:
+        assert (await client.get("/")).status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_decorator():
+    @decorator
+    async def decorator_func(
+        request: Request, handler: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
+        response = await handler(request)
+        response.headers["X-Middleware"] = "1"
+        return response
+
+    @request_response
+    @decorator_func
+    async def view(request: Request) -> Response:
+        return PlainTextResponse(await request.body)
+
+    async with httpx.AsyncClient(app=view, base_url="http://testServer/") as client:
+        assert (await client.get("/")).headers["X-Middleware"] == "1"
+
+
+@pytest.mark.asyncio
+async def test_middleware():
+    @middleware
+    async def m(
+        request: NextRequest, handler: Callable[[NextRequest], Awaitable[NextResponse]]
+    ) -> Response:
+        response = await handler(request)
+        response.headers["X-Middleware"] = "1"
+        return response
+
+    @m
+    @request_response
+    async def view(request: Request) -> Response:
+        return PlainTextResponse(await request.body)
+
+    async with httpx.AsyncClient(app=view, base_url="http://testServer/") as client:
+        response = await client.post("/", content="x")
+        assert response.headers["X-Middleware"] == "1"
+        assert response.text == "x"
+
+
+@pytest.mark.asyncio
+async def test_next_request():
+    async def app(scope, receive, send):
+        request = NextRequest(scope, receive)
+        request["KEY"] = "VALUE"
+        del request["KEY"]
+        response = await NextResponse.from_app(PlainTextResponse(""), request)
+        await response(scope, receive, send)
+
+    async with httpx.AsyncClient(app=app, base_url="http://testServer/") as client:
+        assert (await client.get("/")).status_code == 200
+
+    async def read_body(scope, receive, send):
+        request = NextRequest(scope, receive)
+        await request.body
+        response = await NextResponse.from_app(PlainTextResponse(""), request)
+        await response(scope, receive, send)
+
+    async with httpx.AsyncClient(
+        app=read_body, base_url="http://testServer/"
+    ) as client:
+        with pytest.raises(RuntimeError):
+            await client.post("/", content="hello")
