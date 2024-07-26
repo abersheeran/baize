@@ -18,6 +18,11 @@ class NextRequest(Request, MutableMapping[str, Any]):
         raise RuntimeError("Cannot read request body in middleware.")
 
 
+def ensure_next(iterable: Iterable[bytes]) -> Iterable[bytes]:
+    yield iterable.__iter__().__next__()
+    yield from iterable
+
+
 class NextResponse(StreamingResponse):
     """
     This is a response object for middleware.
@@ -42,7 +47,7 @@ class NextResponse(StreamingResponse):
             status_code = int(status.split(" ")[0])
             headers = Headers(response_headers)
 
-        body = app(request, start_response)
+        body = ensure_next(app(request, start_response))
         return NextResponse(body, status_code, headers)
 
 
