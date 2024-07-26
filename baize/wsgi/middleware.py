@@ -19,8 +19,13 @@ class NextRequest(Request, MutableMapping[str, Any]):
 
 
 def ensure_next(iterable: Iterable[bytes]) -> Iterable[bytes]:
-    yield iterable.__iter__().__next__()
-    yield from iterable
+    first_chunk = iterable.__iter__().__next__()
+
+    def generator():
+        yield first_chunk
+        yield from iterable
+
+    return generator()
 
 
 class NextResponse(StreamingResponse):
