@@ -240,7 +240,7 @@ class SendEventResponse(StreamingResponse[ServerSentEvent]):
         self.charset = charset
 
     async def render_stream(self) -> AsyncGenerator[bytes, None]:
-        q: "asyncio.Queue[ServerSentEvent]" = asyncio.Queue(maxsize=1)
+        q: "asyncio.Queue[ServerSentEvent | None]" = asyncio.Queue(maxsize=1)
 
         should_stop = False
 
@@ -256,6 +256,7 @@ class SendEventResponse(StreamingResponse[ServerSentEvent]):
                     except StopAsyncIteration:
                         should_stop = True
             finally:
+                await q.put(None)
                 g = self.iterable
                 if hasattr(g, "aclose"):
                     await g.aclose()  # type: ignore
@@ -266,6 +267,8 @@ class SendEventResponse(StreamingResponse[ServerSentEvent]):
             while not (push_future.done() and q.empty()):
                 try:
                     event = await asyncio.wait_for(q.get(), timeout=self.ping_interval)
+                    if event is None:
+                        break
                     yield build_bytes_from_sse(event, self.charset)
                 except asyncio.TimeoutError:
                     yield b": ping\n\n"
