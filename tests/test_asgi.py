@@ -802,6 +802,7 @@ async def test_send_event_response_be_killed():
     ) as client:
         async with client.stream("GET", "/") as resp:
             resp.raise_for_status()
+            await resp.aread()
 
     assert killed
 

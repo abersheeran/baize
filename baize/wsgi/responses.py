@@ -238,7 +238,7 @@ class SendEventResponse(StreamingResponse[ServerSentEvent]):
         self.charset = charset
 
     def render_stream(self) -> Generator[bytes, None, None]:
-        q: "queue.Queue[ServerSentEvent]" = queue.Queue(maxsize=1)
+        q: "queue.Queue[ServerSentEvent | None]" = queue.Queue(maxsize=1)
         should_stop = False
 
         def push() -> None:
@@ -253,6 +253,7 @@ class SendEventResponse(StreamingResponse[ServerSentEvent]):
                     except StopIteration:
                         should_stop = True
             finally:
+                q.put(None)
                 g = self.iterable
                 if hasattr(g, "close"):
                     g.close()  # type: ignore
@@ -263,6 +264,8 @@ class SendEventResponse(StreamingResponse[ServerSentEvent]):
             while not (push_future.done() and q.empty()):
                 try:
                     event = q.get(timeout=self.ping_interval)
+                    if event is None:
+                        break
                     yield build_bytes_from_sse(event, self.charset)
                 except queue.Empty:
                     yield b": ping\n\n"
