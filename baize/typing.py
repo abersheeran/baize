@@ -3,6 +3,7 @@ from types import TracebackType
 from typing import (
     Any,
     Awaitable,
+    Callable,
     Iterable,
     List,
     MutableMapping,
@@ -47,21 +48,13 @@ Scope = MutableMapping[str, Any]
 
 Message = MutableMapping[str, Any]
 
+Receive = Callable[[], Awaitable[Message]]
 
-class Receive(Protocol):
-    def __call__(self) -> Awaitable[Message]:
-        ...
-
-
-class Send(Protocol):
-    def __call__(self, message: Message, /) -> Awaitable[None]:
-        ...
+Send = Callable[[Message], Awaitable[None]]
 
 
 class ASGIApp(Protocol):
-    def __call__(
-        self, scope: Scope, receive: Receive, send: Send, /
-    ) -> Awaitable[None]:
+    def __call__(self, scope: Scope, receive: Receive, send: Send) -> Awaitable[None]:
         ...
 
 
@@ -77,14 +70,13 @@ class StartResponse(Protocol):
         status: str,
         response_headers: List[Tuple[str, str]],
         exc_info: Optional[ExcInfo] = None,
-        /,
     ) -> Any:
         ...
 
 
 class WSGIApp(Protocol):
     def __call__(
-        self, environ: Environ, start_response: StartResponse, /
+        self, environ: Environ, start_response: StartResponse
     ) -> Iterable[bytes]:
         ...
 
