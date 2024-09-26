@@ -54,12 +54,14 @@ class Receive(Protocol):
 
 
 class Send(Protocol):
-    def __call__(self, message: Message) -> Awaitable[None]:
+    def __call__(self, message: Message, /) -> Awaitable[None]:
         ...
 
 
 class ASGIApp(Protocol):
-    def __call__(self, scope: Scope, receive: Receive, send: Send) -> Awaitable[None]:
+    def __call__(
+        self, scope: Scope, receive: Receive, send: Send, /
+    ) -> Awaitable[None]:
         ...
 
 
@@ -75,13 +77,14 @@ class StartResponse(Protocol):
         status: str,
         response_headers: List[Tuple[str, str]],
         exc_info: Optional[ExcInfo] = None,
+        /,
     ) -> Any:
         ...
 
 
 class WSGIApp(Protocol):
     def __call__(
-        self, environ: Environ, start_response: StartResponse
+        self, environ: Environ, start_response: StartResponse, /
     ) -> Iterable[bytes]:
         ...
 
