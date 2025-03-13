@@ -62,7 +62,7 @@ def test_request_url():
         response = PlainTextResponse(request.method + " " + str(request.url))
         return response(environ, start_response)
 
-    with httpx.Client(app=app, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(app)) as client:
         response = client.get("/123?a=abc")
         assert response.text == "GET http://testserver/123?a=abc"
 
@@ -77,7 +77,7 @@ def test_request_query_params():
         response = JSONResponse({"params": params})
         return response(environ, start_response)
 
-    with httpx.Client(app=app, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(app)) as client:
         response = client.get("/?a=123&b=456")
         assert response.json() == {"params": {"a": "123", "b": "456"}}
 
@@ -90,7 +90,7 @@ def test_request_headers():
         response = JSONResponse({"headers": headers})
         return response(environ, start_response)
 
-    with httpx.Client(app=app, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(app)) as client:
         response = client.get("/", headers={"host": "example.org"})
         assert response.json() == {
             "headers": {
@@ -110,7 +110,7 @@ def test_request_client():
         )
         return response(environ, start_response)
 
-    with httpx.Client(app=app, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(app)) as client:
         response = client.get("/")
         assert response.json() == {"host": None, "port": None}
 
@@ -125,7 +125,7 @@ def test_request_body():
         response = JSONResponse({"body": body.decode()})
         return response(environ, start_response)
 
-    with httpx.Client(app=app, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(app)) as client:
         response = client.get("/")
         assert response.json() == {"body": ""}
 
@@ -145,7 +145,7 @@ def test_request_stream():
         response = PlainTextResponse(body)
         return response(environ, start_response)
 
-    with httpx.Client(app=app, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(app)) as client:
         response = client.get("/")
         assert response.text == ""
 
@@ -164,7 +164,7 @@ def test_request_form_urlencoded():
         return response(environ, start_response)
         request.close()
 
-    with httpx.Client(app=app, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(app)) as client:
         response = client.post("/", data={"abc": "123 @"})
         assert response.json() == {"form": {"abc": "123 @"}}
 
@@ -185,7 +185,7 @@ def test_request_multipart_form():
         request.close()
         return response(environ, start_response)
 
-    with httpx.Client(app=app, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(app)) as client:
         with tempfile.SpooledTemporaryFile(1024) as file:
             file.write(b"temporary file")
             file.seek(0, 0)
@@ -217,7 +217,7 @@ def test_request_multipart_form_limit():
     def app(environ, start_response):
         FRequest(environ).form
 
-    with httpx.Client(app=app, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(app)) as client:
         with pytest.raises(RequestEntityTooLarge):
             with tempfile.SpooledTemporaryFile(1024) as file:
                 file.write(b"temporary file")
@@ -243,7 +243,7 @@ def test_request_body_then_stream():
         response = JSONResponse({"body": body.decode(), "stream": chunks.decode()})
         return response(environ, start_response)
 
-    with httpx.Client(app=app, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(app)) as client:
         response = client.post("/", content="abc")
         assert response.json() == {"body": "abc", "stream": "abc"}
 
@@ -261,7 +261,7 @@ def test_request_stream_then_body():
         response = JSONResponse({"body": body.decode(), "stream": chunks.decode()})
         return response(environ, start_response)
 
-    with httpx.Client(app=app, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(app)) as client:
         response = client.post("/", content="abc")
         assert response.json() == {"body": "<stream consumed>", "stream": "abc"}
 
@@ -273,7 +273,7 @@ def test_request_json():
         response = JSONResponse({"json": data})
         return response(environ, start_response)
 
-    with httpx.Client(app=app, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(app)) as client:
         response = client.post("/", json={"a": "123"})
         assert response.json() == {"json": {"a": "123"}}
 
@@ -301,7 +301,7 @@ def test_request_accpet():
             response = PlainTextResponse(data)
         return response(environ, start_response)
 
-    with httpx.Client(app=app, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(app)) as client:
         response = client.get("/", headers={"Accept": "application/json"})
         assert response.json() == {"data": data}
 
@@ -312,7 +312,7 @@ def test_request_accpet():
 
 
 def test_unknown_status():
-    with httpx.Client(app=Response(600), base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(Response(600))) as client:
         response = client.get("/")
         assert response.status_code == 600
 
@@ -325,7 +325,7 @@ def test_redirect_response():
             response = RedirectResponse("/")
         return response(environ, start_response)
 
-    with httpx.Client(app=app, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(app)) as client:
         response = client.get("/redirect", follow_redirects=True)
         assert response.text == "hello, world"
         assert response.url == "http://testserver/"
@@ -337,7 +337,7 @@ def test_stream_response():
             yield str(i).encode("utf-8")
 
     with httpx.Client(
-        app=StreamResponse(generator(10)), base_url="http://testServer/"
+        transport=httpx.WSGITransport(StreamResponse(generator(10))), base_url="http://testServer/"
     ) as client:
         response = client.get("/")
         assert response.content == b"".join(str(i).encode("utf-8") for i in range(10))
@@ -358,7 +358,7 @@ def test_file_response(tmp_path: Path):
     filepath = tmp_path / "README.txt"
     filepath.write_bytes(README.encode("utf8"))
     file_response = FileResponse(str(filepath))
-    with httpx.Client(app=file_response, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(file_response)) as client:
         response = client.get("/")
         assert response.status_code == 200
         assert response.headers["content-length"] == str(len(README.encode("utf8")))
@@ -427,7 +427,7 @@ def test_file_response_with_download_name(tmp_path: Path):
     filepath = tmp_path / "README"
     filepath.write_bytes(README.encode("utf8"))
     file_response = FileResponse(str(filepath), download_name="README.txt")
-    with httpx.Client(app=file_response, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(file_response)) as client:
         response = client.get("/")
         assert (
             response.headers["content-disposition"]
@@ -458,7 +458,7 @@ def test_send_event_response():
     )
 
     with httpx.Client(
-        app=SendEventResponse(send_events(), ping_interval=0.1),
+        transport=httpx.WSGITransport(SendEventResponse(send_events(), ping_interval=0.1)),
         base_url="http://testServer/",
     ) as client:
         with client.stream("GET", "/") as resp:
@@ -469,11 +469,11 @@ def test_send_event_response():
             assert events.replace(": ping\n\n", "") == expected_events
 
     with httpx.Client(
-        app=SendEventResponse(
+        transport=httpx.WSGITransport(SendEventResponse(
             send_events(),
             headers={"custom-header": "value"},
             ping_interval=0.1,
-        ),
+        )),
         base_url="http://testServer/",
     ) as client:
         with client.stream("GET", "/") as resp:
@@ -492,7 +492,7 @@ def test_send_event_response_raise_exception():
         raise Exception("Something went wrong")
 
     with httpx.Client(
-        app=SendEventResponse(send_events(), ping_interval=0.1),
+        transport=httpx.WSGITransport(SendEventResponse(send_events(), ping_interval=0.1)),
         base_url="http://testServer/",
     ) as client:
         with client.stream("GET", "/") as resp:
@@ -516,7 +516,7 @@ def test_send_event_response_be_killed():
             killed = True
 
     with httpx.Client(
-        app=SendEventResponse(send_events(), ping_interval=0.1),
+        transport=httpx.WSGITransport(SendEventResponse(send_events(), ping_interval=0.1)),
         base_url="http://testServer/",
     ) as client:
         with client.stream("GET", "/") as resp:
@@ -561,7 +561,7 @@ def test_router():
         ("/redirect", redirect),
         ("/{path}", path),
     )
-    with httpx.Client(app=router, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(router)) as client:
         assert client.get("/").text == "homepage"
         assert client.get("/baize").json() == {"path": "baize"}
         assert client.get("/baize/").status_code == 404
@@ -578,10 +578,10 @@ def test_subpaths():
         return PlainTextResponse(request.get("PATH_INFO", ""))
 
     with httpx.Client(
-        app=Subpaths(
+        transport=httpx.WSGITransport(Subpaths(
             ("/frist", root),
             ("/latest", path),
-        ),
+        )),
         base_url="http://testServer/",
     ) as client:
         assert client.get("/").status_code == 404
@@ -589,10 +589,10 @@ def test_subpaths():
         assert client.get("/latest").text == ""
 
     with httpx.Client(
-        app=Subpaths(
+        transport=httpx.WSGITransport(Subpaths(
             ("", path),
             ("/root", root),
-        ),
+        )),
         base_url="http://testServer/",
     ) as client:
         assert client.get("/").text == "/"
@@ -601,10 +601,10 @@ def test_subpaths():
 
 def test_hosts():
     with httpx.Client(
-        app=Hosts(
+        transport=httpx.WSGITransport(Hosts(
             ("testServer", PlainTextResponse("testServer")),
             (".*", PlainTextResponse("default host")),
-        ),
+        )),
         base_url="http://testServer/",
     ) as client:
         assert client.get("/", headers={"host": "testServer"}).text == "testServer"
@@ -621,7 +621,7 @@ def test_hosts():
     ],
 )
 def test_files(app):
-    with httpx.Client(app=app, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(app)) as client:
         resp = client.get("/py.typed")
         assert resp.text == ""
 
@@ -677,7 +677,7 @@ def test_pages(tmpdir):
     )
 
     app = Pages(tmpdir)
-    with httpx.Client(app=app, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(app)) as client:
         resp = client.get("/")
         assert resp.status_code == 200
         assert resp.text == "<html><body>index</body></html>"
@@ -714,7 +714,7 @@ def test_pages(tmpdir):
             client.get("/d")
 
     app = Pages(tmpdir, handle_404=PlainTextResponse("", 404))
-    with httpx.Client(app=app, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(app)) as client:
         assert client.get("/d").status_code == 404
 
 
@@ -728,7 +728,7 @@ def test_request_response():
     def view(request: Request) -> Response:
         return PlainTextResponse(request.body)
 
-    with httpx.Client(app=view, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(view)) as client:
         assert client.get("/").text == ""
         assert client.post("/", content="hello").text == "hello"
 
@@ -747,7 +747,7 @@ def test_decorator():
     def view(request: Request) -> Response:
         return PlainTextResponse(request.body)
 
-    with httpx.Client(app=view, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(view)) as client:
         assert client.get("/").headers["X-Middleware"] == "1"
 
 
@@ -765,7 +765,7 @@ def test_middleware():
     def view(request: Request) -> Response:
         return PlainTextResponse(request.body)
 
-    with httpx.Client(app=view, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(view)) as client:
         assert client.get("/").headers["X-Middleware"] == "1"
 
 
@@ -777,7 +777,7 @@ def test_next_request():
         response = NextResponse.from_app(PlainTextResponse(""), request)
         return response(environ, start_response)
 
-    with httpx.Client(app=app, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(app)) as client:
         response = client.get("/")
         assert response.status_code == 200
 
@@ -787,6 +787,6 @@ def test_next_request():
         response = NextResponse.from_app(PlainTextResponse(""), request)
         return response(environ, start_response)
 
-    with httpx.Client(app=read_body, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(read_body)) as client:
         with pytest.raises(RuntimeError):
             client.post("/", content="hello")
