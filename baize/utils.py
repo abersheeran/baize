@@ -1,4 +1,5 @@
 import asyncio
+import functools
 import inspect
 import typing
 
@@ -14,6 +15,7 @@ class cached_property(typing.Generic[T]):
 
     def __init__(self, func: typing.Callable[..., T]) -> None:
         self.func = func
+        functools.update_wrapper(self, func)  # type: ignore
 
     @typing.overload
     def __get__(self, obj: None, cls: type) -> "cached_property": ...
