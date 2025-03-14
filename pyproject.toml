@@ -54,10 +54,10 @@ ignore_missing_imports = true
 run-setuptools = true
 
 [tool.pdm.scripts]
-lint-ruff = "ruff {args}"
+lint-ruff = "ruff check {args}"
 lint-mypy = "mypy {args}"
 lint = { composite = ["lint-ruff baize tests", "lint-mypy baize tests"] }
-lint-fix = "ruff --fix baize tests"
+lint-fix = "ruff check --fix baize tests"
 format = "ruff format baize tests --target-version py37"
 test = "pytest tests {args}"
 build-docs = "sphinx-build -M html docs/source docs/build"
