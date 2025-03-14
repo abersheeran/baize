@@ -160,9 +160,9 @@ class WebsocketDenialResponse:
         self.response = response
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        assert (
-            scope["type"] == "websocket"
-        ), "WebsocketDenialResponse requires a websocket scope"
+        assert scope["type"] == "websocket", (
+            "WebsocketDenialResponse requires a websocket scope"
+        )
 
         # Check if Websocket Denial Response can be used
         if self.response is None or "websocket.http.response" not in scope.get(

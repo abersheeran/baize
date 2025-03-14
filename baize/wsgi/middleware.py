@@ -57,7 +57,7 @@ class NextResponse(StreamingResponse):
 
 
 def middleware(
-    handler: Callable[[NextRequest, Callable[[NextRequest], NextResponse]], Response]
+    handler: Callable[[NextRequest, Callable[[NextRequest], NextResponse]], Response],
 ) -> Callable[[WSGIApp], WSGIApp]:
     """
     This can turn a callable object into a middleware for WSGI application.

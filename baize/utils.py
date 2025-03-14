@@ -16,12 +16,10 @@ class cached_property(typing.Generic[T]):
         self.func = func
 
     @typing.overload
-    def __get__(self, obj: None, cls: type) -> "cached_property":
-        ...
+    def __get__(self, obj: None, cls: type) -> "cached_property": ...
 
     @typing.overload
-    def __get__(self, obj: object, cls: type) -> T:
-        ...
+    def __get__(self, obj: object, cls: type) -> T: ...
 
     def __get__(self, obj, cls):
         if obj is None:
