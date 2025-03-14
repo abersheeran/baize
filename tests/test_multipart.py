@@ -144,13 +144,13 @@ def app_read_body(environ, start_response):
 
 
 def test_multipart_request_empty_data(tmpdir):
-    with httpx.Client(app=app, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(app)) as client:
         response = client.post("/", data={}, files=FORCE_MULTIPART)
         assert response.json() == {}
 
 
 def test_multipart_request_data(tmpdir):
-    with httpx.Client(app=app, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(app)) as client:
         response = client.post("/", data={"some": "data"}, files=FORCE_MULTIPART)
         assert response.json() == {"some": "data"}
 
@@ -160,7 +160,7 @@ def test_multipart_request_files(tmpdir):
     with open(path, "wb") as file:
         file.write(b"<file content>")
 
-    with httpx.Client(app=app, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(app)) as client:
         with open(path, "rb") as f:
             response = client.post("/", files={"test": f})
             assert response.json() == {
@@ -177,7 +177,7 @@ def test_multipart_request_files_with_content_type(tmpdir):
     with open(path, "wb") as file:
         file.write(b"<file content>")
 
-    with httpx.Client(app=app, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(app)) as client:
         with open(path, "rb") as f:
             response = client.post("/", files={"test": ("test.txt", f, "text/plain")})
             assert response.json() == {
@@ -198,7 +198,7 @@ def test_multipart_request_multiple_files(tmpdir):
     with open(path2, "wb") as file:
         file.write(b"<file2 content>")
 
-    with httpx.Client(app=app, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(app)) as client:
         with open(path1, "rb") as f1, open(path2, "rb") as f2:
             response = client.post(
                 "/", files={"test1": f1, "test2": ("test2.txt", f2, "text/plain")}
@@ -226,7 +226,7 @@ def test_multi_items(tmpdir):
     with open(path2, "wb") as file:
         file.write(b"<file2 content>")
 
-    with httpx.Client(app=multi_items_app, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(multi_items_app)) as client:
         with open(path1, "rb") as f1, open(path2, "rb") as f2:
             response = client.post(
                 "/",
@@ -251,7 +251,7 @@ def test_multi_items(tmpdir):
 
 
 def test_multipart_request_mixed_files_and_data(tmpdir):
-    with httpx.Client(app=app, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(app)) as client:
         response = client.post(
             "/",
             content=(
@@ -288,7 +288,7 @@ def test_multipart_request_mixed_files_and_data(tmpdir):
 
 
 def test_multipart_request_with_charset_for_filename(tmpdir):
-    with httpx.Client(app=app, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(app)) as client:
         response = client.post(
             "/",
             content=(
@@ -316,7 +316,7 @@ def test_multipart_request_with_charset_for_filename(tmpdir):
 
 
 def test_multipart_request_without_charset_for_filename(tmpdir):
-    with httpx.Client(app=app, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(app)) as client:
         response = client.post(
             "/",
             content=(
@@ -343,7 +343,7 @@ def test_multipart_request_without_charset_for_filename(tmpdir):
 
 
 def test_multipart_request_with_encoded_value(tmpdir):
-    with httpx.Client(app=app, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(app)) as client:
         response = client.post(
             "/",
             content=(
@@ -364,13 +364,13 @@ def test_multipart_request_with_encoded_value(tmpdir):
 
 
 def test_urlencoded_request_data(tmpdir):
-    with httpx.Client(app=app, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(app)) as client:
         response = client.post("/", data={"some": "data"})
         assert response.json() == {"some": "data"}
 
 
 def test_no_request_data(tmpdir):
-    with httpx.Client(app=app, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(app)) as client:
         response = client.post(
             "/", headers={"content-type": "application/x-www-form-urlencoded"}
         )
@@ -378,25 +378,25 @@ def test_no_request_data(tmpdir):
 
 
 def test_urlencoded_percent_encoding(tmpdir):
-    with httpx.Client(app=app, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(app)) as client:
         response = client.post("/", data={"some": "da ta"})
         assert response.json() == {"some": "da ta"}
 
 
 def test_urlencoded_percent_encoding_keys(tmpdir):
-    with httpx.Client(app=app, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(app)) as client:
         response = client.post("/", data={"so me": "data"})
         assert response.json() == {"so me": "data"}
 
 
 def test_urlencoded_multi_field_app_reads_body(tmpdir):
-    with httpx.Client(app=app_read_body, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(app_read_body)) as client:
         response = client.post("/", data={"some": "data", "second": "key pair"})
         assert response.json() == {"some": "data", "second": "key pair"}
 
 
 def test_multipart_multi_field_app_reads_body(tmpdir):
-    with httpx.Client(app=app_read_body, base_url="http://testServer/") as client:
+    with httpx.Client(base_url="http://testServer/", transport=httpx.WSGITransport(app_read_body)) as client:
         response = client.post(
             "/", data={"some": "data", "second": "key pair"}, files=FORCE_MULTIPART
         )
