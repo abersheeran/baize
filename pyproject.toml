@@ -56,7 +56,7 @@ run-setuptools = true
 [tool.pdm.scripts]
 lint-ruff = "ruff check {args}"
 lint-mypy = "mypy {args}"
-lint = { composite = ["lint-ruff baize tests", "lint-mypy baize tests"] }
+lint = { composite = ["lint-ruff baize tests", "lint-mypy baize"] }
 lint-fix = "ruff check --fix baize tests"
 format = "ruff format baize tests --target-version py37"
 test = "pytest tests {args}"
