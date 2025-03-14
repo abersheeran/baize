@@ -49,30 +49,21 @@ py-win32 = "sys_platform == 'win32'"
 ignore_missing_imports = true
 
 [tool.pdm]
-includes = ["baize"]
-build = "speedup.py"
+
+[tool.pdm.build]
+run-setuptools = true
 
 [tool.pdm.scripts]
 lint-ruff = "ruff {args}"
 lint-mypy = "mypy {args}"
-lint = { composite = [
-    "lint-ruff baize tests",
-    "lint-mypy baize tests",
-] }
+lint = { composite = ["lint-ruff baize tests", "lint-mypy baize tests"] }
 lint-fix = "ruff --fix baize tests"
 format = "ruff format baize tests --target-version py37"
 test = "pytest tests {args}"
 build-docs = "sphinx-build -M html docs/source docs/build"
 
 [tool.pdm.dev-dependencies]
-build = [
-    "mypy<2.0,>=1.0",
-    "mypy-extensions>=1.0",
-]
-dev = [
-    "mypy<2.0,>=1.0",
-    "ruff>=0.1.3",
-]
+dev = ["mypy<2.0,>=1.0", "ruff>=0.1.3"]
 doc = [
     "Sphinx>=4.2.0",
     "recommonmark>=0.7.1",
@@ -93,5 +84,12 @@ test = [
 ignore = ["F821"]
 
 [build-system]
-build-backend = "pdm.pep517.api"
-requires = ["pdm-pep517"]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+[dependency-groups]
+build = [
+    "mypy<2.0,>=1.0",
+    "mypy-extensions>=1.0",
+    "pdm-backend>=2.4.3",
+]
