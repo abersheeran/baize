@@ -137,7 +137,45 @@ class RedirectResponse(Response):
         self.headers["location"] = iri_to_uri(str(url))
 
 
-class StreamResponse(Response):
+class StreamingResponse(Response, abc.ABC, Generic[_ContentType]):
+    def __init__(
+        self,
+        iterable: AsyncIterable[_ContentType],
+        status_code: int = 200,
+        headers: Optional[Mapping[str, str]] = None,
+    ) -> None:
+        super().__init__(status_code, headers)
+        self.iterable = iterable
+        self._client_closed = False
+
+    @abc.abstractmethod
+    async def render_stream(self) -> AsyncGenerator[bytes, None]:
+        raise NotImplementedError
+        yield
+
+    async def wait_close(self, receive: Receive) -> None:
+        while not self._client_closed:
+            message = await receive()
+            self._client_closed = message["type"] == "http.disconnect"
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        await send_http_start(send, self.status_code, self.list_headers(as_bytes=True))
+        wait_close_future = asyncio.ensure_future(self.wait_close(receive))
+        generator = self.render_stream()
+        try:
+            while not self._client_closed:
+                chunk = await generator.asend(None)
+                await send_http_body(send, chunk, more_body=True)
+        except StopAsyncIteration:
+            pass
+        finally:
+            wait_close_future.cancel()
+            await generator.aclose()
+
+        return await send_http_body(send)
+
+
+class StreamResponse(StreamingResponse[bytes]):
     def __init__(
         self,
         iterable: AsyncIterable[bytes],
@@ -145,15 +183,103 @@ class StreamResponse(Response):
         headers: Optional[Mapping[str, str]] = None,
         content_type: str = "application/octet-stream",
     ) -> None:
-        self.iterable = iterable
-        super().__init__(status_code, headers)
-        self.headers["content-type"] = content_type
+        super().__init__(iterable, status_code, headers)
+        self.headers["Content-Type"] = content_type
 
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        await send_http_start(send, self.status_code, self.list_headers(as_bytes=True))
-        async for chunk in self.iterable:
-            await send_http_body(send, chunk, more_body=True)
-        return await send_http_body(send)
+    async def render_stream(self) -> AsyncGenerator[bytes, None]:
+        try:
+            async for chunk in self.iterable:
+                yield chunk
+        finally:
+            g = self.iterable
+            if hasattr(g, "aclose"):
+                await g.aclose()  # type: ignore
+
+
+class SendEventResponse(StreamingResponse[ServerSentEvent]):
+    """
+    Server-sent events response.
+
+    When the cilent closes the connection, the generator will be closed.
+    Use `try-finally` to clean up resources.
+
+    ```python
+    async def generator():
+        try:
+            while True:
+                yield ServerSentEvent()
+        finally:
+            print("generator closed")
+
+    response = SendEventResponse(generator())
+    ```
+    """
+
+    required_headers = {
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+        "Content-Type": "text/event-stream",
+    }
+
+    def __init__(
+        self,
+        iterable: AsyncIterable[ServerSentEvent],
+        status_code: int = 200,
+        headers: Optional[Mapping[str, str]] = None,
+        *,
+        ping_interval: float = 3,
+        charset: str = "utf-8",
+    ) -> None:
+        if headers:
+            headers = {**self.required_headers, **headers}
+        else:
+            headers = dict(self.required_headers)
+        headers["Content-Type"] += f"; charset={charset}"
+        super().__init__(iterable, status_code, headers)
+        self.ping_interval = ping_interval
+        self.charset = charset
+
+    async def render_stream(self) -> AsyncGenerator[bytes, None]:
+        q: "asyncio.Queue[ServerSentEvent | None]" = asyncio.Queue(maxsize=1)
+
+        should_stop = False
+
+        async def push() -> None:
+            nonlocal should_stop
+
+            try:
+                i = self.iterable.__aiter__()
+
+                while not should_stop:
+                    try:
+                        await q.put(await i.__anext__())
+                    except StopAsyncIteration:
+                        should_stop = True
+            finally:
+                await q.put(None)
+                g = self.iterable
+                if hasattr(g, "aclose"):
+                    await g.aclose()  # type: ignore
+
+        push_future = asyncio.ensure_future(push())
+
+        try:
+            while not (push_future.done() and q.empty()):
+                try:
+                    event = await asyncio.wait_for(q.get(), timeout=self.ping_interval)
+                    if event is None:
+                        break
+                    yield build_bytes_from_sse(event, self.charset)
+                except asyncio.TimeoutError:
+                    yield b": ping\n\n"
+        finally:
+            should_stop = True
+            while not q.empty():
+                q.get_nowait()  # pragma: no cover
+            if not push_future.cancel():
+                exc = push_future.exception()
+                if exc is not None:
+                    raise exc
 
 
 class Sendfile(Protocol):
@@ -390,99 +516,3 @@ class FileResponse(Response, FileResponseMixin):
             return await self.handle_several_ranges(
                 send_header_only, file_size, scope, send, ranges
             )
-
-
-class SendEventResponse(Response):
-    """
-    Server-sent events response.
-
-    When the cilent closes the connection, the generator will be closed.
-    Use `try-finally` to clean up resources.
-
-    ```python
-    async def generator():
-        try:
-            while True:
-                yield ServerSentEvent()
-        finally:
-            print("generator closed")
-
-    response = SendEventResponse(generator())
-    ```
-    """
-
-    required_headers = {
-        "Cache-Control": "no-cache",
-        "Connection": "keep-alive",
-        "Content-Type": "text/event-stream",
-    }
-
-    def __init__(
-        self,
-        generator: AsyncGenerator[ServerSentEvent, None],
-        status_code: int = 200,
-        headers: Optional[Mapping[str, str]] = None,
-        *,
-        ping_interval: float = 3,
-        charset: str = "utf-8",
-    ) -> None:
-        if headers:
-            headers = {**self.required_headers, **headers}
-        else:
-            headers = dict(self.required_headers)
-        headers["Content-Type"] += f"; charset={charset}"
-        super().__init__(status_code, headers)
-        self.generator = generator
-        self.ping_interval = ping_interval
-        self.charset = charset
-        self.queue: "asyncio.Queue[bytes]" = asyncio.Queue(13)
-        self.has_more_data = True
-        self.client_closed = False
-
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        await send(
-            {
-                "type": "http.response.start",
-                "status": self.status_code,
-                "headers": self.list_headers(as_bytes=True),
-            }
-        )
-        push_event_future = asyncio.ensure_future(self.push_event())
-        wait_close_future = asyncio.ensure_future(self.wait_close(receive))
-
-        try:
-            while not self.client_closed and (
-                self.has_more_data or not self.queue.empty()
-            ):
-                try:
-                    body = await asyncio.wait_for(
-                        self.queue.get(), timeout=self.ping_interval
-                    )
-                except asyncio.TimeoutError:
-                    body = b": ping\n\n"
-                await send_http_body(send, body, more_body=True)
-            return await send_http_body(send)
-        finally:
-            done, pending = await asyncio.wait(
-                (push_event_future, wait_close_future),
-                return_when=asyncio.FIRST_COMPLETED,
-            )
-            [task.cancel() for task in pending]
-            [task.result() for task in done]
-
-    async def push_event(self) -> None:
-        try:
-            while not self.client_closed:
-                chunk = await self.generator.asend(None)
-                await self.queue.put(build_bytes_from_sse(chunk, self.charset))
-        except StopAsyncIteration:
-            pass
-        finally:
-            self.has_more_data = False
-            if self.client_closed:
-                await self.generator.aclose()  # pragma: no cover
-
-    async def wait_close(self, receive: Receive) -> None:
-        while not self.client_closed:
-            message = await receive()
-            self.client_closed = message["type"] == "http.disconnect"

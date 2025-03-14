@@ -31,7 +31,10 @@ from baize.wsgi import (
     SendEventResponse,
     StreamResponse,
     Subpaths,
+    decorator,
     middleware,
+    NextRequest,
+    NextResponse,
     request_response,
 )
 
@@ -518,6 +521,7 @@ def test_send_event_response_be_killed():
     ) as client:
         with client.stream("GET", "/") as resp:
             resp.raise_for_status()
+            resp.read()
 
     assert killed
 
@@ -541,34 +545,6 @@ def test_responses_inherit(response_class):
 # ######################################################################################
 # #################################### Route tests #####################################
 # ######################################################################################
-
-
-def test_request_response():
-    @request_response
-    def view(request: Request) -> Response:
-        return PlainTextResponse(request.body)
-
-    with httpx.Client(app=view, base_url="http://testServer/") as client:
-        assert client.get("/").text == ""
-        assert client.post("/", content="hello").text == "hello"
-
-
-def test_middleware():
-    @middleware
-    def middleware_func(
-        request: Request, handler: Callable[[Request], Response]
-    ) -> Response:
-        response = handler(request)
-        response.headers["X-Middleware"] = "1"
-        return response
-
-    @request_response
-    @middleware_func
-    def view(request: Request) -> Response:
-        return PlainTextResponse(request.body)
-
-    with httpx.Client(app=view, base_url="http://testServer/") as client:
-        assert client.get("/").headers["X-Middleware"] == "1"
 
 
 def test_router():
@@ -740,3 +716,77 @@ def test_pages(tmpdir):
     app = Pages(tmpdir, handle_404=PlainTextResponse("", 404))
     with httpx.Client(app=app, base_url="http://testServer/") as client:
         assert client.get("/d").status_code == 404
+
+
+# ######################################################################################
+# ################################# Shortcut tests #####################################
+# ######################################################################################
+
+
+def test_request_response():
+    @request_response
+    def view(request: Request) -> Response:
+        return PlainTextResponse(request.body)
+
+    with httpx.Client(app=view, base_url="http://testServer/") as client:
+        assert client.get("/").text == ""
+        assert client.post("/", content="hello").text == "hello"
+
+
+def test_decorator():
+    @decorator
+    def decorator_func(
+        request: Request, handler: Callable[[Request], Response]
+    ) -> Response:
+        response = handler(request)
+        response.headers["X-Middleware"] = "1"
+        return response
+
+    @request_response
+    @decorator_func
+    def view(request: Request) -> Response:
+        return PlainTextResponse(request.body)
+
+    with httpx.Client(app=view, base_url="http://testServer/") as client:
+        assert client.get("/").headers["X-Middleware"] == "1"
+
+
+def test_middleware():
+    @middleware
+    def m(
+        request: NextRequest, handler: Callable[[NextRequest], NextResponse]
+    ) -> Response:
+        response = handler(request)
+        response.headers["X-Middleware"] = "1"
+        return response
+
+    @m
+    @request_response
+    def view(request: Request) -> Response:
+        return PlainTextResponse(request.body)
+
+    with httpx.Client(app=view, base_url="http://testServer/") as client:
+        assert client.get("/").headers["X-Middleware"] == "1"
+
+
+def test_next_request():
+    def app(environ, start_response):
+        request = NextRequest(environ, start_response)
+        request["KEY"] = "VALUE"
+        del request["KEY"]
+        response = NextResponse.from_app(PlainTextResponse(""), request)
+        return response(environ, start_response)
+
+    with httpx.Client(app=app, base_url="http://testServer/") as client:
+        response = client.get("/")
+        assert response.status_code == 200
+
+    def read_body(environ, start_response):
+        request = NextRequest(environ, start_response)
+        request.body
+        response = NextResponse.from_app(PlainTextResponse(""), request)
+        return response(environ, start_response)
+
+    with httpx.Client(app=read_body, base_url="http://testServer/") as client:
+        with pytest.raises(RuntimeError):
+            client.post("/", content="hello")

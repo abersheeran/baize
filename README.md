@@ -34,7 +34,7 @@ A short example for WSGI application, if you don't know what is WSGI, please rea
 import time
 from typing import Callable
 from baize.wsgi import (
-    middleware,
+    decorator,
     request_response,
     Router,
     Request,
@@ -43,7 +43,7 @@ from baize.wsgi import (
 )
 
 
-@middleware
+@decorator
 def timer(request: Request, next_call: Callable[[Request], Response]) -> Response:
     start_time = time.time()
     response = next_call(request)
@@ -83,7 +83,7 @@ A short example for ASGI application, if you don't know what is ASGI, please rea
 import time
 from typing import Awaitable, Callable
 from baize.asgi import (
-    middleware,
+    decorator,
     request_response,
     Router,
     Request,
@@ -92,7 +92,7 @@ from baize.asgi import (
 )
 
 
-@middleware
+@decorator
 async def timer(
     request: Request, next_call: Callable[[Request], Awaitable[Response]]
 ) -> Response:

@@ -5,7 +5,6 @@ import queue
 import stat
 from http import HTTPStatus
 from mimetypes import guess_type
-from queue import Queue
 from random import choices as random_choices
 from typing import (
     Any,
@@ -150,17 +149,21 @@ class RedirectResponse(Response):
         self.headers["location"] = iri_to_uri(str(url))
 
 
-class StreamResponse(Response):
+class StreamingResponse(Response, abc.ABC, Generic[_ContentType]):
     def __init__(
         self,
-        iterable: Iterable[bytes],
+        iterable: Iterable[_ContentType],
         status_code: int = 200,
         headers: Optional[Mapping[str, str]] = None,
-        content_type: str = "application/octet-stream",
     ) -> None:
-        self.iterable = iterable
         super().__init__(status_code, headers)
-        self.headers["content-type"] = content_type
+        self.iterable = iterable
+        self._client_closed = False
+
+    @abc.abstractmethod
+    def render_stream(self) -> Generator[bytes, None, None]:
+        raise NotImplementedError
+        yield
 
     def __call__(
         self, environ: Environ, start_response: StartResponse
@@ -168,7 +171,112 @@ class StreamResponse(Response):
         start_response(
             StatusStringMapping[self.status_code], self.list_headers(as_bytes=False)
         )
+
+        yield from self.render_stream()
+
+
+class StreamResponse(StreamingResponse[bytes]):
+    def __init__(
+        self,
+        iterable: Iterable[bytes],
+        status_code: int = 200,
+        headers: Optional[Mapping[str, str]] = None,
+        content_type: str = "application/octet-stream",
+    ) -> None:
+        super().__init__(iterable, status_code, headers)
+        self.headers["Content-Type"] = content_type
+
+    def render_stream(self) -> Generator[bytes, None, None]:
         yield from self.iterable
+
+
+class SendEventResponse(StreamingResponse[ServerSentEvent]):
+    """
+    Server-sent events response.
+
+    When the cilent closes the connection, the generator will be closed.
+    Use `try-finally` to clean up resources.
+
+    ```python
+    def generator():
+        try:
+            while True:
+                yield ServerSentEvent()
+        finally:
+            print("generator closed")
+
+    response = SendEventResponse(generator())
+    ```
+    """
+
+    thread_pool = ThreadPoolExecutor(max_workers=10, thread_name_prefix="SendEvent_")
+
+    required_headers = {
+        "Cache-Control": "no-cache",
+        # https://www.python.org/dev/peps/pep-3333/#other-http-features
+        # WSGI application must not send connection header
+        # "Connection": "keep-alive",
+        "Content-Type": "text/event-stream",
+    }
+
+    def __init__(
+        self,
+        iterable: Iterable[ServerSentEvent],
+        status_code: int = 200,
+        headers: Optional[Mapping[str, str]] = None,
+        *,
+        ping_interval: float = 3,
+        charset: str = "utf-8",
+    ) -> None:
+        if headers:
+            headers = {**self.required_headers, **headers}
+        else:
+            headers = dict(self.required_headers)
+        headers["Content-Type"] += f"; charset={charset}"
+        super().__init__(iterable, status_code, headers)
+        self.ping_interval = ping_interval
+        self.charset = charset
+
+    def render_stream(self) -> Generator[bytes, None, None]:
+        q: "queue.Queue[ServerSentEvent | None]" = queue.Queue(maxsize=1)
+        should_stop = False
+
+        def push() -> None:
+            nonlocal should_stop
+
+            try:
+                i = iter(self.iterable)
+
+                while not should_stop:
+                    try:
+                        q.put(next(i))
+                    except StopIteration:
+                        should_stop = True
+            finally:
+                q.put(None)
+                g = self.iterable
+                if hasattr(g, "close"):
+                    g.close()  # type: ignore
+
+        push_future = self.thread_pool.submit(push)
+
+        try:
+            while not (push_future.done() and q.empty()):
+                try:
+                    event = q.get(timeout=self.ping_interval)
+                    if event is None:
+                        break
+                    yield build_bytes_from_sse(event, self.charset)
+                except queue.Empty:
+                    yield b": ping\n\n"
+        finally:
+            should_stop = True
+            while not q.empty():
+                q.get_nowait()  # pragma: no cover
+            if not push_future.cancel():
+                exc = push_future.exception()
+                if exc is not None:
+                    raise exc
 
 
 class FileResponse(Response, FileResponseMixin):
@@ -307,90 +415,3 @@ class FileResponse(Response, FileResponseMixin):
             yield from self.handle_several_ranges(
                 send_header_only, file_size, start_response, ranges
             )
-
-
-class SendEventResponse(Response):
-    """
-    Server-sent events response.
-
-    When the cilent closes the connection, the generator will be closed.
-    Use `try-finally` to clean up resources.
-
-    ```python
-    def generator():
-        try:
-            while True:
-                yield ServerSentEvent()
-        finally:
-            print("generator closed")
-
-    response = SendEventResponse(generator())
-    ```
-    """
-
-    thread_pool = ThreadPoolExecutor(max_workers=10, thread_name_prefix="SendEvent_")
-
-    required_headers = {
-        "Cache-Control": "no-cache",
-        # https://www.python.org/dev/peps/pep-3333/#other-http-features
-        # WSGI application must not send connection header
-        # "Connection": "keep-alive",
-        "Content-Type": "text/event-stream",
-    }
-
-    def __init__(
-        self,
-        generator: Generator[ServerSentEvent, None, None],
-        status_code: int = 200,
-        headers: Optional[Mapping[str, str]] = None,
-        *,
-        ping_interval: float = 3,
-        charset: str = "utf-8",
-    ) -> None:
-        if headers:
-            headers = {**self.required_headers, **headers}
-        else:
-            headers = dict(self.required_headers)
-        headers["Content-Type"] += f"; charset={charset}"
-        super().__init__(status_code, headers)
-        self.generator = generator
-        self.ping_interval = ping_interval
-        self.charset = charset
-        self.queue: Queue = Queue(13)
-        self.has_more_data = True
-        self.client_closed = False
-
-    def __call__(
-        self, environ: Environ, start_response: StartResponse
-    ) -> Iterable[bytes]:
-        start_response(
-            StatusStringMapping[self.status_code], self.list_headers(as_bytes=False)
-        )
-        future = self.thread_pool.submit(self.send_event)
-
-        try:
-            while not self.client_closed and (
-                self.has_more_data or not self.queue.empty()
-            ):
-                try:
-                    yield self.queue.get(timeout=self.ping_interval)
-                except queue.Empty:
-                    yield b": ping\n\n"
-        finally:
-            self.client_closed = self.has_more_data
-            if not future.cancel():
-                exc = future.exception()
-                if exc is not None:
-                    raise exc
-
-    def send_event(self) -> None:
-        try:
-            while not self.client_closed:
-                chunk = self.generator.send(None)
-                self.queue.put(build_bytes_from_sse(chunk, self.charset))
-        except StopIteration:
-            pass
-        finally:
-            if self.client_closed:
-                self.generator.close()  # pragma: no cover
-            self.has_more_data = False
