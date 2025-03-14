@@ -1,3 +1,4 @@
+import json
 import tempfile
 import time
 from inspect import cleandoc
@@ -130,7 +131,8 @@ def test_request_body():
         assert response.json() == {"body": ""}
 
         response = client.post("/", json={"a": "123"})
-        assert response.json() == {"body": '{"a": "123"}'}
+        inner_json = json.loads(response.json()["body"])
+        assert inner_json == {"a": "123"}
 
         response = client.post("/", content="abc")
         assert response.json() == {"body": "abc"}
@@ -150,7 +152,7 @@ def test_request_stream():
         assert response.text == ""
 
         response = client.post("/", json={"a": "123"})
-        assert response.text == '{"a": "123"}'
+        assert response.json() == {"a": "123"}
 
         response = client.post("/", content="abc")
         assert response.text == "abc"

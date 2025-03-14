@@ -1,4 +1,5 @@
 import asyncio
+import json
 import tempfile
 from functools import partial
 from inspect import cleandoc
@@ -152,7 +153,8 @@ async def test_request_body():
         assert response.json() == {"body": ""}
 
         response = await client.post("/", json={"a": "123"})
-        assert response.json() == {"body": '{"a": "123"}'}
+        inner_json = json.loads(response.json()["body"])
+        assert inner_json == {"a": "123"}
 
         response = await client.post("/", content="abc")
         assert response.json() == {"body": "abc"}
@@ -173,7 +175,8 @@ async def test_request_stream():
         assert response.json() == {"body": ""}
 
         response = await client.post("/", json={"a": "123"})
-        assert response.json() == {"body": '{"a": "123"}'}
+        inner_json = json.loads(response.json()["body"])
+        assert inner_json == {"a": "123"}
 
         response = await client.post("/", content="abc")
         assert response.json() == {"body": "abc"}
