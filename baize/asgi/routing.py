@@ -20,7 +20,11 @@ class Router(BaseRouter[ASGIApp]):
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] == "lifespan":  # pragma: no cover
             raise RuntimeError("Unsupported lifespan in `Router`")
-        result = self.search(scope["path"])
+        root_path = scope.get("root_path", "")
+        path = scope["path"]
+        if root_path and path.startswith(root_path):
+            path = path[len(root_path) :]
+        result = self.search(path)
         if result is None:
             response: ASGIApp = Response(404)
         else:
@@ -48,14 +52,16 @@ class Subpaths(BaseSubpaths[ASGIApp]):
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] == "lifespan":  # pragma: no cover
             raise RuntimeError("Unsupported lifespan in `Subpaths`")
+        root_path = scope.get("root_path", "")
         path = scope["path"]
+        if root_path and path.startswith(root_path):
+            path = path[len(root_path) :]
         result = self.search(path)
         if result is None:
             response: ASGIApp = Response(404)
         else:
             prefix, response = result
-            scope["root_path"] = scope.get("root_path", "") + prefix
-            scope["path"] = path[len(prefix) :]
+            scope["root_path"] = root_path + prefix
         return await response(scope, receive, send)
 
 
