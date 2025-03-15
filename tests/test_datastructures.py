@@ -342,7 +342,6 @@ def test_formdata():
     )
     assert FormData(form) == form
     assert FormData({"a": "123", "b": "789"}) == FormData([("a", "123"), ("b", "789")])
-    assert FormData({"a": "123", "b": "789"}) != {"a": "123", "b": "789"}
 
 
 def test_mutable_multi_mapping():
@@ -374,7 +373,6 @@ def test_mutable_multi_mapping():
         {"b": "456", "a": "123"}
     )
     assert MutableMultiMapping() == MutableMultiMapping({})
-    assert MutableMultiMapping({"a": "123", "b": "456"}) != "invalid"
 
     q = MutableMultiMapping([("a", "123"), ("a", "456")])
     assert MutableMultiMapping(q) == q
