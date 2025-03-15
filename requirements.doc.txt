@@ -2,3 +2,4 @@ sphinx
 sphinx-autodoc-typehints
 sphinx-autodoc2
 myst-parser
+commonmark
