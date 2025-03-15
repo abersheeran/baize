@@ -296,14 +296,14 @@ class Sendfile(Protocol):
 if os.name == "nt":  # pragma: py-no-win32
 
     async def open_for_sendfile(
-        path: Union[str, bytes, "os.PathLike[str]", "os.PathLike[bytes]"]
+        path: Union[str, bytes, "os.PathLike[str]", "os.PathLike[bytes]"],
     ) -> int:
-        return await run_in_threadpool(os.open, path, os.O_RDONLY | os.O_BINARY)
+        return await run_in_threadpool(os.open, path, os.O_RDONLY | os.O_BINARY)  # type: ignore[attr-defined]
 
 else:  # pragma: py-win32
 
     async def open_for_sendfile(
-        path: Union[str, bytes, "os.PathLike[str]", "os.PathLike[bytes]"]
+        path: Union[str, bytes, "os.PathLike[str]", "os.PathLike[bytes]"],
     ) -> int:
         return await run_in_threadpool(os.open, path, os.O_RDONLY)
 
@@ -431,7 +431,7 @@ class FileResponse(Response, FileResponseMixin):
         start: int,
         end: int,
     ) -> None:
-        self.headers["content-range"] = f"bytes {start}-{end-1}/{file_size}"
+        self.headers["content-range"] = f"bytes {start}-{end - 1}/{file_size}"
         self.headers["content-type"] = str(self.content_type)
         self.headers["content-length"] = str(end - start)
         await send_http_start(send, 206, self.list_headers(as_bytes=True))

@@ -96,12 +96,10 @@ class BaseResponse:
         )
 
     @overload
-    def list_headers(self, *, as_bytes: Literal[True]) -> List[Tuple[bytes, bytes]]:
-        ...
+    def list_headers(self, *, as_bytes: Literal[True]) -> List[Tuple[bytes, bytes]]: ...
 
     @overload
-    def list_headers(self, *, as_bytes: Literal[False]) -> List[Tuple[str, str]]:
-        ...
+    def list_headers(self, *, as_bytes: Literal[False]) -> List[Tuple[str, str]]: ...
 
     def list_headers(self, *, as_bytes):
         """
@@ -254,7 +252,7 @@ class FileResponseMixin:
             lambda start, end: (
                 f"--{boundary}\n"
                 f"Content-Type: {content_type}\n"
-                f"Content-Range: bytes {start}-{end-1}/{max_size}\n"
+                f"Content-Range: bytes {start}-{end - 1}/{max_size}\n"
                 "\n"
             ).encode("latin-1"),
         )

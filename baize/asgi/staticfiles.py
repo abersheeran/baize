@@ -27,7 +27,7 @@ class Files(staticfiles.BaseFiles[ASGIApp]):
     ) -> Response:
         if self.if_none_match(
             FileResponse.generate_etag(stat_result), if_none_match
-        ) or self.if_modified_since(stat_result.st_ctime, if_modified_since):
+        ) or self.if_modified_since(stat_result.st_mtime, if_modified_since):
             response = Response(304)
         else:
             response = FileResponse(filepath, stat_result=stat_result)

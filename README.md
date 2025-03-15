@@ -3,7 +3,7 @@
 [![Codecov](https://img.shields.io/codecov/c/github/abersheeran/baize?style=flat-square)](https://codecov.io/gh/abersheeran/baize)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/baize?label=Support%20Python%20Version&style=flat-square)](https://pypi.org/project/baize/)
 
-Powerful and exquisite WSGI/ASGI framework/toolkit.
+Powerful and exquisite WSGI/ASGI framework/toolkit. Only relies on the standard library.
 
 The minimize implementation of methods required in the Web framework. No redundant implementation means that you can freely customize functions without considering the conflict with baize's own implementation.
 

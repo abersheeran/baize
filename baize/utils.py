@@ -15,15 +15,13 @@ class cached_property(typing.Generic[T]):
 
     def __init__(self, func: typing.Callable[..., T]) -> None:
         self.func = func
-        functools.update_wrapper(self, func)
+        functools.update_wrapper(self, func)  # type: ignore
 
     @typing.overload
-    def __get__(self, obj: None, cls: type) -> "cached_property":
-        ...
+    def __get__(self, obj: None, cls: type) -> "cached_property": ...
 
     @typing.overload
-    def __get__(self, obj: object, cls: type) -> T:
-        ...
+    def __get__(self, obj: object, cls: type) -> T: ...
 
     def __get__(self, obj, cls):
         if obj is None:

@@ -1,4 +1,3 @@
-import sys
 from types import TracebackType
 from typing import (
     Any,
@@ -10,19 +9,13 @@ from typing import (
     Optional,
     Tuple,
     Type,
+    Final,
+    Literal,
+    Protocol,
+    TypedDict,
+    final,
+    runtime_checkable,
 )
-
-if sys.version_info < (3, 8):
-    from typing_extensions import (
-        Final,
-        Literal,
-        Protocol,
-        TypedDict,
-        final,
-        runtime_checkable,
-    )
-else:
-    from typing import Final, Literal, Protocol, TypedDict, final, runtime_checkable
 
 __all__ = [
     "Scope",
@@ -54,8 +47,9 @@ Send = Callable[[Message], Awaitable[None]]
 
 
 class ASGIApp(Protocol):
-    def __call__(self, scope: Scope, receive: Receive, send: Send) -> Awaitable[None]:
-        ...
+    def __call__(
+        self, scope: Scope, receive: Receive, send: Send
+    ) -> Awaitable[None]: ...
 
 
 # WSGI: view PEP3333
@@ -70,15 +64,13 @@ class StartResponse(Protocol):
         status: str,
         response_headers: List[Tuple[str, str]],
         exc_info: Optional[ExcInfo] = None,
-    ) -> Any:
-        ...
+    ) -> Any: ...
 
 
 class WSGIApp(Protocol):
     def __call__(
         self, environ: Environ, start_response: StartResponse
-    ) -> Iterable[bytes]:
-        ...
+    ) -> Iterable[bytes]: ...
 
 
 # Server-sent Event

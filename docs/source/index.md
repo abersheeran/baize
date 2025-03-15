@@ -22,7 +22,7 @@ pip install -U baize
 
 BáiZé is a framework and toolkit that directly faces the WSGI and ASGI protocols. Please read the corresponding chapters according to your needs.
 
-```eval_rst
+```{eval-rst}
 .. toctree::
    :maxdepth: 2
 

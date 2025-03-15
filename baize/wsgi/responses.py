@@ -340,7 +340,7 @@ class FileResponse(Response, FileResponseMixin):
         start: int,
         end: int,
     ) -> Generator[bytes, None, None]:
-        self.headers["content-range"] = f"bytes {start}-{end-1}/{file_size}"
+        self.headers["content-range"] = f"bytes {start}-{end - 1}/{file_size}"
         self.headers["content-type"] = str(self.content_type)
         self.headers["content-length"] = str(end - start)
         start_response(StatusStringMapping[206], self.list_headers(as_bytes=False))

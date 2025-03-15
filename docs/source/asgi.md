@@ -2,7 +2,7 @@
 
 ## HTTPConnection
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.asgi.HTTPConnection
    :members:
    :inherited-members:
@@ -10,7 +10,7 @@
 
 ## Request
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.asgi.Request
    :members:
    :undoc-members:
@@ -18,14 +18,14 @@
 
 ## Response
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.asgi.Response
    :members:
 ```
 
 ## SmallResponse
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.asgi.SmallResponse
    :show-inheritance:
    :members:
@@ -33,7 +33,7 @@
 
 ## PlainTextResponse
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.asgi.PlainTextResponse
    :show-inheritance:
    :members:
@@ -41,63 +41,63 @@
 
 ## HTMLResponse
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.asgi.HTMLResponse
    :show-inheritance:
 ```
 
 ## JSONResponse
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.asgi.JSONResponse
    :show-inheritance:
 ```
 
 ## RedirectResponse
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.asgi.RedirectResponse
    :show-inheritance:
 ```
 
 ## StreamResponse
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.asgi.StreamResponse
    :show-inheritance:
 ```
 
 ## FileResponse
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.asgi.FileResponse
    :show-inheritance:
 ```
 
 ## SendEventResponse
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.asgi.SendEventResponse
    :show-inheritance:
 ```
 
 ## WebSocket
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.asgi.WebSocket
    :members:
 ```
 
 ## WebsocketDenialResponse
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.asgi.WebsocketDenialResponse
    :members:
 ```
 
 ## Router
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.asgi.Router
    :members:
    :inherited-members:
@@ -111,13 +111,13 @@ If the built-in types are not enough, then you only need to write a class that i
 
 ## Subpaths
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.asgi.Subpaths
 ```
 
 ## Hosts
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.asgi.Hosts
 ```
 
@@ -125,36 +125,36 @@ If the built-in types are not enough, then you only need to write a class that i
 
 ### request_response
 
-```eval_rst
+```{eval-rst}
 .. autofunction:: baize.asgi.request_response
 ```
 
 ### decorator
 
-```eval_rst
+```{eval-rst}
 .. autofunction:: baize.asgi.decorator
 ```
 
 ### middleware
 
-```eval_rst
+```{eval-rst}
 .. autofunction:: baize.asgi.middleware
 ```
 
 ### websocket_session
 
-```eval_rst
+```{eval-rst}
 .. autofunction:: baize.asgi.websocket_session
 ```
 
 ## Files
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.asgi.Files
 ```
 
 ## Pages
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.asgi.Pages
 ```

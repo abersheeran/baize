@@ -2,7 +2,7 @@
 
 ## HTTPConnection
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.wsgi.HTTPConnection
    :members:
    :inherited-members:
@@ -10,7 +10,7 @@
 
 ## Request
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.wsgi.Request
    :members:
    :undoc-members:
@@ -18,14 +18,14 @@
 
 ## Response
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.wsgi.Response
    :members:
 ```
 
 ## SmallResponse
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.wsgi.SmallResponse
    :show-inheritance:
    :members:
@@ -33,7 +33,7 @@
 
 ## PlainTextResponse
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.wsgi.PlainTextResponse
    :show-inheritance:
    :members:
@@ -41,49 +41,49 @@
 
 ## HTMLResponse
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.wsgi.HTMLResponse
    :show-inheritance:
 ```
 
 ## JSONResponse
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.wsgi.JSONResponse
    :show-inheritance:
 ```
 
 ## RedirectResponse
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.wsgi.RedirectResponse
    :show-inheritance:
 ```
 
 ## StreamResponse
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.wsgi.StreamResponse
    :show-inheritance:
 ```
 
 ## FileResponse
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.wsgi.FileResponse
    :show-inheritance:
 ```
 
 ## SendEventResponse
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.wsgi.SendEventResponse
    :show-inheritance:
 ```
 
 ## Router
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.wsgi.Router
    :members:
    :inherited-members:
@@ -97,13 +97,13 @@ If the built-in types are not enough, then you only need to write a class that i
 
 ## Subpaths
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.wsgi.Subpaths
 ```
 
 ## Hosts
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.wsgi.Hosts
 ```
 
@@ -111,30 +111,30 @@ If the built-in types are not enough, then you only need to write a class that i
 
 ### request_response
 
-```eval_rst
+```{eval-rst}
 .. autofunction:: baize.wsgi.request_response
 ```
 
 ### decorator
 
-```eval_rst
+```{eval-rst}
 .. autofunction:: baize.wsgi.decorator
 ```
 
 ### middleware
 
-```eval_rst
+```{eval-rst}
 .. autofunction:: baize.wsgi.middleware
 ```
 
 ## Files
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.wsgi.Files
 ```
 
 ## Pages
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.wsgi.Pages
 ```

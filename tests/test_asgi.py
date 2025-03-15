@@ -81,7 +81,9 @@ async def test_request_url():
         response = JSONResponse(data)
         await response(scope, receive, send)
 
-    async with httpx.AsyncClient(base_url="http://testServer/", transport=httpx.ASGITransport(app)) as client:
+    async with httpx.AsyncClient(
+        base_url="http://testServer/", transport=httpx.ASGITransport(app)
+    ) as client:
         response = await client.get("/123?a=abc")
         assert response.json() == {
             "method": "GET",
@@ -100,7 +102,9 @@ async def test_request_query_params():
         response = JSONResponse({"params": params})
         await response(scope, receive, send)
 
-    async with httpx.AsyncClient(base_url="http://testServer/", transport=httpx.ASGITransport(app)) as client:
+    async with httpx.AsyncClient(
+        base_url="http://testServer/", transport=httpx.ASGITransport(app)
+    ) as client:
         response = await client.get("/?a=123&b=456")
         assert response.json() == {"params": {"a": "123", "b": "456"}}
 
@@ -114,7 +118,9 @@ async def test_request_headers():
         response = JSONResponse({"headers": headers})
         await response(scope, receive, send)
 
-    async with httpx.AsyncClient(base_url="http://testServer/", transport=httpx.ASGITransport(app)) as client:
+    async with httpx.AsyncClient(
+        base_url="http://testServer/", transport=httpx.ASGITransport(app)
+    ) as client:
         response = await client.get("/", headers={"host": "example.org"})
         assert response.json() == {
             "headers": {
@@ -135,7 +141,9 @@ async def test_request_client():
         )
         await response(scope, receive, send)
 
-    async with httpx.AsyncClient(base_url="http://testServer/", transport=httpx.ASGITransport(app)) as client:
+    async with httpx.AsyncClient(
+        base_url="http://testServer/", transport=httpx.ASGITransport(app)
+    ) as client:
         response = await client.get("/")
         assert response.json() == {"host": "127.0.0.1", "port": 123}
 
@@ -148,7 +156,9 @@ async def test_request_body():
         response = JSONResponse({"body": body.decode()})
         await response(scope, receive, send)
 
-    async with httpx.AsyncClient(base_url="http://testServer/", transport=httpx.ASGITransport(app)) as client:
+    async with httpx.AsyncClient(
+        base_url="http://testServer/", transport=httpx.ASGITransport(app)
+    ) as client:
         response = await client.get("/")
         assert response.json() == {"body": ""}
 
@@ -170,7 +180,9 @@ async def test_request_stream():
         response = JSONResponse({"body": body.decode()})
         await response(scope, receive, send)
 
-    async with httpx.AsyncClient(base_url="http://testServer/", transport=httpx.ASGITransport(app)) as client:
+    async with httpx.AsyncClient(
+        base_url="http://testServer/", transport=httpx.ASGITransport(app)
+    ) as client:
         response = await client.get("/")
         assert response.json() == {"body": ""}
 
@@ -191,7 +203,9 @@ async def test_request_form_urlencoded():
         await response(scope, receive, send)
         await request.close()
 
-    async with httpx.AsyncClient(base_url="http://testServer/", transport=httpx.ASGITransport(app)) as client:
+    async with httpx.AsyncClient(
+        base_url="http://testServer/", transport=httpx.ASGITransport(app)
+    ) as client:
         response = await client.post("/", data={"abc": "123 @"})
         assert response.json() == {"form": {"abc": "123 @"}}
 
@@ -213,7 +227,9 @@ async def test_request_multipart_form():
         await response(scope, receive, send)
         await request.close()
 
-    async with httpx.AsyncClient(base_url="http://testServer/", transport=httpx.ASGITransport(app)) as client:
+    async with httpx.AsyncClient(
+        base_url="http://testServer/", transport=httpx.ASGITransport(app)
+    ) as client:
         with tempfile.SpooledTemporaryFile(1024) as file:
             file.write(b"temporary file")
             file.seek(0, 0)
@@ -248,7 +264,9 @@ async def test_request_multipart_form_limit():
     async def app(scope, receive, send):
         await FRequest(scope, receive).form
 
-    async with httpx.AsyncClient(base_url="http://testServer/", transport=httpx.ASGITransport(app)) as client:
+    async with httpx.AsyncClient(
+        base_url="http://testServer/", transport=httpx.ASGITransport(app)
+    ) as client:
         with pytest.raises(RequestEntityTooLarge):
             with tempfile.SpooledTemporaryFile(1024) as file:
                 file.write(b"temporary file")
@@ -277,7 +295,9 @@ async def test_request_body_then_stream():
         response = JSONResponse({"body": body.decode(), "stream": chunks.decode()})
         await response(scope, receive, send)
 
-    async with httpx.AsyncClient(base_url="http://testServer/", transport=httpx.ASGITransport(app)) as client:
+    async with httpx.AsyncClient(
+        base_url="http://testServer/", transport=httpx.ASGITransport(app)
+    ) as client:
         response = await client.post("/", content="abc")
         assert response.json() == {"body": "abc", "stream": "abc"}
 
@@ -296,7 +316,9 @@ async def test_request_stream_then_body():
         response = JSONResponse({"body": body.decode(), "stream": chunks.decode()})
         await response(scope, receive, send)
 
-    async with httpx.AsyncClient(base_url="http://testServer/", transport=httpx.ASGITransport(app)) as client:
+    async with httpx.AsyncClient(
+        base_url="http://testServer/", transport=httpx.ASGITransport(app)
+    ) as client:
         response = await client.post("/", content="abc")
         assert response.json() == {"body": "<stream consumed>", "stream": "abc"}
 
@@ -309,7 +331,9 @@ async def test_request_json():
         response = JSONResponse({"json": data})
         await response(scope, receive, send)
 
-    async with httpx.AsyncClient(base_url="http://testServer/", transport=httpx.ASGITransport(app)) as client:
+    async with httpx.AsyncClient(
+        base_url="http://testServer/", transport=httpx.ASGITransport(app)
+    ) as client:
         response = await client.post("/", json={"a": "123"})
         assert response.json() == {"json": {"a": "123"}}
 
@@ -342,7 +366,9 @@ async def test_request_without_setting_receive():
         response = JSONResponse({"json": data})
         await response(scope, receive, send)
 
-    async with httpx.AsyncClient(base_url="http://testServer/", transport=httpx.ASGITransport(app)) as client:
+    async with httpx.AsyncClient(
+        base_url="http://testServer/", transport=httpx.ASGITransport(app)
+    ) as client:
         response = await client.post("/", json={"a": "123"})
         assert response.json() == {"json": "Receive channel not available"}
 
@@ -384,7 +410,9 @@ async def test_request_is_disconnected():
         await response(scope, receive, send)
         disconnected_after_response = await request.is_disconnected()
 
-    async with httpx.AsyncClient(base_url="http://testServer/", transport=httpx.ASGITransport(app)) as client:
+    async with httpx.AsyncClient(
+        base_url="http://testServer/", transport=httpx.ASGITransport(app)
+    ) as client:
         response = await client.get("/")
         assert response.json() == {"disconnected": False}
         assert disconnected_after_response
@@ -403,7 +431,9 @@ async def test_request_cookies():
 
         await response(scope, receive, send)
 
-    async with httpx.AsyncClient(base_url="http://testServer/", transport=httpx.ASGITransport(app)) as client:
+    async with httpx.AsyncClient(
+        base_url="http://testServer/", transport=httpx.ASGITransport(app)
+    ) as client:
         response = await client.get("/")
         assert response.text == "Hello, world!"
         response = await client.get("/")
@@ -438,7 +468,9 @@ async def test_cookie_lenient_parsing():
         response = JSONResponse({"cookies": request.cookies})
         await response(scope, receive, send)
 
-    async with httpx.AsyncClient(base_url="http://testServer/", transport=httpx.ASGITransport(app)) as client:
+    async with httpx.AsyncClient(
+        base_url="http://testServer/", transport=httpx.ASGITransport(app)
+    ) as client:
         response = await client.get("/", headers={"cookie": tough_cookie})
         result = response.json()
         assert len(result["cookies"]) == 4
@@ -474,7 +506,9 @@ async def test_cookies_edge_cases(set_cookie, expected):
         response = JSONResponse({"cookies": request.cookies})
         await response(scope, receive, send)
 
-    async with httpx.AsyncClient(base_url="http://testServer/", transport=httpx.ASGITransport(app)) as client:
+    async with httpx.AsyncClient(
+        base_url="http://testServer/", transport=httpx.ASGITransport(app)
+    ) as client:
         response = await client.get("/", headers={"cookie": set_cookie})
         result = response.json()
         assert result["cookies"] == expected
@@ -515,7 +549,9 @@ async def test_cookies_invalid(set_cookie, expected):
         response = JSONResponse({"cookies": request.cookies})
         await response(scope, receive, send)
 
-    async with httpx.AsyncClient(base_url="http://testServer/", transport=httpx.ASGITransport(app)) as client:
+    async with httpx.AsyncClient(
+        base_url="http://testServer/", transport=httpx.ASGITransport(app)
+    ) as client:
         response = await client.get("/", headers={"cookie": set_cookie})
         result = response.json()
         assert result["cookies"] == expected
@@ -534,7 +570,9 @@ async def test_response_headers():
         response.headers["x-header-2"] = "789"
         await response(scope, receive, send)
 
-    async with httpx.AsyncClient(base_url="http://testServer/", transport=httpx.ASGITransport(app)) as client:
+    async with httpx.AsyncClient(
+        base_url="http://testServer/", transport=httpx.ASGITransport(app)
+    ) as client:
         response = await client.get("/")
         assert response.headers["x-header-1"] == "123"
         assert response.headers["x-header-2"] == "789"
@@ -555,7 +593,9 @@ async def test_set_cookie():
         samesite="none",
     )
 
-    async with httpx.AsyncClient(base_url="http://testServer/", transport=httpx.ASGITransport(response)) as client:
+    async with httpx.AsyncClient(
+        base_url="http://testServer/", transport=httpx.ASGITransport(response)
+    ) as client:
         response = await client.get("/")
         assert response.text == "Hello, world!"
 
@@ -571,7 +611,9 @@ async def test_delete_cookie():
             response.set_cookie("mycookie", "myvalue")
         await response(scope, receive, send)
 
-    async with httpx.AsyncClient(base_url="http://testServer/", transport=httpx.ASGITransport(app)) as client:
+    async with httpx.AsyncClient(
+        base_url="http://testServer/", transport=httpx.ASGITransport(app)
+    ) as client:
         response = await client.get("/")
         assert response.cookies["mycookie"]
         response = await client.get("/")
@@ -587,7 +629,9 @@ async def test_redirect_response():
             response = RedirectResponse("/")
         await response(scope, receive, send)
 
-    async with httpx.AsyncClient(base_url="http://testServer/", transport=httpx.ASGITransport(app)) as client:
+    async with httpx.AsyncClient(
+        base_url="http://testServer/", transport=httpx.ASGITransport(app)
+    ) as client:
         response = await client.get("/redirect", follow_redirects=True)
         assert response.text == "hello, world"
         assert response.url == "http://testserver/"
@@ -600,7 +644,8 @@ async def test_stream_response():
             yield str(i).encode("utf-8")
 
     async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(StreamResponse(generator(10))), base_url="http://testServer/"
+        transport=httpx.ASGITransport(StreamResponse(generator(10))),
+        base_url="http://testServer/",
     ) as client:
         response = await client.get("/")
         assert response.content == b"".join(str(i).encode("utf-8") for i in range(10))
@@ -633,7 +678,9 @@ async def test_file_response(tmp_path: Path, response_class: Type[FileResponse])
     async def app(scope, r, s):
         return await response_class(str(filepath))(scope, r, s)
 
-    async with httpx.AsyncClient(base_url="http://testServer/", transport=httpx.ASGITransport(app)) as client:
+    async with httpx.AsyncClient(
+        base_url="http://testServer/", transport=httpx.ASGITransport(app)
+    ) as client:
         response = await client.get("/")
         assert response.status_code == 200
         assert response.headers["content-length"] == str(len(README.encode("utf8")))
@@ -684,12 +731,12 @@ async def test_file_response(tmp_path: Path, response_class: Type[FileResponse])
         assert response.status_code == 400
 
         response = await client.head(
-            "/", headers={"Range": f"bytes=0-{len(README.encode('utf8'))+1}"}
+            "/", headers={"Range": f"bytes=0-{len(README.encode('utf8')) + 1}"}
         )
         assert response.status_code == 206
 
         response = await client.head(
-            "/", headers={"Range": f"bytes={len(README.encode('utf8'))+1}-"}
+            "/", headers={"Range": f"bytes={len(README.encode('utf8')) + 1}-"}
         )
         assert response.status_code == 416
         assert response.headers["Content-Range"] == f"*/{len(README.encode('utf8'))}"
@@ -740,7 +787,9 @@ async def test_send_event_response():
     )
 
     async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(SendEventResponse(send_events(), ping_interval=0.1)),
+        transport=httpx.ASGITransport(
+            SendEventResponse(send_events(), ping_interval=0.1)
+        ),
         base_url="http://testServer/",
     ) as client:
         async with client.stream("GET", "/") as resp:
@@ -751,11 +800,13 @@ async def test_send_event_response():
             assert events.replace(": ping\n\n", "") == expected_events
 
     async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(SendEventResponse(
-            send_events(),
-            headers={"custom-header": "value"},
-            ping_interval=0.1,
-        )),
+        transport=httpx.ASGITransport(
+            SendEventResponse(
+                send_events(),
+                headers={"custom-header": "value"},
+                ping_interval=0.1,
+            )
+        ),
         base_url="http://testServer/",
     ) as client:
         async with client.stream("GET", "/") as resp:
@@ -775,7 +826,9 @@ async def test_send_event_response_raise_exception():
         raise Exception("Something went wrong")
 
     async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(SendEventResponse(send_events(), ping_interval=0.1)),
+        transport=httpx.ASGITransport(
+            SendEventResponse(send_events(), ping_interval=0.1)
+        ),
         base_url="http://testServer/",
     ) as client:
         with pytest.raises(Exception, match="Something went wrong"):
@@ -800,7 +853,9 @@ async def test_send_event_response_be_killed():
             killed = True
 
     async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(SendEventResponse(send_events(), ping_interval=0.1)),
+        transport=httpx.ASGITransport(
+            SendEventResponse(send_events(), ping_interval=0.1)
+        ),
         base_url="http://testServer/",
     ) as client:
         async with client.stream("GET", "/") as resp:
@@ -1012,8 +1067,7 @@ def test_websocket_scope_interface():
     async def mock_receive() -> Message:
         return {}
 
-    async def mock_send(message: Message) -> None:
-        ...
+    async def mock_send(message: Message) -> None: ...
 
     websocket = WebSocket(
         {"type": "websocket", "path": "/abc/", "headers": []},
@@ -1045,7 +1099,9 @@ async def test_router():
         ("/redirect", redirect),
         ("/{path}", path),
     )
-    async with httpx.AsyncClient(base_url="http://testServer/", transport=httpx.ASGITransport(router)) as client:
+    async with httpx.AsyncClient(
+        base_url="http://testServer/", transport=httpx.ASGITransport(router)
+    ) as client:
         assert (await client.get("/")).text == "homepage"
         assert (await client.get("/baize")).json() == {"path": "baize"}
         assert (await client.get("/baize/")).status_code == 404
@@ -1063,10 +1119,12 @@ async def test_subpaths():
         return PlainTextResponse(request["path"])
 
     async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(Subpaths(
-            ("/frist", root),
-            ("/latest", path),
-        )),
+        transport=httpx.ASGITransport(
+            Subpaths(
+                ("/frist", root),
+                ("/latest", path),
+            )
+        ),
         base_url="http://testServer/",
     ) as client:
         assert (await client.get("/")).status_code == 404
@@ -1074,10 +1132,12 @@ async def test_subpaths():
         assert (await client.get("/latest")).text == ""
 
     async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(Subpaths(
-            ("", path),
-            ("/root", root),
-        )),
+        transport=httpx.ASGITransport(
+            Subpaths(
+                ("", path),
+                ("/root", root),
+            )
+        ),
         base_url="http://testServer/",
     ) as client:
         assert (await client.get("/")).text == "/"
@@ -1087,10 +1147,12 @@ async def test_subpaths():
 @pytest.mark.asyncio
 async def test_hosts():
     async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(Hosts(
-            ("testServer", PlainTextResponse("testServer")),
-            (".*", PlainTextResponse("default host")),
-        )),
+        transport=httpx.ASGITransport(
+            Hosts(
+                ("testServer", PlainTextResponse("testServer")),
+                (".*", PlainTextResponse("default host")),
+            )
+        ),
         base_url="http://testServer/",
     ) as client:
         assert (
@@ -1114,7 +1176,9 @@ async def test_hosts():
     ],
 )
 async def test_files(app):
-    async with httpx.AsyncClient(base_url="http://testServer/", transport=httpx.ASGITransport(app)) as client:
+    async with httpx.AsyncClient(
+        base_url="http://testServer/", transport=httpx.ASGITransport(app)
+    ) as client:
         resp = await client.get("/py.typed")
         assert resp.text == ""
 
@@ -1173,7 +1237,9 @@ async def test_pages(tmpdir):
     )
 
     app = Pages(tmpdir)
-    async with httpx.AsyncClient(base_url="http://testServer/", transport=httpx.ASGITransport(app)) as client:
+    async with httpx.AsyncClient(
+        base_url="http://testServer/", transport=httpx.ASGITransport(app)
+    ) as client:
         resp = await client.get("/")
         assert resp.status_code == 200
         assert resp.text == "<html><body>index</body></html>"
@@ -1210,7 +1276,9 @@ async def test_pages(tmpdir):
             await client.get("/d")
 
     app = Pages(tmpdir, handle_404=PlainTextResponse("", 404))
-    async with httpx.AsyncClient(base_url="http://testServer/", transport=httpx.ASGITransport(app)) as client:
+    async with httpx.AsyncClient(
+        base_url="http://testServer/", transport=httpx.ASGITransport(app)
+    ) as client:
         assert (await client.get("/d")).status_code == 404
 
 
@@ -1225,15 +1293,18 @@ async def test_request_response():
     async def view(request: Request) -> Response:
         return PlainTextResponse(await request.body)
 
-    async with httpx.AsyncClient(base_url="http://testServer/", transport=httpx.ASGITransport(view)) as client:
+    async with httpx.AsyncClient(
+        base_url="http://testServer/", transport=httpx.ASGITransport(view)
+    ) as client:
         assert (await client.get("/")).text == ""
         assert (await client.post("/", content="hello")).text == "hello"
 
     client = TestClient(view)
-    with pytest.raises(WebSocketDisconnect) as exc:
+    with pytest.raises(
+        (WebSocketDisconnect, starlette.testclient.WebSocketDenialResponse)
+    ):
         with client.websocket_connect("/"):
             pass
-    assert exc.value.code == 1000
 
 
 @pytest.mark.asyncio
@@ -1243,7 +1314,9 @@ async def test_websocket_session():
         await websocket.accept()
         await websocket.close()
 
-    async with httpx.AsyncClient(base_url="http://testServer/", transport=httpx.ASGITransport(view)) as client:
+    async with httpx.AsyncClient(
+        base_url="http://testServer/", transport=httpx.ASGITransport(view)
+    ) as client:
         assert (await client.get("/")).status_code == 404
 
 
@@ -1262,7 +1335,9 @@ async def test_decorator():
     async def view(request: Request) -> Response:
         return PlainTextResponse(await request.body)
 
-    async with httpx.AsyncClient(base_url="http://testServer/", transport=httpx.ASGITransport(view)) as client:
+    async with httpx.AsyncClient(
+        base_url="http://testServer/", transport=httpx.ASGITransport(view)
+    ) as client:
         assert (await client.get("/")).headers["X-Middleware"] == "1"
 
 
@@ -1281,7 +1356,9 @@ async def test_middleware():
     async def view(request: Request) -> Response:
         return PlainTextResponse(await request.body)
 
-    async with httpx.AsyncClient(base_url="http://testServer/", transport=httpx.ASGITransport(view)) as client:
+    async with httpx.AsyncClient(
+        base_url="http://testServer/", transport=httpx.ASGITransport(view)
+    ) as client:
         response = await client.post("/", content="x")
         assert response.headers["X-Middleware"] == "1"
         assert response.text == "x"
@@ -1296,7 +1373,9 @@ async def test_next_request():
         response = await NextResponse.from_app(PlainTextResponse(""), request)
         await response(scope, receive, send)
 
-    async with httpx.AsyncClient(base_url="http://testServer/", transport=httpx.ASGITransport(app)) as client:
+    async with httpx.AsyncClient(
+        base_url="http://testServer/", transport=httpx.ASGITransport(app)
+    ) as client:
         assert (await client.get("/")).status_code == 200
 
     async def read_body(scope, receive, send):

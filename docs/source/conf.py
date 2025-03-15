@@ -32,7 +32,7 @@ release = importlib.import_module("baize.__version__").__version__
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ["recommonmark", "sphinx.ext.autodoc"]
+extensions = ["myst_parser", "sphinx.ext.autodoc"]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -70,10 +70,6 @@ html_static_path = []
 
 
 def setup(app):
-    from recommonmark.transform import AutoStructify
-
-    app.add_transform(AutoStructify)
-
     import commonmark
 
     def docstring(app, what, name, obj, options, lines):

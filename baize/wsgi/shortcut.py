@@ -30,7 +30,7 @@ def request_response(view: ViewType) -> WSGIApp:
 
 
 def decorator(
-    handler: Callable[[Request, ViewType], Response]
+    handler: Callable[[Request, ViewType], Response],
 ) -> Callable[[ViewType], ViewType]:
     """
     This can turn a callable object into a decorator for view.

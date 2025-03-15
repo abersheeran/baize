@@ -29,9 +29,9 @@ class BaseFiles(Generic[Interface]):
         cacheability: Literal["public", "private", "no-cache", "no-store"] = "public",
         max_age: int = 60 * 10,  # 10 minutes
     ) -> None:
-        assert not (
-            os.path.isabs(directory) and package is not None
-        ), "directory must be a relative path, with package is not None"
+        assert not (os.path.isabs(directory) and package is not None), (
+            "directory must be a relative path, with package is not None"
+        )
         self.directory = self.normalize_dir_path(str(directory), package)
         self.handle_404: Optional[Interface] = handle_404
         self.cacheability = cacheability
@@ -43,15 +43,15 @@ class BaseFiles(Generic[Interface]):
         else:
             spec = importlib.util.find_spec(package)
             assert spec is not None, f"Package {package!r} could not be found."
-            assert (
-                spec.origin is not None
-            ), f"Directory '{directory}' in package {package!r} could not be found."
+            assert spec.origin is not None, (
+                f"Directory '{directory}' in package {package!r} could not be found."
+            )
             package_directory = os.path.normpath(
                 os.path.join(spec.origin, "..", directory)
             )
-            assert os.path.isdir(
-                package_directory
-            ), f"Directory '{directory}' in package {package!r} could not be found."
+            assert os.path.isdir(package_directory), (
+                f"Directory '{directory}' in package {package!r} could not be found."
+            )
             return package_directory
 
     def ensure_absolute_path(self, path: str) -> Optional[str]:

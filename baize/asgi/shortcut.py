@@ -56,7 +56,7 @@ def websocket_session(view: Callable[[WebSocket], Awaitable[None]]) -> ASGIApp:
 
 
 def decorator(
-    handler: Callable[[Request, ViewType], Awaitable[Response]]
+    handler: Callable[[Request, ViewType], Awaitable[Response]],
 ) -> Callable[[ViewType], ViewType]:
     """
     This can turn a callable object into a decorator for view.

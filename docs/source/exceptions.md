@@ -1,15 +1,17 @@
 # Exceptions
 
+## Basic HTTP Exception
+
 ### HTTPException
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.exceptions.HTTPException
    :members:
 ```
 
 ### abort
 
-```eval_rst
+```{eval-rst}
 .. autofunction:: baize.exceptions.abort
 ```
 
@@ -17,14 +19,14 @@
 
 ### UnsupportedMediaType
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.exceptions.UnsupportedMediaType
    :members:
 ```
 
 ### RangeNotSatisfiable
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.exceptions.RangeNotSatisfiable
    :members:
 ```
@@ -33,21 +35,21 @@
 
 ### MalformedJSON
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.exceptions.MalformedJSON
    :members:
 ```
 
 ### MalformedMultipart
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.exceptions.MalformedMultipart
    :members:
 ```
 
 ### MalformedRangeHeader
 
-```eval_rst
+```{eval-rst}
 .. autoclass:: baize.exceptions.MalformedRangeHeader
    :members:
 ```

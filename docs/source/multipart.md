@@ -6,12 +6,12 @@ BáiZé provides a "bring your own I/O" multipart parser with excellent performa
 
 ### `parse_stream`
 
-```eval_rst
+```{eval-rst}
 .. autofunction:: baize.multipart_helper.parse_stream
 ```
 
 ### `parse_async_stream`
 
-```eval_rst
+```{eval-rst}
 .. autofunction:: baize.multipart_helper.parse_async_stream
 ```
