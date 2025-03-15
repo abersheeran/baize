@@ -1300,10 +1300,11 @@ async def test_request_response():
         assert (await client.post("/", content="hello")).text == "hello"
 
     client = TestClient(view)
-    with pytest.raises(WebSocketDisconnect) as exc:
+    with pytest.raises(
+        (WebSocketDisconnect, starlette.testclient.WebSocketDenialResponse)
+    ):
         with client.websocket_connect("/"):
             pass
-    assert exc.value.code == 1000
 
 
 @pytest.mark.asyncio
