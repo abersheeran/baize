@@ -1,5 +1,7 @@
 # Exceptions
 
+## Basic HTTP Exception
+
 ### HTTPException
 
 ```{eval-rst}
