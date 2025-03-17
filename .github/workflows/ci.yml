@@ -28,6 +28,12 @@ jobs:
       matrix:
         python-version: [3.9, "3.10", 3.11, 3.12, 3.13]
         os: [windows-latest, ubuntu-latest, macos-latest]
+        exclude:
+          - python-version: 3.9
+            os: macos-latest
+        include:
+          - python-version: 3.9
+            os: macos-13
 
     steps:
       - uses: actions/checkout@v4
