@@ -13,7 +13,7 @@ description = "Powerful and exquisite WSGI/ASGI framework/toolkit."
 license = { text = "Apache-2.0" }
 name = "baize"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 version = "0.22.2"
 
 [project.urls]
