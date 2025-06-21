@@ -5,7 +5,7 @@
 groups = ["default", "build", "dev", "doc", "test"]
 strategy = []
 lock_version = "4.5.0"
-content_hash = "sha256:d9f9db84054e4c38208864dc74c193ea543f607fcefdf75f4f64349b60974a5f"
+content_hash = "sha256:6f7df7131f9f52812a38ee87397e09b01991bb5d61f8d657284e604c424abdf0"
 
 [[metadata.targets]]
 requires_python = ">=3.9"
@@ -377,6 +377,19 @@ summary = "Utility library for gitignore style pattern matching of file paths."
 files = [
     {file = "pathspec-0.12.1-py3-none-any.whl", hash = "sha256:a0d503e138a4c123b27490a4f7beda6a01c6f288df0e4a8b79c7eb0dc7b4cc08"},
     {file = "pathspec-0.12.1.tar.gz", hash = "sha256:a482d51503a1ab33b1c67a6c3813a26953dbdc71c31dacaef9a838c4e29f5712"},
+]
+
+[[package]]
+name = "pdm-backend"
+version = "2.4.4"
+requires_python = ">=3.9"
+summary = "The build backend used by PDM that supports latest packaging standards"
+dependencies = [
+    "importlib-metadata>=3.6; python_version < \"3.10\"",
+]
+files = [
+    {file = "pdm_backend-2.4.4-py3-none-any.whl", hash = "sha256:87f85f65c208956a8adbcc01b8878ab29a97d0494cde56b733d961d4b5a48acf"},
+    {file = "pdm_backend-2.4.4.tar.gz", hash = "sha256:f72551eeb319f74ca25856c24fb4026684eeb0dddd9df68482901ab0dc481258"},
 ]
 
 [[package]]
