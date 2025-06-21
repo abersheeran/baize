@@ -1,5 +1,5 @@
+import asyncio
 import functools
-from tempfile import SpooledTemporaryFile
 from typing import (
     Any,
     AsyncGenerator,
@@ -9,34 +9,29 @@ from typing import (
     MutableMapping,
 )
 
-from ..concurrency import run_in_threadpool
 from ..datastructures import Headers
 from ..typing import ASGIApp, Scope, Receive, Send, Message
 from .requests import Request
 from .responses import Response, StreamingResponse
 
 
-class CachedStream(AsyncIterator[bytes]):
-    spool_max_size = 1024 * 1024
-
+class PipeStream(AsyncIterator[bytes]):
     def __init__(self) -> None:
-        self._buffer = SpooledTemporaryFile(max_size=self.spool_max_size, mode="w+b")
+        self._queue: asyncio.Queue[bytes] = asyncio.Queue(maxsize=1)
         self._pushed_eof = False
 
     async def push(self, chunk: bytes) -> None:
         if self._pushed_eof:
             raise RuntimeError("Cannot push chunk after push EOF.")  # pragma: no cover
-        await run_in_threadpool(self._buffer.write, chunk)
+        await self._queue.put(chunk)
 
     async def push_eof(self) -> None:
-        await run_in_threadpool(self._buffer.seek, 0)
         self._pushed_eof = True
 
     async def __anext__(self) -> bytes:
-        chunk = await run_in_threadpool(self._buffer.read, 4096 * 16)
-        if not chunk:
+        if self._pushed_eof and self._queue.empty():
             raise StopAsyncIteration
-        return chunk
+        return await self._queue.get()
 
 
 class NextRequest(Request, MutableMapping[str, Any]):
@@ -66,7 +61,7 @@ class NextResponse(StreamingResponse):
         """
         status_code = 200
         headers = Headers()
-        body = CachedStream()
+        body = PipeStream()
 
         async def send(message: Message) -> None:
             nonlocal status_code
