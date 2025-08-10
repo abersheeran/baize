@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import sys
 
 
 def pdm_build_update_setup_kwargs(context, setup_kwargs):
@@ -7,6 +8,11 @@ def pdm_build_update_setup_kwargs(context, setup_kwargs):
         from mypyc.build import mypycify
     except ImportError:
         print("Error in import mypyc.build, skip build.", flush=True)
+        return
+
+    # Skip build for Python 3.13
+    if sys.version_info >= (3, 13):
+        print("Skip build for Python 3.13+.", flush=True)
         return
 
     modules = list(

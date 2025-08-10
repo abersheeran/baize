@@ -374,6 +374,9 @@ def test_mutable_multi_mapping():
     )
     assert MutableMultiMapping() == MutableMultiMapping({})
 
+    # NOTE: dict MUST NOT be a instance of MutableMultiMapping
+    assert not isinstance({}, MutableMultiMapping)
+
     q = MutableMultiMapping([("a", "123"), ("a", "456")])
     assert MutableMultiMapping(q) == q
 
